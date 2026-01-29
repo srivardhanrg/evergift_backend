@@ -60,6 +60,7 @@ class Theme(str, Enum):
     # Newest premium themes (Safari & Dream Weaver)
     STORYGIFT_SAFARI_ADVENTURE = "storygift_safari_adventure"
     STORYGIFT_DREAM_WEAVER = "storygift_dream_weaver"
+    STORYGIFT_SECRET_AGENT = "storygift_secret_agent"
 
     # Legacy themes (for backward compatibility)
     MAGIC_CASTLE = "magic_castle"

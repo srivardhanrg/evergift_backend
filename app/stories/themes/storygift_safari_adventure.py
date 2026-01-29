@@ -41,7 +41,7 @@ STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
             page_number=2,
             scene_description="Arriving in savanna and meeting Zara the elephant",
             scene_type="adventure",
-            realistic_prompt="""Spectacular dramatic arrival scene. Child {name} now wearing khaki safari outfit, appearing in golden African savanna through swirling magical dust storm, landing in tall grass with expression of shock and wonder. Before them stands ZARA - majestic African elephant with colorful Maasai beads around neck, wise kind eyes, trunk raised protectively. Magical golden particles still swirling around child from teleportation. Acacia trees silhouetted against dramatic orange sunset sky with storm clouds. Heartstone Compass blazing on child's chest. Epic first meeting moment. Only child and elephant in frame. Warm golden storm light, dust dramatically catching sunlight. BBC Earth dramatic quality. Child's amazed face detailed, soft focus background.""",
+            realistic_prompt="""Epic first meeting scene in African savanna. Child {name} wearing khaki safari outfit standing confidently beside ZARA - a magnificent wise African elephant with colorful Maasai beads draped around her neck. Child looking up at Zara with amazed wonder, one hand gently touching her trunk in greeting. Zara's trunk curved protectively near child, wise gentle eyes looking down at the young guardian. Magical golden dust particles floating in warm sunset light around them both. Heartstone Compass glowing warmly on child's chest. Acacia trees silhouetted against dramatic orange and purple sunset sky. Golden savanna grass, warm atmospheric lighting. Intimate bonding moment between child and elephant. Child's face clearly visible showing wonder and connection, front-facing three-quarter view. BBC Earth documentary quality. Soft focus background, detailed textures.""",
             story_text="{name} tumbled through spinning light and landed in golden grass! \"Welcome, Guardian!\" rumbled a gentle voice. A magnificent elephant with glowing beads stood before {name}. \"I'm Zara. Quick—we must reach the Great Tree before sunset! Hold tight!\" She knelt. The race was on!",
             costume="wearing khaki safari explorer outfit with vest and hat"
         ),
@@ -49,11 +49,11 @@ STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
         # === PAGE 3 - RIDING KITO THROUGH THE CANYON === (PREVIEW - Action)
         PageTemplate(
             page_number=3,
-            scene_description="Thrilling ride on Kito the giraffe through canyon",
+            scene_description="Thrilling ride on Kito the wild horse through canyon",
             scene_type="adventure",
-            realistic_prompt="""Breathtaking elevated action scene. Child {name} in safari outfit sitting high on KITO's back - magnificent tall giraffe with beautiful spotted pattern galloping through narrow golden canyon. Child elevated prominently in frame, holding gently to giraffe's neck, wind in hair, expression of pure exhilaration and joy. Rocky canyon walls on either side. Dramatic late afternoon light streaming through canyon. Dust kicking up from hooves. Only child riding giraffe, dynamic two-character action composition. Child's excited face clearly visible and detailed at top of frame. National Geographic action quality, motion energy, soft focus background.""",
-            story_text="\"The shortcut is through the canyon!\" Kito the giraffe said, kneeling. {name} climbed up—and suddenly they were SOARING! From his tall back, {name} could see over everything! The canyon raced past below. \"This is AMAZING!\" {name} laughed!",
-            costume="wearing safari outfit, riding on giraffe's back"
+            realistic_prompt="""Thrilling action scene in African canyon. Child {name} in safari outfit riding on KITO's back - a powerful wild African horse with golden-brown coat and flowing dark mane, galloping through narrow red rock canyon. Child sitting tall on horse's back, hands gripping mane, leaning slightly forward with excited smile and windswept hair. Child positioned prominently in upper half of frame, face clearly visible and detailed. Rocky canyon walls on either side creating dramatic framing. Warm golden afternoon light streaming through canyon, dust clouds behind horse's hooves. Dynamic motion composition with child as the clear focal point. Child's joyful excited expression front-facing. National Geographic action quality, cinematic lighting, soft focus background.""",
+            story_text="\"The shortcut is through the canyon!\" Kito the wild horse said, kneeling. {name} climbed up—and suddenly they were RACING! The canyon walls blurred past as Kito's hooves thundered on the ground. \"This is AMAZING!\" {name} laughed, holding tight!",
+            costume="wearing safari outfit, riding on horse's back"
         ),
 
         # === PAGE 4 - RACING WITH NIA THE ZEBRA === (PREVIEW - Speed Action)
@@ -81,9 +81,9 @@ STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
             page_number=6,
             scene_description="Earning the Lion King's respect",
             scene_type="triumph",
-            realistic_prompt="""Triumphant dramatic moment. THE LION KING has lowered his great golden-maned head down to child {name}'s level, their foreheads nearly touching in gesture of respect. Child's small hand placed on lion's massive forehead. Brilliant golden light from Heartstone Compass exploding outward creating spectacular halo and light rays around both. Dramatic sunset sun creating golden rim light on lion's magnificent mane, dust sparkling like gold confetti. Child's expression shows awe, pride, and joy. Only child and lion king in powerful intimate moment. Wide epic cinematic shot showing the sacred connection. Detailed child's amazed face. National Geographic quality, soft focus background.""",
+            realistic_prompt="""Powerful triumphant moment in golden savanna. Child {name} wearing khaki safari explorer outfit with vest and safari hat, standing face-to-face with the magnificent LION KING who has lowered his great head to child's level. Child's small hand placed gently on lion's golden-maned forehead in sacred connection. Lion's wise amber eyes closed in peaceful respect. Heartstone Compass on child's chest glowing with warm golden light, creating soft halo around them both. Dramatic sunset behind them with orange and gold sky. Child's face showing quiet pride and wonder, three-quarter front view, clearly detailed. Intimate powerful composition, eye-level perspective. Golden rim light on lion's majestic mane. BBC Earth documentary quality, emotional connection captured. Soft focus savanna background.""",
             story_text="The Lion King's fierce expression melted into a smile. He lowered his mighty head to {name}'s. \"You didn't run. You didn't cry. You stood your ground.\" His golden mane glowed. \"THAT is what makes a true Guardian, {name}. Welcome to the Great Tree!\"",
-            costume="wearing safari outfit with glowing compass"
+            costume="wearing khaki safari explorer outfit with vest, safari hat, and glowing Heartstone Compass"
         ),
 
         # === PAGE 7 - FLYING WITH JABARI THE CHEETAH === (PAID - Speed Action)
@@ -109,11 +109,11 @@ STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
         # === PAGE 9 - THE GUARDIAN'S GOLDEN FEATHER === (PAID - Emotional Ceremony)
         PageTemplate(
             page_number=9,
-            scene_description="Receiving the sacred golden feather from the Lion King",
+            scene_description="Receiving the sacred golden feather at the Great Tree ceremony",
             scene_type="bonding",
-            realistic_prompt="""Epic emotional ceremony at twilight. THE LION KING standing majestically before child {name}, holding magnificent golden feather (glowing and shimmering like captured sunshine) in his mouth, offering it ceremonially. Child kneeling with both hands extended up to receive it, face tilted up showing overwhelming emotion - joy, pride, and tears. First stars beginning to appear in purple-pink twilight sky. Heartstone Compass creating soft golden glow. Acacia tree silhouetted behind. Only child and lion king in powerful ceremonial moment. Golden hour fading to magical blue hour, dramatic lighting on faces. Frame-worthy emotional climax. Detailed child's tearful joyful face. Cinematic quality, soft focus background.""",
-            story_text="At twilight, the Lion King approached holding a golden feather that glowed like a star. \"You rode with the fastest, swam with the gentlest, and stood brave before me,\" he said warmly. He placed it in {name}'s hair. \"You ARE the Guardian!\" {name} beamed!",
-            costume="wearing safari outfit, kneeling, receiving golden feather"
+            realistic_prompt="""Magical ceremony at the Great Tree. CHILD {name} IS THE CLEAR FOCAL POINT - wearing khaki safari explorer outfit, standing prominently in foreground at the base of the Great Tree (massive baobab with golden glowing leaves). A golden owl perched on branch above, presenting shimmering golden feather downward to child. Child's face is the PRIMARY FOCUS - well-lit by warm golden magical glow from the feather and compass, three-quarter front view looking up with overwhelming joy and pride, detailed facial features. Background animals (elephant, zebra, cheetah) shown only as DISTANT BLURRED silhouettes far behind, out of focus. Purple-pink twilight sky with first stars. Heartstone Compass glowing on child's chest illuminating face from below. Child takes up 60% of frame height, face large and clearly detailed. Medium close-up composition centered on child. BBC Earth documentary quality, face dramatically lit, very soft blur on everything except child.""",
+            story_text="At the Great Tree, all the animals gathered in a circle. The wise Great Owl flew down, holding a golden feather that sparkled like starlight. \"You showed courage, kindness, and a brave heart,\" she hooted softly. She placed the feather in {name}'s hair. \"You ARE the Guardian!\"",
+            costume="wearing khaki safari explorer outfit with vest, receiving golden feather from owl"
         ),
 
         # === PAGE 10 - THE GUARDIAN RETURNS HOME === (PAID - Resolution)

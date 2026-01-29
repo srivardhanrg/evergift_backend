@@ -246,34 +246,33 @@ class StoryGiftPDFGeneratorService:
                 display_title = display_title.strip()
 
             # =========================================================
-            # TOP GRADIENT OVERLAY - Subtle and smooth (no harsh bars)
-            # Much lighter than before to avoid "black bar" appearance
+            # TOP VIGNETTE - Ultra-smooth gradient (no visible banding)
+            # Uses 60 overlapping layers for seamless blend
             # =========================================================
             c.saveState()
             
-            # Subtle gradient: only 25% of page height, lighter opacity
-            top_gradient_height = PAGE_HEIGHT * 0.25
-            num_layers = 15
+            # Smooth top gradient - only 15% of page height (subtle, like reference)
+            top_gradient_height = PAGE_HEIGHT * 0.15
+            num_layers = 60  # 60 layers with overlap = no visible lines
             stripe_height = top_gradient_height / num_layers
             
             for i in range(num_layers):
-                # Start at 50% opacity and fade to transparent (gentler than before)
+                # Gentle fade: max 30% opacity at top, fades to transparent
                 progress = i / num_layers
-                alpha = 0.50 * (1 - progress) ** 1.5  # Exponential falloff for smoother fade
+                alpha = 0.30 * (1 - progress) ** 3  # Cubic falloff for ultra-smooth
                 
                 y_pos = PAGE_HEIGHT - (i + 1) * stripe_height
                 c.setFillColor(Color(0, 0, 0, alpha=alpha))
-                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)
+                # Overlap stripes by 2px to eliminate any gaps/lines
+                c.rect(0, y_pos - 2, PAGE_WIDTH, stripe_height + 4, fill=1, stroke=0)
             
             c.restoreState()
 
             # =========================================================
-            # TITLE TEXT - Premium serif font with letter spacing
-            # Matching the Enchanted Forest elegant style
+            # TITLE TEXT - GOLDEN color with shadow (like reference)
             # =========================================================
             c.saveState()
             
-            # Use Times-Bold for elegant serif look (built-in ReportLab font)
             title_upper = display_title.upper()
             title_y = PAGE_HEIGHT - 0.85 * inch
             
@@ -289,62 +288,81 @@ class StoryGiftPDFGeneratorService:
             if title_width > PAGE_WIDTH - 80:
                 base_font_size = 36
             
-            # Letter spacing effect (draw each character individually)
-            letter_spacing = 4  # pixels between letters
+            # Letter spacing effect
+            letter_spacing = 4
             total_width = 0
             
             for char in title_upper:
                 total_width += c.stringWidth(char, "Times-Bold", base_font_size) + letter_spacing
-            total_width -= letter_spacing  # Remove last spacing
+            total_width -= letter_spacing
+            
+            # Golden color for title (matching reference)
+            golden_color = Color(255/255, 200/255, 50/255)  # Bright golden yellow
+            shadow_color = Color(0, 0, 0, alpha=0.5)
             
             # Check if we need to split into two lines
             if total_width > PAGE_WIDTH - 60:
-                # Split title into two lines at natural break point
                 words = title_upper.split()
                 if len(words) >= 2:
                     mid = len(words) // 2
                     line1 = " ".join(words[:mid])
                     line2 = " ".join(words[mid:])
                     
-                    # Draw line 1
-
+                    # Draw shadow first for line 1
+                    self._draw_letter_spaced_text(c, line1, "Times-Bold", base_font_size, 
+                                                  title_y + 33, letter_spacing,
+                                                  shadow_color, shadow_offset=2)
+                    # Draw line 1 in golden
                     self._draw_letter_spaced_text(c, line1, "Times-Bold", base_font_size, 
                                                   title_y + 35, letter_spacing,
-                                                  Color(218/255, 165/255, 32/255))  # Golden color
-                    # Draw line 2
+                                                  golden_color)
+                    
+                    # Draw shadow first for line 2
+                    self._draw_letter_spaced_text(c, line2, "Times-Bold", base_font_size,
+                                                  title_y - 12, letter_spacing,
+                                                  shadow_color, shadow_offset=2)
+                    # Draw line 2 in golden
                     self._draw_letter_spaced_text(c, line2, "Times-Bold", base_font_size,
                                                   title_y - 10, letter_spacing,
-                                                  Color(218/255, 165/255, 32/255))
+                                                  golden_color)
                 else:
-                    # Single word, just draw it
+                    # Single word with shadow
+                    self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
+                                                  title_y - 2, letter_spacing,
+                                                  shadow_color, shadow_offset=2)
                     self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
                                                   title_y, letter_spacing,
-                                                  Color(218/255, 165/255, 32/255))
+                                                  golden_color)
             else:
-                # Single line title
+                # Single line title with shadow
+                self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
+                                              title_y - 2, letter_spacing,
+                                              shadow_color, shadow_offset=2)
                 self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
                                               title_y, letter_spacing,
-                                              Color(218/255, 165/255, 32/255))
+                                              golden_color)
             
             c.restoreState()
 
             # =========================================================
-            # BOTTOM GRADIENT OVERLAY - Subtle fade for text readability
+            # BOTTOM VIGNETTE - Ultra-smooth gradient (no visible banding)
+            # Uses 60 overlapping layers for seamless blend
             # =========================================================
             c.saveState()
             
-            bottom_gradient_height = PAGE_HEIGHT * 0.20
-            num_layers = 12
+            bottom_gradient_height = PAGE_HEIGHT * 0.15  # 15% - subtle like reference
+            num_layers = 60  # 60 layers with overlap = no visible lines
             stripe_height = bottom_gradient_height / num_layers
             
             for i in range(num_layers):
-                # Fade from bottom (0.6 opacity) to transparent
+                # Gentle fade from bottom: max 35% opacity, fades to transparent
                 progress = i / num_layers
-                alpha = 0.60 * (1 - progress) ** 1.5
+                alpha = 0.35 * (1 - progress) ** 3  # Cubic falloff for ultra-smooth
                 
                 y_pos = i * stripe_height
                 c.setFillColor(Color(0, 0, 0, alpha=alpha))
-                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)
+                # Overlap stripes by 2px to eliminate any gaps/lines
+                c.rect(0, y_pos - 2, PAGE_WIDTH, stripe_height + 4, fill=1, stroke=0)
             
             c.restoreState()
 
@@ -352,29 +370,29 @@ class StoryGiftPDFGeneratorService:
             # THIN GOLD DECORATIVE LINE - Premium separator
             # =========================================================
             c.saveState()
-            c.setStrokeColor(Color(218/255, 165/255, 32/255, alpha=0.7))  # Golden, slightly transparent
-            c.setLineWidth(1)
+            c.setStrokeColor(Color(218/255, 165/255, 32/255, alpha=0.8))
+            c.setLineWidth(1.5)
             line_y = 1.0 * inch
             line_width = 2.5 * inch
             c.line((PAGE_WIDTH - line_width) / 2, line_y, (PAGE_WIDTH + line_width) / 2, line_y)
             c.restoreState()
 
             # =========================================================
-            # "STARRING" LABEL - Letter-spaced, elegant
+            # "STARRING" LABEL - Letter-spaced, light gray
             # =========================================================
             c.saveState()
             starring_text = "STARRING"
             starring_size = 11
-            starring_spacing = 6  # Wide letter spacing for premium feel
+            starring_spacing = 6
             starring_y = 0.75 * inch
             
             self._draw_letter_spaced_text(c, starring_text, "Helvetica", starring_size,
                                           starring_y, starring_spacing,
-                                          Color(0.75, 0.75, 0.75))  # Light gray
+                                          Color(0.80, 0.80, 0.80))  # Light gray
             c.restoreState()
 
             # =========================================================
-            # CHILD NAME - Premium serif, white with subtle shadow
+            # CHILD NAME - WHITE with subtle shadow
             # =========================================================
             c.saveState()
             name_upper = child_name.upper()
@@ -382,13 +400,12 @@ class StoryGiftPDFGeneratorService:
             name_y = 0.35 * inch
             name_spacing = 3
             
-            # Calculate width for centering
             c.setFont("Times-Bold", name_font_size)
             
-            # Draw subtle shadow first
+            # Draw shadow first
             self._draw_letter_spaced_text(c, name_upper, "Times-Bold", name_font_size,
-                                          name_y - 1, name_spacing,
-                                          Color(0, 0, 0, alpha=0.4), shadow_offset=1.5)
+                                          name_y - 2, name_spacing,
+                                          Color(0, 0, 0, alpha=0.6), shadow_offset=2)
             
             # Draw main name in white
             self._draw_letter_spaced_text(c, name_upper, "Times-Bold", name_font_size,
