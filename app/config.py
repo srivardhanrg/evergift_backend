@@ -32,22 +32,22 @@ class Settings(BaseSettings):
     # AI Services
     fal_api_key: str
 
-    # StoryGift AI Model Configuration
-    realistic_model: str = "nano_banana"  # Primary model: NanoBanana with VLM analysis
+    # AI Model Configuration
+    realistic_model: str = "photorealistic"  # Primary model for photorealistic generation
 
     # Legacy model configurations (kept for backward compatibility)
     fallback_base_model: str = "flux_schnell"
-    fallback_realistic_model: str = "nano_banana"  # Fallback uses same NanoBanana model
+    fallback_realistic_model: str = "photorealistic"  # Fallback uses same photorealistic pipeline
 
     # Testing Configuration
     testing_mode_enabled: bool = False  # Toggle for development vs production (default False for safety)
     testing_mode_pages: int = 5        # Generate only 5 pages in testing mode
     production_pages: int = 10         # Full 10 pages for production
 
-    # NanoBanana Specific Settings
-    nanobana_vlm_model: str = "fal-ai/llava-next"  # Vision Language Model for face analysis
-    nanobana_aspect_ratio: str = "5:4"            # StoryGift's optimized aspect ratio
-    nanobana_quality: float = 0.95                # JPEG quality for PDF generation
+    # Photorealistic Pipeline Settings
+    vlm_model: str = "fal-ai/llava-next"      # Vision Language Model for face analysis
+    page_aspect_ratio: str = "5:4"            # Optimized aspect ratio for print
+    jpeg_quality: float = 0.95                # JPEG quality for PDF generation
 
     # Parallel Generation Settings
     parallel_batch_size: int = 3  # Number of pages to generate simultaneously (2-3 recommended)

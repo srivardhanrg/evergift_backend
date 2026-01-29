@@ -2,12 +2,13 @@
 StoryGift Safari Adventure Theme - African Savanna Adventure.
 
 Complete 10-page story: "[NAME]'s Wild Safari Adventure"
-Premium theme featuring African wildlife, elephant guide Zara, Lion King encounter, and becoming the Safari Guardian.
-Optimized for both photorealistic and 3D cartoon pipelines.
+Premium adventure story featuring different African animals on each page - elephant, giraffe, zebra, lion, cheetah, hippo.
+Each page = 1-2 characters max for perfect facial consistency with NanoBana.
+Optimized for exciting narrative flow with wow factor moments.
 
 CONVERSION OPTIMIZATION:
-- Pages 1-5 (Preview): Maximum wow factor, ends with Lion King cliffhanger
-- Pages 6-10 (Paid): Resolution, parade, emotional farewell
+- Pages 1-5 (Preview): Thrilling animal encounters, ends with Lion King confrontation cliffhanger
+- Pages 6-10 (Paid): Victory, speed racing, underwater adventure, emotional ceremony
 """
 
 from app.stories.templates import StoryTemplate, PageTemplate
@@ -25,103 +26,103 @@ STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
     cover_magical_elements="Majestic elephant Zara with colorful Maasai beads standing protectively behind the child. A proud lion with golden mane on one side. Giraffes, zebras, and colorful birds creating a frame. The magical Heartstone Compass glowing golden on child's chest. Warm rim lighting creates epic silhouette.",
     cover_footer_description="Golden savanna grass swaying, dust particles catching sunset light, animal footprints in red earth",
     pages=[
-        # === PAGE 1 - THE HEARTSTONE COMPASS === (PREVIEW - Wonder)
+        # === PAGE 1 - THE HEARTSTONE COMPASS === (PREVIEW - Discovery)
         PageTemplate(
             page_number=1,
             scene_description="Discovering the magical Heartstone Compass",
             scene_type="discovery",
-            realistic_prompt="""Magical morning discovery scene. The child named {name} in pajamas kneeling on bedroom floor, golden morning light streaming through window. Before them sits an ancient wooden box with African tribal carvings that has mysteriously appeared. The box is open, revealing a magnificent glowing compass made of amber and gold - the Heartstone Compass - hovering slightly and pulsing with warm golden light. Tiny golden particles float around it like fireflies. Child's hands reaching toward it with wonder, face illuminated by the magical glow, expression of pure amazement. Safari-themed room decorations visible - animal posters, globe. The compass casts animal-shaped shadows on the walls. Dreamy, warm lighting with magical golden glow effects. Detailed textures, soft focus background.""",
-            story_text="{name} woke up to find a mysterious wooden box at the foot of the bed. Inside was the most beautiful compass {name} had ever seen - and it was glowing! The moment {name} touched it, it felt warm, like it had been waiting for someone special.",
+            realistic_prompt="""Magical morning discovery scene. Child {name} in pajamas kneeling on bedroom floor, golden morning light streaming through window. Ancient wooden box with African tribal carvings open before them, revealing the magnificent Heartstone Compass (amber and gold) hovering and pulsing with warm golden light. Tiny golden particles floating like fireflies around it. Child's hands reaching toward it with pure wonder and amazement, face illuminated by magical glow. Safari-themed room decorations visible - animal posters, globe on shelf. The compass casts animal-shaped shadows dancing on walls. Dreamy warm lighting with magical golden glow effects. Child's face showing awe and excitement. Detailed textures, soft focus background.""",
+            story_text="{name} gasped—a mysterious box glowed at the foot of the bed! Inside, the most beautiful compass floated in golden light. The moment {name}'s fingers touched it, the room exploded in swirling light. \"WHOOOOSH!\" The adventure was beginning!",
             costume="wearing pajamas"
         ),
 
-        # === PAGE 2 - MAGICAL TRANSPORT === (PREVIEW - Excitement)
+        # === PAGE 2 - MEETING ZARA IN THE STORM === (PREVIEW - Dramatic Arrival)
         PageTemplate(
             page_number=2,
-            scene_description="The compass activates magical teleportation",
-            scene_type="wonder",
-            realistic_prompt="""Magical teleportation scene. The child {name} in pajamas standing in bedroom, holding the Heartstone Compass which blazes with intense golden light. A spectacular magical whirlwind of golden particles, African patterns, and animal silhouettes swirls around the child. The room transforms - walls fade into golden savanna light. Child's expression shows wonder and excitement, hair and clothes blown by magical wind. Glowing compass at center of the vortex. Everything spinning into golden light. Cinematic magical transformation moment, detailed textures, soft focus background.""",
-            story_text="The compass grew brighter and brighter until {name} could barely look at it! When {name} held it tight and whispered 'I want to help,' the whole room began to spin in a whirlwind of golden light and animal shadows. Heart pounding with excitement, {name} felt the floor disappear...",
-            costume="wearing pajamas, holding blazing compass"
-        ),
-
-        # === PAGE 3 - ARRIVAL IN SAVANNA === (PREVIEW - Spectacle)
-        PageTemplate(
-            page_number=3,
-            scene_description="Child appears in the African savanna, meets Zara",
+            scene_description="Arriving in savanna and meeting Zara the elephant",
             scene_type="adventure",
-            realistic_prompt="""Spectacular arrival scene. The child {name} now wearing khaki safari outfit, standing in golden African savanna grass, looking around in amazement. Before them stands ZARA - a majestic African elephant with colorful Maasai beads around her neck, wise kind eyes, trunk raised in greeting. Acacia trees silhouetted against dramatic orange sunset sky. Giraffes and zebras visible in the distance. The Heartstone Compass still glowing on child's chest. Child's expression shows joyful disbelief. Warm golden hour lighting, dust particles in sunlight. Epic first meeting, BBC Earth quality.""",
-            story_text="...and suddenly {name} was standing in the most incredible place! Golden grass stretched forever under a huge African sky. And there, waiting with a knowing smile in her eyes, was the most beautiful elephant {name} had ever seen. 'Welcome, brave one,' she said warmly. 'I am Zara. The Heartstone knew you would come. The animals need your help!'",
+            realistic_prompt="""Spectacular dramatic arrival scene. Child {name} now wearing khaki safari outfit, appearing in golden African savanna through swirling magical dust storm, landing in tall grass with expression of shock and wonder. Before them stands ZARA - majestic African elephant with colorful Maasai beads around neck, wise kind eyes, trunk raised protectively. Magical golden particles still swirling around child from teleportation. Acacia trees silhouetted against dramatic orange sunset sky with storm clouds. Heartstone Compass blazing on child's chest. Epic first meeting moment. Only child and elephant in frame. Warm golden storm light, dust dramatically catching sunlight. BBC Earth dramatic quality. Child's amazed face detailed, soft focus background.""",
+            story_text="{name} tumbled through spinning light and landed in golden grass! \"Welcome, Guardian!\" rumbled a gentle voice. A magnificent elephant with glowing beads stood before {name}. \"I'm Zara. Quick—we must reach the Great Tree before sunset! Hold tight!\" She knelt. The race was on!",
             costume="wearing khaki safari explorer outfit with vest and hat"
         ),
 
-        # === PAGE 4 - THE GREAT GATHERING === (PREVIEW - Heart + Stakes)
+        # === PAGE 3 - RIDING KITO THROUGH THE CANYON === (PREVIEW - Action)
+        PageTemplate(
+            page_number=3,
+            scene_description="Thrilling ride on Kito the giraffe through canyon",
+            scene_type="adventure",
+            realistic_prompt="""Breathtaking elevated action scene. Child {name} in safari outfit sitting high on KITO's back - magnificent tall giraffe with beautiful spotted pattern galloping through narrow golden canyon. Child elevated prominently in frame, holding gently to giraffe's neck, wind in hair, expression of pure exhilaration and joy. Rocky canyon walls on either side. Dramatic late afternoon light streaming through canyon. Dust kicking up from hooves. Only child riding giraffe, dynamic two-character action composition. Child's excited face clearly visible and detailed at top of frame. National Geographic action quality, motion energy, soft focus background.""",
+            story_text="\"The shortcut is through the canyon!\" Kito the giraffe said, kneeling. {name} climbed up—and suddenly they were SOARING! From his tall back, {name} could see over everything! The canyon raced past below. \"This is AMAZING!\" {name} laughed!",
+            costume="wearing safari outfit, riding on giraffe's back"
+        ),
+
+        # === PAGE 4 - RACING WITH NIA THE ZEBRA === (PREVIEW - Speed Action)
         PageTemplate(
             page_number=4,
-            scene_description="Meeting the animals at the Great Acacia Tree",
-            scene_type="bonding",
-            realistic_prompt="""Emotional gathering scene. The child {name} in safari outfit standing at the base of the Great Acacia Tree (enormous ancient tree with golden leaves), surrounded by African animals forming a hopeful circle. Baby zebra pressing against child's leg. Meerkats on hind legs. Wise old tortoise looking up. Giraffes bending necks down. ZARA (elephant with colorful Maasai beads, wise eyes) standing protectively nearby. Dry cracked watering hole visible behind. The Heartstone Compass glowing with golden threads connecting to each animal. Child's expression shows compassion and determination. Golden hour light, detailed textures, soft focus background.""",
-            story_text="At the Great Acacia Tree, animals of every kind had gathered. A baby zebra who had lost its mother pressed close to {name}. 'The rains haven't come,' said a wise old tortoise sadly. 'The watering hole is almost empty.' {name} felt the compass grow warm and knew: 'I'll help you. I promise.'",
-            costume="wearing safari outfit with glowing Heartstone Compass pendant"
+            scene_description="Racing across the plains on Nia the zebra",
+            scene_type="action",
+            realistic_prompt="""Dynamic high-speed action scene. Child {name} in safari outfit riding on NIA's back - beautiful zebra with striking bold stripes, running at full gallop across golden savanna plains. Child leaning forward, both hands holding zebra's mane, expression of thrilling excitement and laughter. Wind dramatically blowing child's hair back. Heartstone Compass streaming golden light trail. Motion blur in background grass, dust cloud behind them. Golden afternoon dramatic light. Only child riding zebra, powerful two-character action composition. Child's face showing pure joy and adrenaline, clearly detailed. National Geographic wildlife action quality, energy and movement, soft focus background.""",
+            story_text="\"The Great Tree is far—we need speed!\" Nia the zebra grinned. \"Hang on, Guardian!\" They EXPLODED into a run! The world became a golden blur! {name} whooped with joy—they were flying across the savanna! Nia was faster than the wind!",
+            costume="wearing safari outfit, riding on zebra, hair blown by wind"
         ),
 
-        # === PAGE 5 - THE LION KING === (PREVIEW - CLIFFHANGER!)
+        # === PAGE 5 - THE LION KING BLOCKS THE PATH === (PREVIEW - CLIFFHANGER!)
         PageTemplate(
             page_number=5,
-            scene_description="Face to face with the mighty Lion King",
+            scene_description="Epic confrontation with the Lion King",
             scene_type="triumph",
-            realistic_prompt="""Epic cliffhanger moment. The child {name} in safari outfit standing brave but small before the LION KING - magnificent male lion with enormous golden mane glowing with inner fire, amber eyes piercing and ancient. Animals parted and silent. Lion's expression unreadable, testing. Child standing firm, chin up with courage. Heartstone Compass blazing golden light between them. Dust particles in dramatic sunbeams. Low angle emphasizing lion's power but child's bravery central. Golden hour rim light on mane. Tense, beautiful, museum-quality dramatic composition, detailed textures, soft focus background.""",
-            story_text="Suddenly, the animals fell silent. From the tall grass emerged the Lion King himself - the most magnificent creature {name} had ever seen. His golden eyes studied the small human before him. {name}'s heart pounded, but instead of running, our brave hero stood tall and looked right into the lion's eyes. The compass blazed with light. The Lion King spoke: 'So... YOU are the one the Heartstone chose.'",
-            costume="wearing safari outfit, compass blazing with golden light"
+            realistic_prompt="""National Geographic award-winning wildlife photography. Dramatic standoff moment in African savanna at golden hour. Child {name} in khaki safari outfit standing bravely facing a magnificent adult male African lion with thick golden-brown mane, intense piercing amber eyes locked onto the child. The Heartstone Compass hanging on child's chest glows with soft warm amber light, casting gentle golden illumination on child's determined face. Lion blocking the path, powerful stance, the Great Tree visible as a distant silhouette behind him. Child standing firm with clenched fists and chin raised despite visible nervousness. Realistic natural savanna setting with dry golden grass, acacia trees, dust particles catching warm sunset light. Eye-level camera angle showing both characters at natural proportionate scale. Dramatic golden rim lighting on lion's magnificent mane. Real wildlife documentary quality lighting and composition. Child's face clearly detailed showing brave determination mixed with fear. Soft focus background, sharp focus on both child and lion.""",
+            story_text="Suddenly, the ground SHOOK. The mighty Lion King stepped from the shadows, eyes blazing like fire! \"You dare approach the Great Tree?\" he roared. Thunder rumbled. {name}'s heart hammered, but our brave Guardian stood tall anyway. The lion's eyes narrowed. \"Interesting...\"",
+            costume="wearing khaki safari outfit with glowing Heartstone Compass pendant"
         ),
 
-        # === PAGE 6 - EARNING RESPECT === (PAID - Triumph)
+        # === PAGE 6 - THE LION KING'S VICTORY === (PAID - Triumph)
         PageTemplate(
             page_number=6,
-            scene_description="The Lion King bows to the new Safari Guardian",
+            scene_description="Earning the Lion King's respect",
             scene_type="triumph",
-            realistic_prompt="""Triumphant recognition moment. The LION KING has lowered his great golden-maned head in bow of respect to the child {name}. Child's small hand gently placed on lion's massive forehead. Golden light radiates from Heartstone Compass creating halo around both. Behind them, animals celebrating - elephants trumpeting, zebras rearing, birds spiraling, meerkats jumping. ZARA (elephant with Maasai beads, wise eyes) watching proudly. Dramatic sun creating golden rim light, dust sparkling like glitter. Child's expression shows awe and rising confidence. Wide epic shot, cinematic emotional quality.""",
-            story_text="The great lion studied {name} for a long moment... then slowly, majestically, he bowed his golden head. 'Courage is not about being unafraid,' he rumbled. 'It is about standing tall when you ARE afraid. You have the heart of a true Safari Guardian, {name}.' All around them, the animals erupted in joyful celebration!",
+            realistic_prompt="""Triumphant dramatic moment. THE LION KING has lowered his great golden-maned head down to child {name}'s level, their foreheads nearly touching in gesture of respect. Child's small hand placed on lion's massive forehead. Brilliant golden light from Heartstone Compass exploding outward creating spectacular halo and light rays around both. Dramatic sunset sun creating golden rim light on lion's magnificent mane, dust sparkling like gold confetti. Child's expression shows awe, pride, and joy. Only child and lion king in powerful intimate moment. Wide epic cinematic shot showing the sacred connection. Detailed child's amazed face. National Geographic quality, soft focus background.""",
+            story_text="The Lion King's fierce expression melted into a smile. He lowered his mighty head to {name}'s. \"You didn't run. You didn't cry. You stood your ground.\" His golden mane glowed. \"THAT is what makes a true Guardian, {name}. Welcome to the Great Tree!\"",
             costume="wearing safari outfit with glowing compass"
         ),
 
-        # === PAGE 7 - SAVING THE WATERING HOLE === (PAID - Teamwork)
+        # === PAGE 7 - FLYING WITH JABARI THE CHEETAH === (PAID - Speed Action)
         PageTemplate(
             page_number=7,
-            scene_description="Working together to restore the watering hole",
+            scene_description="Racing at incredible speed with Jabari the cheetah",
             scene_type="action",
-            realistic_prompt="""Action-packed teamwork scene. The child {name} in safari outfit standing on rock directing animals, compass pointing the way, expression of determined leadership. Meerkats digging channels with impressive speed, dirt flying. ZARA and elephants (Maasai beads) using trunks to move boulders. Hippos clearing mud. Birds carrying plants. Zebras stomping earth flat. Water beginning to flow into dry watering hole, creating first reflecting pools. Dusty, active, everyone working together. Heartstone Compass sending golden guiding threads. Late afternoon light, dynamic diagonal action composition, detailed textures, soft focus background.""",
-            story_text="There was no time to waste! {name} and the animals worked together like never before. The meerkats dug new channels with lightning speed. The elephants moved heavy boulders. The birds planted seeds. And slowly, wonderfully, fresh water began to flow back into the watering hole! {name} had done it - with the help of new friends!",
-            costume="wearing safari outfit, dusty from work, compass glowing"
+            realistic_prompt="""Explosive speed action scene. Child {name} in safari outfit riding low on JABARI's back - sleek powerful spotted cheetah at absolute maximum sprint, muscles rippling, running faster than wind. Child crouched forward aerodynamically, holding cheetah's neck, hair streaming back, face showing pure exhilaration mixed with slight terror. Heartstone Compass blazing golden speed trail behind them. Extreme motion blur on background, savanna becoming streaks of gold. Dust and grass exploding behind. Golden afternoon light. Only child and cheetah, explosive two-character speed composition. Child's thrilled face detailed. Award-winning wildlife action photography quality, incredible energy, soft focus background.""",
+            story_text="\"Want to feel REAL speed?\" Jabari the cheetah grinned mischievously. Before {name} could answer—WHOOOOSH! They became a BLUR! Faster than anything {name} had ever felt! The world streaked past! \"THIS IS INCREDIBLE!\" {name} screamed with joy! They were practically flying!",
+            costume="wearing safari outfit, riding cheetah, hair streaming back"
         ),
 
-        # === PAGE 8 - THE GREAT ANIMAL PARADE === (PAID - Celebration)
+        # === PAGE 8 - SWIMMING WITH MAKENA THE HIPPO === (PAID - Underwater Wonder)
         PageTemplate(
             page_number=8,
-            scene_description="Sunset celebration parade across the savanna",
-            scene_type="celebration",
-            realistic_prompt="""Iconic celebration image. The Great Animal Parade at golden sunset. Wide cinematic shot. The child {name} riding on ZARA's back (elephant with colorful Maasai beads, wise kind eyes), arms raised in joyful celebration. Parade of African animals against spectacular orange-pink-purple sunset. Lion King walking alongside. Giraffes arching gracefully. Zebras prancing. Flamingos flying in pink ribbons. Full watering hole reflecting sunset. Great Acacia Tree silhouetted. Dust catching golden light like glitter. Heartstone Compass creating golden glow around child. Frame-worthy, epic composition, BBC Planet Earth meets Lion King parade, detailed textures, soft focus background.""",
-            story_text="As the sun began to set, something magical happened. Every animal in the savanna joined together in the Great Animal Parade - a celebration that hadn't happened in a hundred years! {name} rode proudly on Zara's back as the parade crossed the golden grasslands. It was the most beautiful sight in the world.",
-            costume="wearing safari outfit, sitting proudly on elephant"
+            scene_description="Magical underwater adventure with Makena the hippo",
+            scene_type="wonder",
+            realistic_prompt="""Magical underwater scene at golden hour. Child {name} in safari outfit riding on MAKENA's back - massive gentle hippopotamus swimming gracefully underwater. Child holding hippo's back, surrounded by stream of magical golden bubbles from Heartstone Compass. Shafts of golden sunset light piercing down through water surface above, creating cathedral-like light rays. Fish swimming around them. Child's face visible underwater, eyes wide with wonder and delight. Only child riding hippo, mystical serene two-character composition. Underwater plants swaying. Detailed child's amazed expression. Magical underwater cinematography like BBC Blue Planet, soft focus background.""",
+            story_text="\"Trust me,\" Makena the hippo winked. She dove deep! {name} held tight—and gasped! Underwater was a glowing golden world! They glided through cathedral rays of light, fish sparkling everywhere! \"It's like flying underwater!\" {name} thought, heart bursting with wonder. Magic was everywhere!",
+            costume="wearing safari outfit, riding hippo underwater"
         ),
 
-        # === PAGE 9 - THE GOLDEN FEATHER === (PAID - Emotional Gift)
+        # === PAGE 9 - THE GUARDIAN'S GOLDEN FEATHER === (PAID - Emotional Ceremony)
         PageTemplate(
             page_number=9,
-            scene_description="Receiving the sacred golden feather",
+            scene_description="Receiving the sacred golden feather from the Lion King",
             scene_type="bonding",
-            realistic_prompt="""Intimate emotional ceremony at twilight. The LION KING gently placing a magnificent golden feather (shimmering like captured sunshine) into the hair of child {name}, who is kneeling respectfully. ZARA (elephant with Maasai beads) standing nearby, tears of joy in wise eyes. Animals gathered in a reverent circle. Baby zebra pressing close. Meerkats at attention. First stars in purple twilight sky. Heartstone Compass glowing softly. Lion's expression warm, fatherly, proud. Child's face showing overwhelming gratitude and bittersweet farewell emotion. Golden hour fading to blue hour, intimate lighting, frame-worthy tearjerker, detailed textures, soft focus background.""",
-            story_text="The Lion King approached with something precious - a golden feather that shimmered like captured sunshine. 'This marks you as a Safari Guardian forever, {name},' he said, placing it gently in the child's hair. 'Whenever an animal needs kindness anywhere in the world, you will feel it in your heart.' {name}'s eyes filled with happy tears.",
-            costume="wearing safari outfit, receiving golden feather"
+            realistic_prompt="""Epic emotional ceremony at twilight. THE LION KING standing majestically before child {name}, holding magnificent golden feather (glowing and shimmering like captured sunshine) in his mouth, offering it ceremonially. Child kneeling with both hands extended up to receive it, face tilted up showing overwhelming emotion - joy, pride, and tears. First stars beginning to appear in purple-pink twilight sky. Heartstone Compass creating soft golden glow. Acacia tree silhouetted behind. Only child and lion king in powerful ceremonial moment. Golden hour fading to magical blue hour, dramatic lighting on faces. Frame-worthy emotional climax. Detailed child's tearful joyful face. Cinematic quality, soft focus background.""",
+            story_text="At twilight, the Lion King approached holding a golden feather that glowed like a star. \"You rode with the fastest, swam with the gentlest, and stood brave before me,\" he said warmly. He placed it in {name}'s hair. \"You ARE the Guardian!\" {name} beamed!",
+            costume="wearing safari outfit, kneeling, receiving golden feather"
         ),
 
-        # === PAGE 10 - HOME WITH THE WILD IN HEART === (PAID - Resolution)
+        # === PAGE 10 - THE GUARDIAN RETURNS HOME === (PAID - Resolution)
         PageTemplate(
             page_number=10,
-            scene_description="Home again, but forever connected to the wild",
+            scene_description="Home again with magic forever in heart",
             scene_type="resolution",
-            realistic_prompt="""Perfect storybook ending. The child {name} back in bedroom at night, sitting at window in pajamas, looking up at spectacular star-filled sky. Heartstone Compass on windowsill glowing softly. Golden feather tucked behind ear, also glowing. Stars arranged into African animal constellations - lion, elephant, giraffe across the Milky Way. Small stuffed elephant toy (gift from Zara) on bed pillow. Child with peaceful knowing smile, one hand on compass, other touching feather. Soft nightlight glow, magical starlight from window. Cozy but magical, emotionally satisfying conclusion, detailed textures, soft focus background.""",
-            story_text="The Heartstone Compass glowed one last time, and in a whirlwind of golden light, {name} was back home, safe in bed as the stars came out. Looking out the window, {name} gasped - the stars had formed into animal shapes, just for a moment! The compass glowed on the windowsill, the golden feather tucked safely behind one ear. {name} smiled. The savanna would always be there, and the animals would always be friends.",
+            realistic_prompt="""Perfect magical storybook ending. Child {name} in pajamas sitting at bedroom window at night, looking up at spectacular star-filled sky with expression of peaceful joy and wonder. Heartstone Compass on windowsill glowing softly with warm golden light. Magnificent golden feather tucked behind ear, also glowing. Stars in sky arranged into beautiful African animal constellations - lion, elephant, giraffe, zebra, cheetah clearly visible across the Milky Way, subtly glowing. Small stuffed safari animals on bed behind. Child with peaceful knowing smile, one hand touching the glowing feather. Soft cozy nightlight glow, magical starlight streaming through window. Warm emotional satisfying conclusion. Detailed child's content peaceful face, soft focus background.""",
+            story_text="The compass glowed one last time—and {name} tumbled back into bed as stars came out! Looking up, {name} gasped with delight—the stars formed all the animal friends, winking! {name} touched the golden feather and smiled. The adventure had just begun!",
             costume="wearing pajamas, golden feather in hair, compass nearby"
         ),
     ]

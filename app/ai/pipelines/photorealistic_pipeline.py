@@ -1,9 +1,9 @@
 """
-NanoBanana Pipeline - StoryGift-style photorealistic generation.
+Photorealistic Pipeline - Identity-preserving photorealistic generation.
 
-Replicates StoryGift's superior approach:
+Uses fal.ai nano-banana model with VLM face analysis:
 - VLM face analysis using LLaVA-Next
-- NanoBanana model for face-embedded generation
+- Identity-preserving generation with face embedding
 - Sequential generation to avoid API limits
 - 5:4 aspect ratio optimized for print
 """
@@ -20,33 +20,33 @@ from app.config import get_settings
 logger = structlog.get_logger()
 
 
-class NanoBananaPipeline:
+class PhotorealisticPipeline:
     """
-    NanoBanana pipeline implementing StoryGift's proven approach.
+    Photorealistic pipeline for identity-preserving image generation.
 
     Flow:
-    1. Analyze child's face using LLaVA-Next VLM (like StoryGift)
-    2. Generate each page with NanoBanana using face analysis + prompt
+    1. Analyze child's face using LLaVA-Next VLM
+    2. Generate each page with face analysis + scene prompt
     3. Sequential generation to avoid API concurrency limits
     4. Store results in cloud storage
     """
 
     def __init__(self, model_override: Optional[str] = None):
         """
-        Initialize NanoBanana pipeline.
+        Initialize photorealistic pipeline.
 
         Args:
-            model_override: Optional model override (defaults to nano_banana)
+            model_override: Optional model override
         """
         self.settings = get_settings()
         self.storage = StorageService()
 
-        # NanoBanana model configuration (from StoryGift)
+        # Model configuration
         self.model_id = "fal-ai/nano-banana/edit"
-        self.model_name = "nano_banana"
+        self.model_name = "photorealistic"
 
         logger.info(
-            "NanoBanana pipeline initialized",
+            "Photorealistic pipeline initialized",
             model_id=self.model_id,
             testing_mode=self.settings.testing_mode_enabled
         )
@@ -55,7 +55,6 @@ class NanoBananaPipeline:
         """
         Analyze child's face using LLaVA-Next VLM.
 
-        This replicates StoryGift's analyzeImage function (lines 118-138).
         Extracts detailed facial features for consistent generation.
 
         Args:
@@ -68,7 +67,6 @@ class NanoBananaPipeline:
             logger.info("Starting VLM face analysis", image_url=face_image_url)
             start_time = time.time()
 
-            # Use LLaVA-Next for face analysis (same as StoryGift)
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     "https://fal.run/fal-ai/llava-next",
@@ -78,7 +76,6 @@ class NanoBananaPipeline:
                     },
                     json={
                         "image_url": face_image_url,
-                        # CRITICAL: Exact prompt from StoryGift for consistent analysis
                         "prompt": "Describe the child's face, hair color, hair texture, eye color, nose shape, and body type in detail. Be precise about facial features to ensure resemblance. Do not describe the clothing or background. Example: 'a cute chubby toddler with round cheeks, button nose, curly brown hair and big expressive hazel eyes'.",
                         "max_tokens": 150
                     }
@@ -95,18 +92,18 @@ class NanoBananaPipeline:
                     analysis_length=len(analysis_result)
                 )
 
-                return analysis_result or "a cute child"  # Fallback
+                return analysis_result or "a cute child"
             else:
                 logger.error(
                     "VLM analysis failed",
                     status_code=response.status_code,
                     response=response.text
                 )
-                return "a cute child"  # Fallback
+                return "a cute child"
 
         except Exception as e:
             logger.error("VLM analysis error", error=str(e))
-            return "a cute child"  # Fallback
+            return "a cute child"
 
     async def generate_with_face_analysis(
         self,
@@ -114,17 +111,18 @@ class NanoBananaPipeline:
         face_url: str,
         child_name: str,
         analyzed_features: Optional[str] = None,
-        aspect_ratio: str = "5:4",  # Default for story pages, use "1:1" for covers
+        aspect_ratio: str = "5:4",
         seed: Optional[int] = None
     ) -> GenerationResult:
         """
-        Generate single image using NanoBanana with face analysis.
+        Generate single image with face analysis.
 
         Args:
             prompt: Scene description prompt
             face_url: Child's reference photo URL
             child_name: Child's name for prompt personalization
             analyzed_features: Pre-analyzed facial features (optional)
+            aspect_ratio: Image aspect ratio (default 5:4 for pages, 1:1 for covers)
             seed: Random seed for generation
 
         Returns:
@@ -133,27 +131,24 @@ class NanoBananaPipeline:
         start_time = time.time()
 
         try:
-            # Use pre-analyzed features or analyze now
             if not analyzed_features:
                 analyzed_features = await self.analyze_face(face_url)
 
-            # Build enhanced prompt with facial analysis (StoryGift approach)
             enhanced_prompt = self._build_enhanced_prompt(
                 prompt, child_name, analyzed_features
             )
 
             logger.info(
-                "Starting NanoBanana generation",
+                "Starting photorealistic generation",
                 prompt_length=len(enhanced_prompt),
                 child_name=child_name
             )
 
-            # NanoBanana API call with StoryGift configuration
             async with httpx.AsyncClient(timeout=60.0) as client:
                 payload = {
                     "prompt": enhanced_prompt,
-                    "image_urls": [face_url],  # NanoBanana uses image_urls array
-                    "aspect_ratio": aspect_ratio,  # 5:4 for pages, 1:1 for cover
+                    "image_urls": [face_url],
+                    "aspect_ratio": aspect_ratio,
                     "negative_prompt": "black bars, letterbox, scope, cinema bars, blurry, low quality, distorted face",
                 }
 
@@ -179,7 +174,7 @@ class NanoBananaPipeline:
                     latency = int((time.time() - start_time) * 1000)
 
                     logger.info(
-                        "NanoBanana generation successful",
+                        "Photorealistic generation successful",
                         latency_ms=latency,
                         image_url=image_url
                     )
@@ -189,7 +184,7 @@ class NanoBananaPipeline:
                         image_url=image_url,
                         latency_ms=latency,
                         model_used=self.model_name,
-                        cost=0.04,  # NanoBanana cost per image
+                        cost=0.04,
                         metadata={
                             "analyzed_features": analyzed_features,
                             "seed": seed,
@@ -199,12 +194,12 @@ class NanoBananaPipeline:
                 else:
                     return GenerationResult(
                         success=False,
-                        error_message="No images returned from NanoBanana",
+                        error_message="No images returned from generation",
                         latency_ms=int((time.time() - start_time) * 1000),
                         model_used=self.model_name
                     )
             else:
-                error_msg = f"NanoBanana API error: {response.status_code}"
+                error_msg = f"Generation API error: {response.status_code}"
                 logger.error(error_msg, response_text=response.text)
 
                 return GenerationResult(
@@ -215,7 +210,7 @@ class NanoBananaPipeline:
                 )
 
         except Exception as e:
-            error_msg = f"NanoBanana generation failed: {str(e)}"
+            error_msg = f"Photorealistic generation failed: {str(e)}"
             logger.error(error_msg, error=e)
 
             return GenerationResult(
@@ -234,7 +229,7 @@ class NanoBananaPipeline:
         testing_mode: bool = True
     ) -> Dict[str, Any]:
         """
-        Generate all story pages sequentially (StoryGift approach).
+        Generate all story pages sequentially.
 
         Args:
             story_pages: List of page data with prompts
@@ -253,32 +248,27 @@ class NanoBananaPipeline:
             preview_id=preview_id
         )
 
-        # Determine page count based on testing mode
         page_count = self.settings.testing_mode_pages if testing_mode else len(story_pages)
         pages_to_generate = story_pages[:page_count]
 
         logger.info(f"Generating {page_count} pages in {'testing' if testing_mode else 'production'} mode")
 
-        # Analyze face once for all generations (efficiency)
         analyzed_features = await self.analyze_face(face_url)
 
         successful_pages = []
         failed_pages = []
         total_cost = 0.0
 
-        # Sequential generation to avoid API limits (StoryGift approach)
         for i, page_data in enumerate(pages_to_generate):
             page_number = i + 1
             logger.info(f"Generating page {page_number}/{page_count}")
 
             try:
-                # Get prompt from page data
                 prompt = page_data.get("prompt", page_data.get("realistic_prompt", ""))
                 if not prompt:
                     logger.warning(f"No prompt found for page {page_number}")
                     continue
 
-                # Generate the page
                 result = await self.generate_with_face_analysis(
                     prompt=prompt,
                     face_url=face_url,
@@ -287,7 +277,6 @@ class NanoBananaPipeline:
                 )
 
                 if result.success:
-                    # Store in cloud storage
                     storage_path = f"final/{preview_id}/page_{page_number:02d}.jpg"
                     stored_url = await self.storage.store_from_url(
                         result.image_url, storage_path
@@ -339,17 +328,15 @@ class NanoBananaPipeline:
         analyzed_features: str
     ) -> str:
         """
-        Build enhanced prompt with facial analysis (StoryGift approach).
+        Build enhanced prompt with facial analysis.
 
-        This replicates StoryGift's prompt layering system:
+        Layers prompt structure:
         - Subject + Appearance
         - Scene Action
         - Style constraints
         """
-        # Replace {name} tokens with actual child name
         personalized_prompt = base_prompt.replace("{name}", child_name)
 
-        # Build layered prompt (StoryGift style)
         enhanced_prompt = f"""Subject: The child named {child_name}.
 Appearance: {analyzed_features}.
 

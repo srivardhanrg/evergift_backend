@@ -209,13 +209,17 @@ class StoryGiftPDFGeneratorService:
         story_title: str,
         child_name: str
     ):
-        """Draw the cover page with full-bleed image and premium title overlay.
+        """Draw premium cover page matching the Enchanted Forest sample style.
         
-        Cover image is now 1:1 aspect ratio matching the PDF page.
-        Uses smooth gradient overlays (no layering artifacts).
+        Premium features:
+        - Elegant serif font (Times-Roman) for title with letter spacing
+        - Subtle gradient overlays (no harsh black bars)
+        - Thin gold decorative line separator
+        - Letter-spaced "STARRING" label
+        - Clean, premium typography
         """
         try:
-            # Load and draw cover image to fill entire page (no border needed)
+            # Load and draw cover image to fill entire page
             img = Image.open(BytesIO(cover_image))
             img_reader = ImageReader(img)
             
@@ -225,7 +229,7 @@ class StoryGiftPDFGeneratorService:
                 0, 0,
                 width=PAGE_WIDTH,
                 height=PAGE_HEIGHT,
-                preserveAspectRatio=False  # Fill completely since aspect matches
+                preserveAspectRatio=False
             )
 
             # Extract display title (remove child name prefix)
@@ -236,127 +240,160 @@ class StoryGiftPDFGeneratorService:
                     rf"{re.escape(child_name)}'?s?\s*",
                     rf"{re.escape(child_name)}\s+and\s+the\s+",
                     r"^and\s+the\s+",
-                    r"^the\s+",
                 ]
                 for pattern in patterns:
                     display_title = re.sub(pattern, '', display_title, flags=re.IGNORECASE)
                 display_title = display_title.strip()
 
             # =========================================================
-            # TOP GRADIENT OVERLAY - Smooth multi-layer fade (matches CSS)
-            # CSS: bg-gradient-to-b from-black/70 via-black/40 to-transparent
+            # TOP GRADIENT OVERLAY - Subtle and smooth (no harsh bars)
+            # Much lighter than before to avoid "black bar" appearance
             # =========================================================
             c.saveState()
-
-            # Simulate smooth gradient with multiple thin stripes
-            # Total gradient height: ~1/3 of page height (matches preview UI h-1/3)
-            top_gradient_height = PAGE_HEIGHT / 3
-            num_layers = 20  # More layers = smoother gradient
+            
+            # Subtle gradient: only 25% of page height, lighter opacity
+            top_gradient_height = PAGE_HEIGHT * 0.25
+            num_layers = 15
             stripe_height = top_gradient_height / num_layers
-
+            
             for i in range(num_layers):
-                # Calculate alpha: 0.70 at top -> 0.40 at middle -> 0 at bottom
-                # Using quadratic easing for smoother visual transition
-                progress = i / num_layers  # 0 to 1
-                if progress < 0.5:
-                    # First half: 0.70 -> 0.40
-                    alpha = 0.70 - (0.30 * (progress * 2))
-                else:
-                    # Second half: 0.40 -> 0
-                    alpha = 0.40 * (1 - ((progress - 0.5) * 2))
-
+                # Start at 50% opacity and fade to transparent (gentler than before)
+                progress = i / num_layers
+                alpha = 0.50 * (1 - progress) ** 1.5  # Exponential falloff for smoother fade
+                
                 y_pos = PAGE_HEIGHT - (i + 1) * stripe_height
                 c.setFillColor(Color(0, 0, 0, alpha=alpha))
-                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)  # +1 to avoid gaps
-
+                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)
+            
             c.restoreState()
 
-            # Title text in AMBER-400 color: rgb(251, 191, 36) = #fbbf24
-            # Premium styling with drop shadow effect
+            # =========================================================
+            # TITLE TEXT - Premium serif font with letter spacing
+            # Matching the Enchanted Forest elegant style
+            # =========================================================
             c.saveState()
             
+            # Use Times-Bold for elegant serif look (built-in ReportLab font)
             title_upper = display_title.upper()
-            title_y = PAGE_HEIGHT - 1.0 * inch
+            title_y = PAGE_HEIGHT - 0.85 * inch
             
-            # Calculate font size (responsive to text length)
-            font_size = 48
-            c.setFont("Helvetica-Bold", font_size)
-            title_width = c.stringWidth(title_upper, "Helvetica-Bold", font_size)
+            # Calculate base font size
+            base_font_size = 52
+            c.setFont("Times-Bold", base_font_size)
             
-            if title_width > PAGE_WIDTH - 60:
-                font_size = 38
-                c.setFont("Helvetica-Bold", font_size)
-                title_width = c.stringWidth(title_upper, "Helvetica-Bold", font_size)
+            # Measure and adjust for long titles
+            title_width = c.stringWidth(title_upper, "Times-Bold", base_font_size)
+            if title_width > PAGE_WIDTH - 80:
+                base_font_size = 44
+            title_width = c.stringWidth(title_upper, "Times-Bold", base_font_size)
+            if title_width > PAGE_WIDTH - 80:
+                base_font_size = 36
             
-            if title_width > PAGE_WIDTH - 60:
-                font_size = 32
-                c.setFont("Helvetica-Bold", font_size)
-                title_width = c.stringWidth(title_upper, "Helvetica-Bold", font_size)
+            # Letter spacing effect (draw each character individually)
+            letter_spacing = 4  # pixels between letters
+            total_width = 0
             
-            title_x = (PAGE_WIDTH - title_width) / 2
+            for char in title_upper:
+                total_width += c.stringWidth(char, "Times-Bold", base_font_size) + letter_spacing
+            total_width -= letter_spacing  # Remove last spacing
             
-            # Draw drop shadow for depth (slight offset)
-            c.setFillColor(Color(0, 0, 0, alpha=0.6))
-            c.drawString(title_x + 2, title_y - 2, title_upper)
-            
-            # Draw main title in amber
-            c.setFillColor(Color(251/255, 191/255, 36/255))  # Amber-400
-            c.drawString(title_x, title_y, title_upper)
-            
-            c.restoreState()
+            # Check if we need to split into two lines
+            if total_width > PAGE_WIDTH - 60:
+                # Split title into two lines at natural break point
+                words = title_upper.split()
+                if len(words) >= 2:
+                    mid = len(words) // 2
+                    line1 = " ".join(words[:mid])
+                    line2 = " ".join(words[mid:])
+                    
+                    # Draw line 1
 
-            # =========================================================
-            # BOTTOM GRADIENT OVERLAY - Smooth multi-layer fade (matches CSS)
-            # CSS: bg-gradient-to-t from-black/80 via-black/50 to-transparent
-            # =========================================================
-            c.saveState()
-
-            # Total gradient height: ~1/4 of page height (matches preview UI h-1/4)
-            bottom_gradient_height = PAGE_HEIGHT / 4
-            num_layers = 16  # Smooth gradient layers
-            stripe_height = bottom_gradient_height / num_layers
-
-            for i in range(num_layers):
-                # Calculate alpha: 0.80 at bottom -> 0.50 at middle -> 0 at top
-                # Layer 0 is at bottom (highest opacity), layer n is at top (transparent)
-                progress = i / num_layers  # 0 to 1 (bottom to top)
-                if progress < 0.5:
-                    # First half (bottom): 0.80 -> 0.50
-                    alpha = 0.80 - (0.30 * (progress * 2))
+                    self._draw_letter_spaced_text(c, line1, "Times-Bold", base_font_size, 
+                                                  title_y + 35, letter_spacing,
+                                                  Color(218/255, 165/255, 32/255))  # Golden color
+                    # Draw line 2
+                    self._draw_letter_spaced_text(c, line2, "Times-Bold", base_font_size,
+                                                  title_y - 10, letter_spacing,
+                                                  Color(218/255, 165/255, 32/255))
                 else:
-                    # Second half (top): 0.50 -> 0
-                    alpha = 0.50 * (1 - ((progress - 0.5) * 2))
-
-                y_pos = i * stripe_height  # Start from bottom
-                c.setFillColor(Color(0, 0, 0, alpha=alpha))
-                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)  # +1 to avoid gaps
-
+                    # Single word, just draw it
+                    self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
+                                                  title_y, letter_spacing,
+                                                  Color(218/255, 165/255, 32/255))
+            else:
+                # Single line title
+                self._draw_letter_spaced_text(c, title_upper, "Times-Bold", base_font_size,
+                                              title_y, letter_spacing,
+                                              Color(218/255, 165/255, 32/255))
+            
             c.restoreState()
 
-            # "STARRING" label in light gray
+            # =========================================================
+            # BOTTOM GRADIENT OVERLAY - Subtle fade for text readability
+            # =========================================================
             c.saveState()
-            c.setFillColor(Color(0.85, 0.85, 0.85))
-            c.setFont("Helvetica", 13)
-            starring_text = "STARRING"
-            starring_width = c.stringWidth(starring_text, "Helvetica", 13)
-            c.drawString((PAGE_WIDTH - starring_width) / 2, 0.75 * inch, starring_text)
+            
+            bottom_gradient_height = PAGE_HEIGHT * 0.20
+            num_layers = 12
+            stripe_height = bottom_gradient_height / num_layers
+            
+            for i in range(num_layers):
+                # Fade from bottom (0.6 opacity) to transparent
+                progress = i / num_layers
+                alpha = 0.60 * (1 - progress) ** 1.5
+                
+                y_pos = i * stripe_height
+                c.setFillColor(Color(0, 0, 0, alpha=alpha))
+                c.rect(0, y_pos, PAGE_WIDTH, stripe_height + 1, fill=1, stroke=0)
+            
             c.restoreState()
 
-            # Child name in WHITE with drop shadow
+            # =========================================================
+            # THIN GOLD DECORATIVE LINE - Premium separator
+            # =========================================================
+            c.saveState()
+            c.setStrokeColor(Color(218/255, 165/255, 32/255, alpha=0.7))  # Golden, slightly transparent
+            c.setLineWidth(1)
+            line_y = 1.0 * inch
+            line_width = 2.5 * inch
+            c.line((PAGE_WIDTH - line_width) / 2, line_y, (PAGE_WIDTH + line_width) / 2, line_y)
+            c.restoreState()
+
+            # =========================================================
+            # "STARRING" LABEL - Letter-spaced, elegant
+            # =========================================================
+            c.saveState()
+            starring_text = "STARRING"
+            starring_size = 11
+            starring_spacing = 6  # Wide letter spacing for premium feel
+            starring_y = 0.75 * inch
+            
+            self._draw_letter_spaced_text(c, starring_text, "Helvetica", starring_size,
+                                          starring_y, starring_spacing,
+                                          Color(0.75, 0.75, 0.75))  # Light gray
+            c.restoreState()
+
+            # =========================================================
+            # CHILD NAME - Premium serif, white with subtle shadow
+            # =========================================================
             c.saveState()
             name_upper = child_name.upper()
-            c.setFont("Helvetica-Bold", 32)
-            name_width = c.stringWidth(name_upper, "Helvetica-Bold", 32)
-            name_x = (PAGE_WIDTH - name_width) / 2
-            name_y = 0.30 * inch
+            name_font_size = 30
+            name_y = 0.35 * inch
+            name_spacing = 3
             
-            # Drop shadow
-            c.setFillColor(Color(0, 0, 0, alpha=0.5))
-            c.drawString(name_x + 1.5, name_y - 1.5, name_upper)
+            # Calculate width for centering
+            c.setFont("Times-Bold", name_font_size)
             
-            # Main text
-            c.setFillColor(white)
-            c.drawString(name_x, name_y, name_upper)
+            # Draw subtle shadow first
+            self._draw_letter_spaced_text(c, name_upper, "Times-Bold", name_font_size,
+                                          name_y - 1, name_spacing,
+                                          Color(0, 0, 0, alpha=0.4), shadow_offset=1.5)
+            
+            # Draw main name in white
+            self._draw_letter_spaced_text(c, name_upper, "Times-Bold", name_font_size,
+                                          name_y, name_spacing,
+                                          white)
             c.restoreState()
 
         except Exception as e:
@@ -365,8 +402,39 @@ class StoryGiftPDFGeneratorService:
             c.setFillColor(Color(0.4, 0.2, 0.6))
             c.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1)
             c.setFillColor(white)
-            c.setFont("Helvetica-Bold", 48)
+            c.setFont("Times-Bold", 48)
             c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2, story_title)
+
+    def _draw_letter_spaced_text(
+        self,
+        c: canvas.Canvas,
+        text: str,
+        font_name: str,
+        font_size: float,
+        y_pos: float,
+        letter_spacing: float,
+        color: Color,
+        shadow_offset: float = 0
+    ):
+        """Draw text with letter spacing, centered on page."""
+        c.setFont(font_name, font_size)
+        
+        # Calculate total width with spacing
+        total_width = 0
+        for char in text:
+            total_width += c.stringWidth(char, font_name, font_size) + letter_spacing
+        total_width -= letter_spacing  # Remove last spacing
+        
+        # Start position for centering
+        x_pos = (PAGE_WIDTH - total_width) / 2 + shadow_offset
+        
+        c.setFillColor(color)
+        
+        # Draw each character
+        for char in text:
+            char_width = c.stringWidth(char, font_name, font_size)
+            c.drawString(x_pos, y_pos, char)
+            x_pos += char_width + letter_spacing
 
     def _draw_story_page(
         self,

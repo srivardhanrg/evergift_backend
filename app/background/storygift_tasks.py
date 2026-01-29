@@ -1,8 +1,8 @@
 """
 StoryGift-style background tasks for image generation and PDF creation.
 
-Updated to use:
-- NanoBanana pipeline with VLM face analysis
+Using:
+- Photorealistic pipeline with VLM face analysis
 - Configurable page generation (5 testing / 10 production)
 - StoryGift magic castle theme
 - Superior PDF generation
@@ -106,12 +106,12 @@ async def generate_storygift_preview(
     child_age: int,
     child_gender: str,
     theme: str,
-    style: str = "photorealistic"  # NEW: art style with backward-compatible default
+    style: str = "photorealistic"  # Art style (photorealistic or cartoon_3d)
 ):
     """
     Generate StoryGift-style preview with configurable page count.
 
-    Uses NanoBanana pipeline with VLM face analysis.
+    Uses photorealistic pipeline with VLM face analysis.
     Supports testing mode (5 pages) vs production mode (10 pages).
     """
     try:
@@ -271,15 +271,15 @@ async def generate_storygift_preview(
                     get_progress_message(f"page_{page_num}", page_num)
                 )
 
-                # Get prompt for this page (use realistic_prompt for NanoBanana)
+                # Get prompt for this page
                 prompt = page_template.realistic_prompt or page_template.artistic_prompt or ""
 
                 if not prompt:
                     logger.warning(f"No prompt found for page {page_num}, skipping")
                     continue
 
-                # Generate image with NanoBanana
-                logger.info(f"Generating page {page_num} with NanoBanana")
+                # Generate image with photorealistic pipeline
+                logger.info(f"Generating page {page_num} with photorealistic pipeline")
 
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,

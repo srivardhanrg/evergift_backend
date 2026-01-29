@@ -218,7 +218,7 @@ class FaceValidationService:
                     error_message="Unable to process face data. Please try again."
                 )
 
-            if face_area < 0.1:
+            if face_area < 0.15:
                 logger.warning(f"Face too small: {face_area:.2%} of image")
                 return FaceValidationResult(
                     is_valid=False,
@@ -273,7 +273,7 @@ class FaceValidationService:
                 details={"error": str(e)}
             )
 
-    def _is_blurry(self, image: np.ndarray, threshold: float = 100.0) -> bool:
+    def _is_blurry(self, image: np.ndarray, threshold: float = 70.0) -> bool:
         """
         Check if image is too blurry using Laplacian variance.
 
