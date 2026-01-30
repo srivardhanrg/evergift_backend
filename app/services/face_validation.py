@@ -273,7 +273,7 @@ class FaceValidationService:
                 details={"error": str(e)}
             )
 
-    def _is_blurry(self, image: np.ndarray, threshold: float = 70.0) -> bool:
+    def _is_blurry(self, image: np.ndarray, threshold: float = 25.0) -> bool:
         """
         Check if image is too blurry using Laplacian variance.
 
