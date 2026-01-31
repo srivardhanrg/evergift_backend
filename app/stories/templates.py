@@ -23,7 +23,7 @@ class PageTemplate:
 # Base cover prompt template with zone-based composition for typography
 # Optimized for consistent photorealistic face rendering
 COVER_PROMPT_TEMPLATE = """
-A high-quality DSLR photograph of a real child in a fantasy setting. 
+A high-quality DSLR photograph of a real child in a fantasy setting.
 Professional portrait photography with natural lighting. RAW photo quality.
 
 COMPOSITION (STRICT):
@@ -33,10 +33,11 @@ TOP ZONE (Upper 20%):
 - Empty space for typography - no characters or objects here
 
 MAIN SUBJECT (Center 65%):
-- A real human child named {name} stands confidently in the center
+- A {age}-year-old {gender} named {name} stands confidently in the center
 - Position the child's face in the center of the frame, fully visible
 - CRITICAL FACE REQUIREMENTS:
   * Real human child photographed with a DSLR camera
+  * Age-appropriate facial features for a {age}-year-old {gender}
   * Natural skin with pores and texture visible
   * Realistic eyes with natural light reflections
   * No CGI, no 3D rendering, no illustration style
@@ -53,7 +54,7 @@ PHOTOGRAPHY STYLE:
 - Shot on Canon EOS R5 with 85mm portrait lens
 - Natural golden hour lighting
 - Shallow depth of field (f/2.8)
-- The child looks REAL and PHOTOGRAPHED, not illustrated
+- The {age}-year-old {gender} looks REAL and PHOTOGRAPHED, not illustrated
 - Fantasy elements in background only, child remains photographic
 
 ABSOLUTE RULES:
@@ -61,8 +62,9 @@ ABSOLUTE RULES:
 - Face must be photorealistic - like an actual photograph
 - NO cartoon, anime, or illustrated style on the child
 - Child's skin must have natural human texture
+- Render age-appropriate proportions and features
 
-Professional portrait photograph of a child in fantasy scenery.
+Professional portrait photograph of a {age}-year-old child in fantasy scenery.
 """
 
 # =============================================================================
@@ -82,9 +84,10 @@ TOP ZONE (Upper 20%):
 - Painted atmospheric effects (clouds, magic, light rays)
 
 MAIN SUBJECT (Center 65%):
-- A child hero named {name} in a dynamic, confident pose
+- A {age}-year-old {gender} hero named {name} in a dynamic, confident pose
 - Position the child's face prominently in the center, fully visible
 - CRITICAL FACE REQUIREMENTS:
+  * Age-appropriate facial features and proportions for a {age}-year-old {gender}
   * Hyper-realistic skin texture with visible pores and natural imperfections
   * Subsurface scattering for warm, lifelike skin tones
   * Ultra-detailed eyes with iris depth, reflections, and life
@@ -110,10 +113,11 @@ ARTISTIC STYLE:
 ABSOLUTE RULES:
 - NO text, letters, or watermarks
 - Face must have realistic skin texture - parents must recognize their child
+- Render {age}-year-old {gender} with age-appropriate features
 - NO cheap CG look, NO mobile game art, NO generic 3D render
 - Must look like a $500 commissioned artwork
 
-Premium children's book cover illustration with cinematic lighting.
+Premium children's book cover illustration with cinematic lighting for a {age}-year-old child.
 """
 
 
@@ -138,15 +142,17 @@ class StoryTemplate:
         """Get formatted title for this story."""
         return self.title_template.format(name=child_name)
     
-    def get_cover_prompt(self, child_name: str, style: str = "photorealistic") -> str:
+    def get_cover_prompt(self, child_name: str, child_age: int, child_gender: str, style: str = "photorealistic") -> str:
         """
         Get formatted cover page prompt with zone-based composition.
-        
+
         Args:
             child_name: Child's name for personalization
+            child_age: Child's age for age-appropriate features
+            child_gender: Child's gender ('male' or 'female')
             style: Art style - 'photorealistic' (default) or 'cartoon3d'/'animated'
                    Uses different prompt templates for visual consistency
-        
+
         Returns:
             Formatted cover prompt matching the selected art style
         """
@@ -155,9 +161,14 @@ class StoryTemplate:
             template = CINEMATIC_COVER_PROMPT_TEMPLATE
         else:
             template = COVER_PROMPT_TEMPLATE
-        
+
+        # Convert gender to boy/girl for prompt
+        gender_word = "boy" if child_gender.lower() == "male" else "girl"
+
         return template.format(
             name=child_name,
+            age=child_age,
+            gender=gender_word,
             header_atmosphere=self.cover_header_atmosphere or "Dark or softly glowing magical sky, forest canopy, or mist",
             costume=self.cover_costume or self.default_costume,
             magical_elements=self.cover_magical_elements or "Magical sparkles and particles surround the body, but NOT the face",

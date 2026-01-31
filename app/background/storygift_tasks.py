@@ -183,13 +183,15 @@ async def generate_storygift_preview(
 
         cover_url = None
         try:
-            # Get cover prompt from template (using sanitized name and matching style)
+            # Get cover prompt from template (using sanitized name, age, gender and matching style)
             # This ensures cover and pages use consistent artistic styling
-            cover_prompt = template.get_cover_prompt(safe_child_name, style=style)
+            cover_prompt = template.get_cover_prompt(safe_child_name, child_age, child_gender, style=style)
             logger.info(
                 "Generating cover image with face-preserving pipeline",
                 preview_id=preview_id,
                 style=style,
+                child_age=child_age,
+                child_gender=child_gender,
                 prompt_length=len(cover_prompt),
                 prompt_preview=cover_prompt[:200]  # First 200 chars for debugging
             )
@@ -200,6 +202,8 @@ async def generate_storygift_preview(
                 prompt=cover_prompt,
                 face_url=photo_url,
                 child_name=safe_child_name,
+                child_age=child_age,
+                child_gender=child_gender,
                 analyzed_features=analyzed_features,
                 aspect_ratio="1:1"  # Cover is square for PDF, story pages use 5:4
             )
@@ -278,13 +282,15 @@ async def generate_storygift_preview(
                     logger.warning(f"No prompt found for page {page_num}, skipping")
                     continue
 
-                # Generate image with photorealistic pipeline
-                logger.info(f"Generating page {page_num} with photorealistic pipeline")
+                # Generate image with pipeline (photorealistic or cartoon3d)
+                logger.info(f"Generating page {page_num} with {style} pipeline", child_age=child_age, child_gender=child_gender)
 
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,
                     face_url=photo_url,
                     child_name=safe_child_name,
+                    child_age=child_age,
+                    child_gender=child_gender,
                     analyzed_features=analyzed_features
                 )
 
@@ -537,6 +543,8 @@ async def generate_remaining_pages_and_pdf(
             photo_url = preview_data.get("photo_url")
             theme = preview_data.get("theme", "storygift_enchanted_forest")
             style = preview_data.get("style", "photorealistic")
+            child_age = preview_data.get("child_age", 5)
+            child_gender = preview_data.get("child_gender", "male")
             
             if not existing_hires or not existing_story_pages:
                 raise StorageError(f"No preview pages found for: {preview_id}")
@@ -585,13 +593,15 @@ async def generate_remaining_pages_and_pdf(
                             logger.warning(f"No prompt found for page {page_num}, skipping")
                             continue
                         
-                        logger.info(f"Generating page {page_num} (post-payment)")
-                        
+                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender)
+
                         # Generate using stored analyzed_features for consistency
                         result = await pipeline.generate_with_face_analysis(
                             prompt=prompt,
                             face_url=photo_url,
                             child_name=safe_child_name,
+                            child_age=child_age,
+                            child_gender=child_gender,
                             analyzed_features=analyzed_features
                         )
 

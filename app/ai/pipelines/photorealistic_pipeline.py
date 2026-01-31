@@ -110,6 +110,8 @@ class PhotorealisticPipeline:
         prompt: str,
         face_url: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         analyzed_features: Optional[str] = None,
         aspect_ratio: str = "5:4",
         seed: Optional[int] = None
@@ -121,6 +123,8 @@ class PhotorealisticPipeline:
             prompt: Scene description prompt
             face_url: Child's reference photo URL
             child_name: Child's name for prompt personalization
+            child_age: Child's age for age-appropriate features
+            child_gender: Child's gender ('male' or 'female')
             analyzed_features: Pre-analyzed facial features (optional)
             aspect_ratio: Image aspect ratio (default 5:4 for pages, 1:1 for covers)
             seed: Random seed for generation
@@ -135,7 +139,7 @@ class PhotorealisticPipeline:
                 analyzed_features = await self.analyze_face(face_url)
 
             enhanced_prompt = self._build_enhanced_prompt(
-                prompt, child_name, analyzed_features
+                prompt, child_name, child_age, child_gender, analyzed_features
             )
 
             logger.info(
@@ -225,6 +229,8 @@ class PhotorealisticPipeline:
         story_pages: List[Dict[str, Any]],
         face_url: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         preview_id: str,
         testing_mode: bool = True
     ) -> Dict[str, Any]:
@@ -235,6 +241,8 @@ class PhotorealisticPipeline:
             story_pages: List of page data with prompts
             face_url: Child's reference photo URL
             child_name: Child's name
+            child_age: Child's age
+            child_gender: Child's gender ('male' or 'female')
             preview_id: Preview ID for storage paths
             testing_mode: If True, generate only 5 pages, else 10 pages
 
@@ -273,6 +281,8 @@ class PhotorealisticPipeline:
                     prompt=prompt,
                     face_url=face_url,
                     child_name=child_name,
+                    child_age=child_age,
+                    child_gender=child_gender,
                     analyzed_features=analyzed_features
                 )
 
@@ -325,20 +335,26 @@ class PhotorealisticPipeline:
         self,
         base_prompt: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         analyzed_features: str
     ) -> str:
         """
-        Build enhanced prompt with facial analysis.
+        Build enhanced prompt with facial analysis, age, and gender.
 
         Layers prompt structure:
-        - Subject + Appearance
+        - Subject + Age + Gender + Appearance
         - Scene Action
         - Style constraints
         """
         personalized_prompt = base_prompt.replace("{name}", child_name)
 
-        enhanced_prompt = f"""Subject: The child named {child_name}.
+        # Convert gender to boy/girl for natural language
+        gender_word = "boy" if child_gender.lower() == "male" else "girl"
+
+        enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}.
 Appearance: {analyzed_features}.
+Age-specific features: Render with age-appropriate facial proportions and features for a {child_age}-year-old {gender_word}.
 
 Scene Action: {personalized_prompt}.
 
@@ -346,6 +362,6 @@ Environment: Masterpiece, 8k resolution, photorealistic, intricate details, shar
 
 Style: an award-winning cinematic photograph, hyper-realistic, highly detailed skin texture, 8k resolution, deep depth of field, sharp background, soft natural lighting, shot on 35mm film.
 
-Constraint: identical character face, consistent clothing, perfect face integration."""
+Constraint: identical character face, consistent clothing, perfect face integration, age-appropriate proportions."""
 
         return enhanced_prompt

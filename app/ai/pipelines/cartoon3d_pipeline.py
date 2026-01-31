@@ -209,6 +209,8 @@ class Cartoon3DPipeline:
         prompt: str,
         face_url: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         analyzed_features: Optional[str] = None,
         aspect_ratio: str = "5:4",  # Default for story pages, use "1:1" for covers
         seed: Optional[int] = None
@@ -220,6 +222,8 @@ class Cartoon3DPipeline:
             prompt: Scene description prompt
             face_url: Child's reference photo URL
             child_name: Child's name for prompt personalization
+            child_age: Child's age for age-appropriate features
+            child_gender: Child's gender ('male' or 'female')
             analyzed_features: Pre-analyzed facial features (optional)
             seed: Random seed for generation
 
@@ -235,7 +239,7 @@ class Cartoon3DPipeline:
 
             # Build enhanced prompt with cartoon styling
             enhanced_prompt = self._build_cartoon_prompt(
-                prompt, child_name, analyzed_features
+                prompt, child_name, child_age, child_gender, analyzed_features
             )
 
             logger.info(
@@ -331,6 +335,8 @@ class Cartoon3DPipeline:
         story_pages: List[Dict[str, Any]],
         face_url: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         preview_id: str,
         testing_mode: bool = True
     ) -> Dict[str, Any]:
@@ -341,6 +347,8 @@ class Cartoon3DPipeline:
             story_pages: List of page data with prompts
             face_url: Child's reference photo URL
             child_name: Child's name
+            child_age: Child's age
+            child_gender: Child's gender ('male' or 'female')
             preview_id: Preview ID for storage paths
             testing_mode: If True, generate only 5 pages, else 10 pages
 
@@ -378,6 +386,8 @@ class Cartoon3DPipeline:
                     prompt=prompt,
                     face_url=face_url,
                     child_name=child_name,
+                    child_age=child_age,
+                    child_gender=child_gender,
                     analyzed_features=analyzed_features
                 )
 
@@ -430,16 +440,21 @@ class Cartoon3DPipeline:
         self,
         base_prompt: str,
         child_name: str,
+        child_age: int,
+        child_gender: str,
         analyzed_features: str
     ) -> str:
         """
-        Builds prompt with cinematic painting style instructions.
-        
+        Builds prompt with cinematic painting style instructions, including age and gender.
+
         This creates a unified visual language for both cover and story pages,
         ensuring consistency across the entire book.
         """
         # Replace {name} tokens with actual child name
         personalized_prompt = base_prompt.replace("{name}", child_name)
+
+        # Convert gender to boy/girl for natural language
+        gender_word = "boy" if child_gender.lower() == "male" else "girl"
 
         # Build enhanced prompt with cinematic painting style
         # The styling instructions wrap the scene to ensure consistent output
@@ -447,7 +462,8 @@ class Cartoon3DPipeline:
 
 SCENE: {personalized_prompt}
 
-CHILD CHARACTER: {child_name}
+CHILD CHARACTER: {child_name}, a {child_age}-year-old {gender_word}
+AGE & GENDER: Render with age-appropriate facial proportions and features for a {child_age}-year-old {gender_word}
 FACIAL REFERENCE: {analyzed_features}
 
 [SKIN & FACE RENDERING - CRITICAL]
@@ -456,10 +472,11 @@ FACIAL REFERENCE: {analyzed_features}
 - Use Subsurface Scattering (SSS) for warm, luminous, lifelike skin
 - Eyes must be ultra-detailed with iris depth, reflections, and life
 - Rosy cheeks, natural skin color variations
+- Age-appropriate facial proportions for {child_age}-year-old {gender_word}
 
 {CINEMATIC_PAINTING_STYLE.strip()}
 
 FINAL OUTPUT: A premium cinematic digital painting worthy of a $500 commissioned artwork.
-The child should be immediately recognizable to their parents."""
+The {child_age}-year-old {gender_word} should be immediately recognizable to their parents."""
 
         return enhanced_prompt
