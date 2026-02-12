@@ -156,9 +156,11 @@ class FaceValidationService:
 
         Requirements:
         - Exactly 1 face detected
-        - Face size > 10% of image area
-        - Face is relatively front-facing
+        - Face is relatively front-facing (confidence > 70%)
         - Image is not too blurry
+
+        Note: Face size validation removed to accept all portrait photos.
+        AI models handle various face sizes effectively.
 
         Args:
             image_bytes: Image file content
@@ -209,6 +211,7 @@ class FaceValidationService:
 
             try:
                 face_area, confidence_score = self._extract_face_properties(detection, rgb_image)
+                logger.info(f"Face detected - Area: {face_area:.2%}, Confidence: {confidence_score:.2f}")
             except Exception as e:
                 logger.error(f"Failed to extract face properties: {e}")
                 return FaceValidationResult(
@@ -218,17 +221,8 @@ class FaceValidationService:
                     error_message="Unable to process face data. Please try again."
                 )
 
-            if face_area < 0.15:
-                logger.warning(f"Face too small: {face_area:.2%} of image")
-                return FaceValidationResult(
-                    is_valid=False,
-                    face_count=1,
-                    error_code="face_too_small",
-                    error_message="Face is too small. Please take a closer photo of your child's face."
-                )
-
-            # Check if face is reasonably centered and front-facing
-            # (MediaPipe detection score already handles this to some extent)
+            # Check if face is reasonably front-facing and clear
+            # (MediaPipe detection score handles face quality and orientation)
             if confidence_score < 0.7:
                 logger.warning(f"Face detection confidence too low: {confidence_score:.2f}")
                 return FaceValidationResult(

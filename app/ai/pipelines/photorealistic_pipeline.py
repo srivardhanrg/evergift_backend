@@ -76,8 +76,8 @@ class PhotorealisticPipeline:
                     },
                     json={
                         "image_url": face_image_url,
-                        "prompt": "Describe the child's face, hair color, hair texture, eye color, nose shape, and body type in detail. Be precise about facial features to ensure resemblance. Do not describe the clothing or background. Example: 'a cute chubby toddler with round cheeks, button nose, curly brown hair and big expressive hazel eyes'.",
-                        "max_tokens": 150
+                        "prompt": "Describe the child's face in precise detail: EXACT skin tone (light/medium/dark/very dark brown, or pale/beige/tan/olive), facial structure, hair color and texture (straight/wavy/curly/kinky), eye color and shape, nose shape, cheek fullness, and any distinctive features like bindi, moles, or facial marks. Be very specific about skin tone - describe it accurately using brown/tan/beige/olive/pale descriptors. Include ethnic features if visible (South Asian, East Asian, African, etc.). Do not describe clothing or background. Example: 'a young child with medium-dark brown South Asian skin tone, round full cheeks, small nose, curly dark brown hair, large expressive dark eyes, and a bindi on the forehead'.",
+                        "max_tokens": 200
                     }
                 )
 
@@ -261,7 +261,15 @@ class PhotorealisticPipeline:
 
         logger.info(f"Generating {page_count} pages in {'testing' if testing_mode else 'production'} mode")
 
-        analyzed_features = await self.analyze_face(face_url)
+        # ============================================================
+        # VLM ANALYSIS - COMMENTED OUT FOR TESTING
+        # To re-enable: uncomment the line below and comment out the fallback
+        # ============================================================
+        # analyzed_features = await self.analyze_face(face_url)
+        # ============================================================
+        # FALLBACK - Using simplified identity anchor (face image is source of truth)
+        analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
+        # ============================================================
 
         successful_pages = []
         failed_pages = []
@@ -354,6 +362,7 @@ class PhotorealisticPipeline:
 
         enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}.
 Appearance: {analyzed_features}.
+CRITICAL SKIN TONE: Accurately render the child's EXACT skin tone as described above - do not lighten, darken, or change skin color regardless of lighting conditions (golden light, moonlight, magical glow, etc.). Preserve authentic skin tone and ethnic features even in bright, dramatic, or colored lighting. The lighting should enhance features without altering natural complexion.
 Age-specific features: Render with age-appropriate facial proportions and features for a {child_age}-year-old {gender_word}.
 
 Scene Action: {personalized_prompt}.
@@ -362,6 +371,6 @@ Environment: Masterpiece, 8k resolution, photorealistic, intricate details, shar
 
 Style: an award-winning cinematic photograph, hyper-realistic, highly detailed skin texture, 8k resolution, deep depth of field, sharp background, soft natural lighting, shot on 35mm film.
 
-Constraint: identical character face, consistent clothing, perfect face integration, age-appropriate proportions."""
+Constraint: identical character face, consistent clothing, perfect face integration, age-appropriate proportions, authentic skin tone preservation."""
 
         return enhanced_prompt

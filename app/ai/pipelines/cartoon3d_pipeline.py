@@ -233,9 +233,18 @@ class Cartoon3DPipeline:
         start_time = time.time()
 
         try:
-            # Use pre-analyzed features or analyze now
+            # ============================================================
+            # VLM ANALYSIS - COMMENTED OUT FOR TESTING
+            # To re-enable: uncomment the lines below and comment out the fallback
+            # ============================================================
+            # # Use pre-analyzed features or analyze now
+            # if not analyzed_features:
+            #     analyzed_features = await self.analyze_face(face_url)
+            # ============================================================
+            # FALLBACK - Using simplified identity anchor (face image is source of truth)
             if not analyzed_features:
-                analyzed_features = await self.analyze_face(face_url)
+                analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
+            # ============================================================
 
             # Build enhanced prompt with cartoon styling
             enhanced_prompt = self._build_cartoon_prompt(
@@ -365,8 +374,16 @@ class Cartoon3DPipeline:
         page_count = self.settings.testing_mode_pages if testing_mode else len(story_pages)
         pages_to_generate = story_pages[:page_count]
 
-        # Analyze face once for all generations
-        analyzed_features = await self.analyze_face(face_url)
+        # ============================================================
+        # VLM ANALYSIS - COMMENTED OUT FOR TESTING
+        # To re-enable: uncomment the line below and comment out the fallback
+        # ============================================================
+        # # Analyze face once for all generations
+        # analyzed_features = await self.analyze_face(face_url)
+        # ============================================================
+        # FALLBACK - Using simplified identity anchor (face image is source of truth)
+        analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
+        # ============================================================
 
         successful_pages = []
         failed_pages = []
