@@ -634,11 +634,10 @@ async def generate_remaining_pages_and_pdf(
                         logger.error(f"Error generating page {page_num}", error=str(e))
                         raise
                 
-                # Update preview with all 10 pages
+                # Update preview with all 10 pages (keep generation_phase as generating_full until PDF is ready)
                 db.table("previews").update({
                     "hires_images": hires_images,
                     "story_pages": story_pages,
-                    "generation_phase": "complete",
                     "preview_page_count": len(story_pages)
                 }).eq("preview_id", preview_id).execute()
             
@@ -673,10 +672,13 @@ async def generate_remaining_pages_and_pdf(
                 cover_image_url=cover_url
             )
             
-            # Update preview with PDF URL
+            # Update preview with PDF URL and mark generation as complete
+            # NOTE: generation_phase is set to "complete" HERE (after PDF upload) to ensure
+            # the download endpoint only returns "ready" when PDF is actually available
             db.table("previews").update({
                 "pdf_url": pdf_url,
-                "status": PreviewStatus.PURCHASED.value
+                "status": PreviewStatus.PURCHASED.value,
+                "generation_phase": "complete"
             }).eq("preview_id", preview_id).execute()
             
             # Update order as completed

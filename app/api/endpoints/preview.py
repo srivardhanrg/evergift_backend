@@ -485,8 +485,10 @@ async def get_preview(preview_id: str):
                 is_cover=True  # Flag this as cover page
             ))
         
-        # For paid users with complete generation: show ALL 10 hi-res pages
-        if is_purchased and generation_phase == 'complete' and preview.get("hires_images"):
+        # For paid users with generation in progress or complete: show ALL available hi-res pages
+        # NOTE: generation_phase is 'generating_full' during page generation and PDF creation,
+        # and becomes 'complete' only after PDF is uploaded to R2
+        if is_purchased and generation_phase in ('generating_full', 'complete') and preview.get("hires_images"):
             for img_data in preview["hires_images"]:
                 story_page = next(
                     (sp for sp in preview["story_pages"] if sp["page"] == img_data["page"]),
