@@ -634,67 +634,83 @@ async def generate_remaining_pages_and_pdf(
                         logger.error(f"Error generating page {page_num}", error=str(e))
                         raise
                 
-                # Update preview with all 10 pages (keep generation_phase as generating_full until PDF is ready)
+                # Update preview with all 10 pages and mark as pages_complete
+                # This intermediate phase lets the frontend know all images are done,
+                # even if PDF creation fails later
                 db.table("previews").update({
                     "hires_images": hires_images,
                     "story_pages": story_pages,
-                    "preview_page_count": len(story_pages)
+                    "preview_page_count": len(story_pages),
+                    "generation_phase": "pages_complete"
                 }).eq("preview_id", preview_id).execute()
             
             # ============================================
             # Now generate full 10-page PDF
+            # Wrapped in its own try/except so page generation
+            # isn't retried if only PDF creation fails
             # ============================================
-            logger.info("Generating full 10-page PDF", preview_id=preview_id)
-            
-            # Reload data to get all 10 pages
-            preview_result = db.table("previews").select("*").eq("preview_id", preview_id).execute()
-            preview_data = preview_result.data[0]
-            all_hires = preview_data.get("hires_images", [])
-            all_story_pages = preview_data.get("story_pages", [])
-            
-            pdf_generator = StoryGiftPDFGeneratorService()
+            try:
+                logger.info("Generating full 10-page PDF", preview_id=preview_id)
+                
+                # Reload data to get all 10 pages
+                preview_result = db.table("previews").select("*").eq("preview_id", preview_id).execute()
+                preview_data = preview_result.data[0]
+                all_hires = preview_data.get("hires_images", [])
+                all_story_pages = preview_data.get("story_pages", [])
+                
+                pdf_generator = StoryGiftPDFGeneratorService()
 
-            # Get story title from theme (using sanitized name)
-            template = get_theme(theme)
-            story_title = template.get_title(safe_child_name) if hasattr(template, 'get_title') else f"{safe_child_name}'s Adventure"
-            
-            # Use dedicated cover_url if available, otherwise fallback to first page
-            cover_url = preview_data.get("cover_url")
-            if not cover_url and all_hires and isinstance(all_hires[0], dict):
-                cover_url = all_hires[0]["url"]
-                logger.info("No dedicated cover found, using first page as cover")
-            
-            pdf_url = await pdf_generator.generate_storygift_pdf(
-                preview_id=preview_id,
-                child_name=safe_child_name,
-                story_pages=all_story_pages,
-                story_title=story_title,
-                cover_image_url=cover_url
-            )
-            
-            # Update preview with PDF URL and mark generation as complete
-            # NOTE: generation_phase is set to "complete" HERE (after PDF upload) to ensure
-            # the download endpoint only returns "ready" when PDF is actually available
-            db.table("previews").update({
-                "pdf_url": pdf_url,
-                "status": PreviewStatus.PURCHASED.value,
-                "generation_phase": "complete"
-            }).eq("preview_id", preview_id).execute()
-            
-            # Update order as completed
-            db.table("orders").update({
-                "pdf_url": pdf_url,
-                "status": OrderStatus.COMPLETED.value,
-                "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
-            }).eq("order_id", order_id).execute()
-            
-            logger.info(
-                "Full book generation completed successfully",
-                order_id=order_id,
-                preview_id=preview_id,
-                total_pages=len(all_story_pages),
-                pdf_url=pdf_url
-            )
+                # Get story title from theme (using sanitized name)
+                template = get_theme(theme)
+                story_title = template.get_title(safe_child_name) if hasattr(template, 'get_title') else f"{safe_child_name}'s Adventure"
+                
+                # Use dedicated cover_url if available, otherwise fallback to first page
+                cover_url = preview_data.get("cover_url")
+                if not cover_url and all_hires and isinstance(all_hires[0], dict):
+                    cover_url = all_hires[0]["url"]
+                    logger.info("No dedicated cover found, using first page as cover")
+                
+                pdf_url = await pdf_generator.generate_storygift_pdf(
+                    preview_id=preview_id,
+                    child_name=safe_child_name,
+                    story_pages=all_story_pages,
+                    story_title=story_title,
+                    cover_image_url=cover_url
+                )
+                
+                # Update preview with PDF URL and mark generation as complete
+                db.table("previews").update({
+                    "pdf_url": pdf_url,
+                    "status": PreviewStatus.PURCHASED.value,
+                    "generation_phase": "complete"
+                }).eq("preview_id", preview_id).execute()
+                
+                # Update order as completed
+                db.table("orders").update({
+                    "pdf_url": pdf_url,
+                    "status": OrderStatus.COMPLETED.value,
+                    "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                }).eq("order_id", order_id).execute()
+                
+                logger.info(
+                    "Full book generation completed successfully",
+                    order_id=order_id,
+                    preview_id=preview_id,
+                    total_pages=len(all_story_pages),
+                    pdf_url=pdf_url
+                )
+            except Exception as pdf_error:
+                # PDF generation failed but pages are safe — mark as pdf_failed
+                # so the frontend can offer a regenerate button
+                logger.error(
+                    "PDF generation failed (pages are preserved)",
+                    preview_id=preview_id,
+                    error=str(pdf_error)
+                )
+                db.table("previews").update({
+                    "generation_phase": "pdf_failed"
+                }).eq("preview_id", preview_id).execute()
+                # Don't re-raise — pages are saved, user can retry PDF via /regenerate-pdf
             
             # ============================================
             # Send completion email

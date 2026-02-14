@@ -4,7 +4,7 @@ Main API router that combines all endpoints.
 
 from fastapi import APIRouter
 
-from app.api.endpoints import upload, preview, status, download, health, my_creations
+from app.api.endpoints import upload, preview, status, download, health, my_creations, regenerate
 from app.api.webhooks import shopify
 from app.config import get_settings
 
@@ -17,6 +17,7 @@ api_router.include_router(upload.router, tags=["upload"])
 api_router.include_router(preview.router, tags=["preview"])  # No prefix - routes already have /preview
 api_router.include_router(status.router, tags=["status"])
 api_router.include_router(download.router, tags=["download"])
+api_router.include_router(regenerate.router, tags=["regenerate"])
 api_router.include_router(my_creations.router, tags=["my-creations"])
 
 # Development & Test endpoints - ONLY in development/testing mode
