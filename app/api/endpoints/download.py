@@ -188,8 +188,18 @@ async def get_download(identifier: str):
                         message="Your book is still being created. Please check back in a few minutes.",
                     )
 
-        # Check if pages are complete but PDF hasn't been generated yet
-        if generation_phase in ("pages_complete", "pdf_failed"):
+        # Pages done, PDF is auto-generating in background — keep polling
+        if generation_phase == "pages_complete":
+            pages_done = len(story_pages)
+            progress = min(90, int((pages_done / 10) * 80) + 10)
+            return DownloadResponse(
+                status="generating",
+                progress=progress,
+                message="Your pages are ready! Creating your PDF now, this takes about 1 minute.",
+            )
+
+        # PDF specifically failed — user needs to manually retry
+        if generation_phase == "pdf_failed":
             return DownloadResponse(
                 status="pdf_missing",
                 progress=90,

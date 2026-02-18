@@ -689,6 +689,8 @@ async def generate_remaining_pages_and_pdf(
                 
                 # Reload data to get all 10 pages
                 preview_result = db.table("previews").select("*").eq("preview_id", preview_id).execute()
+                if not preview_result.data:
+                    raise StorageError(f"Preview not found when generating PDF: {preview_id}")
                 preview_data = preview_result.data[0]
                 all_hires = preview_data.get("hires_images", [])
                 all_story_pages = preview_data.get("story_pages", [])
