@@ -114,7 +114,7 @@ MODELS: Dict[str, ModelConfig] = {
         }
     ),
 
-    # PuLID models removed - using NanoBanana and Cartoon3D pipelines only
+    # PuLID models removed - using PhotorealisticPipeline and CartoonTwoStagePipeline
 
     # ========== FACE EMBEDDING MODELS ==========
 

@@ -205,7 +205,10 @@ async def generate_storygift_preview(
                 child_age=child_age,
                 child_gender=child_gender,
                 analyzed_features=analyzed_features,
-                aspect_ratio="1:1"  # Cover is square for PDF, story pages use 5:4
+                aspect_ratio="1:1",  # Cover is square for PDF, story pages use 5:4
+                scene_type="cover",
+                preview_id=preview_id,
+                page_number=0  # Cover is page 0
             )
 
             logger.info(
@@ -217,13 +220,20 @@ async def generate_storygift_preview(
             )
 
             if cover_result.success and cover_result.image_url:
-                # Store cover in cloud storage
-                cover_storage_path = f"final/{preview_id}/cover.jpg"
-                logger.info("Uploading cover to storage", path=cover_storage_path)
+                settings = get_settings()
 
-                cover_url = await StorageService().download_and_upload(
-                    cover_result.image_url, cover_storage_path
-                )
+                # Check if image is already in R2 (cartoon pipeline uploads directly)
+                if cover_result.image_url.startswith(settings.r2_public_url):
+                    # Already in R2, use directly
+                    cover_url = cover_result.image_url
+                    logger.info("Cover already in R2 storage", cover_url=cover_url)
+                else:
+                    # Download from external URL and upload to R2 (photorealistic pipeline)
+                    cover_storage_path = f"final/{preview_id}/cover.jpg"
+                    logger.info("Uploading cover to storage", path=cover_storage_path)
+                    cover_url = await StorageService().download_and_upload(
+                        cover_result.image_url, cover_storage_path
+                    )
 
                 logger.info("Cover uploaded to storage", cover_url=cover_url)
 
@@ -283,7 +293,10 @@ async def generate_storygift_preview(
                     continue
 
                 # Generate image with pipeline (photorealistic or cartoon3d)
-                logger.info(f"Generating page {page_num} with {style} pipeline", child_age=child_age, child_gender=child_gender)
+                # Get scene_type from page template for expression mapping in cartoon pipeline
+                scene_type = getattr(page_template, 'scene_type', None) or ""
+
+                logger.info(f"Generating page {page_num} with {style} pipeline", child_age=child_age, child_gender=child_gender, scene_type=scene_type)
 
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,
@@ -291,15 +304,25 @@ async def generate_storygift_preview(
                     child_name=safe_child_name,
                     child_age=child_age,
                     child_gender=child_gender,
-                    analyzed_features=analyzed_features
+                    analyzed_features=analyzed_features,
+                    scene_type=scene_type,
+                    preview_id=preview_id,
+                    page_number=page_num
                 )
 
                 if result.success and result.image_url:
-                    # Store in cloud storage
-                    storage_path = f"final/{preview_id}/page_{page_num:02d}.jpg"
-                    stored_url = await StorageService().download_and_upload(
-                        result.image_url, storage_path
-                    )
+                    settings = get_settings()
+
+                    # Check if image is already in R2 (cartoon pipeline uploads directly)
+                    if result.image_url.startswith(settings.r2_public_url):
+                        # Already in R2, use directly
+                        stored_url = result.image_url
+                    else:
+                        # Download from external URL and upload to R2 (photorealistic pipeline)
+                        storage_path = f"final/{preview_id}/page_{page_num:02d}.jpg"
+                        stored_url = await StorageService().download_and_upload(
+                            result.image_url, storage_path
+                        )
 
                     # Store in format expected by preview.py
                     hires_images.append({"page": page_num, "url": stored_url})
@@ -593,7 +616,10 @@ async def generate_remaining_pages_and_pdf(
                             logger.warning(f"No prompt found for page {page_num}, skipping")
                             continue
                         
-                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender)
+                        # Get scene_type from page template for expression mapping
+                        scene_type = getattr(page_template, 'scene_type', None) or ""
+
+                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender, scene_type=scene_type)
 
                         # Generate using stored analyzed_features for consistency
                         result = await pipeline.generate_with_face_analysis(
@@ -602,15 +628,24 @@ async def generate_remaining_pages_and_pdf(
                             child_name=safe_child_name,
                             child_age=child_age,
                             child_gender=child_gender,
-                            analyzed_features=analyzed_features
+                            analyzed_features=analyzed_features,
+                            scene_type=scene_type,
+                            preview_id=preview_id,
+                            page_number=page_num
                         )
 
                         if result.success and result.image_url:
-                            # Store in cloud
-                            storage_path = f"final/{preview_id}/page_{page_num:02d}.jpg"
-                            stored_url = await StorageService().download_and_upload(
-                                result.image_url, storage_path
-                            )
+                            # Check if image is already in R2 (cartoon pipeline uploads directly)
+                            settings = get_settings()
+                            if result.image_url.startswith(settings.r2_public_url):
+                                # Already in R2, use directly
+                                stored_url = result.image_url
+                            else:
+                                # Download from external URL and upload to R2 (photorealistic pipeline)
+                                storage_path = f"final/{preview_id}/page_{page_num:02d}.jpg"
+                                stored_url = await StorageService().download_and_upload(
+                                    result.image_url, storage_path
+                                )
 
                             hires_images.append({"page": page_num, "url": stored_url})
 

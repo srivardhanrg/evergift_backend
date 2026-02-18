@@ -31,9 +31,15 @@ class Settings(BaseSettings):
 
     # AI Services
     fal_api_key: str
+    segmind_api_key: str = ""  # For Segmind FaceSwap Comic (cartoon pipeline)
 
     # AI Model Configuration
     realistic_model: str = "photorealistic"  # Primary model for photorealistic generation
+
+    # Cartoon Pipeline Configuration (DEPRECATED)
+    # Cartoon3D pipeline has been deprecated. CartoonTwoStagePipeline is always used.
+    # This setting is kept for backward compatibility but is no longer read.
+    use_twostage_cartoon_pipeline: bool = True  # Deprecated - always True now
 
     # Legacy model configurations (kept for backward compatibility)
     fallback_base_model: str = "flux_schnell"

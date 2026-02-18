@@ -80,23 +80,38 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration - Allow Shopify domains
+# CORS Configuration - Environment-aware
+# In production: Only allow specific domains
+# In development: Allow localhost for testing
+settings = get_settings()
+
+if settings.app_env == "production":
+    # Production: Strict CORS with specific origins
+    cors_origins = [
+        "https://storygift.in",
+        "https://www.storygift.in",
+        "https://zelavokids.com",
+        "https://www.zelavokids.com",
+        "https://storygift-2061.myshopify.com",
+        "https://admin.shopify.com",
+    ]
+else:
+    # Development: Allow localhost + production domains
+    cors_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://0.0.0.0:3000",
+        "https://storygift.in",
+        "https://storygift-2061.myshopify.com",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*",  # Allow all origins for Shopify App Proxy
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite default dev server
-        "http://0.0.0.0:3000",    # Vite with host 0.0.0.0
-        "https://zelavokids.com",  # Production frontend
-        "https://*.zelavokids.com",  # Subdomains
-        "https://*.myshopify.com",  # Shopify stores
-        "https://admin.shopify.com",  # Shopify Admin
-        "https://cdn.shopify.com",  # Shopify CDN
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Shopify-Shop-Domain"],
 )
 
 

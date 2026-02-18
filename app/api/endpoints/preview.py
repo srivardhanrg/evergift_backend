@@ -597,19 +597,31 @@ async def get_preview(preview_id: str):
 
 # ============================================
 # TEST ENDPOINT - Trigger remaining page generation
+# PROTECTED: Only available in development/testing mode
 # ============================================
 @router.post("/test/trigger-completion/{preview_id}")
 async def test_trigger_completion(preview_id: str, background_tasks: BackgroundTasks):
     """
     TEST ONLY: Triggers the remaining page generation for a preview.
     This simulates what happens after Shopify webhook confirms payment.
-    
+
     Usage: POST /api/preview/test/trigger-completion/{preview_id}
+
+    SECURITY: This endpoint is disabled in production.
     """
     from app.background.tasks import generate_remaining_pages
     from app.models.enums import OrderStatus
     from datetime import datetime, timedelta
-    
+    from app.config import get_settings
+
+    # SECURITY: Block this endpoint in production
+    settings = get_settings()
+    if settings.app_env == "production" and not settings.testing_mode_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Test endpoint disabled in production"
+        )
+
     logger.info("TEST: Triggering remaining page generation", preview_id=preview_id)
     
     db = get_db()

@@ -125,7 +125,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
         PageTemplate(
             page_number=10,
             scene_description="A magical friendship",
-            scene_type="resolution",
+            scene_type="sleeping",
             realistic_prompt="""Close up portrait. The child named {name} is smiling with eyes closed, gently hugging Pip the squirrel with a fluffy tail. Soft magical sparkles surround them in the golden sunset light. A feeling of warmth, friendship, and happiness fills the scene. The child is wearing comfortable outdoor clothes.""",
             story_text="As the golden sun painted the sky in magical colors, {name} knew this was just the beginning of many adventures to come. With a gentle hug, Pip whispered, 'See you next time, brave explorer!' And {name} smiled, knowing the enchanted forest would always be there, waiting for the next magical journey.",
             costume="wearing comfortable outdoor clothes"

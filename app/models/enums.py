@@ -51,7 +51,7 @@ class Theme(str, Enum):
     # Primary StoryGift themes (superior quality, 10 pages each)
     STORYGIFT_MAGIC_CASTLE = "storygift_magic_castle"
     STORYGIFT_ENCHANTED_FOREST = "storygift_enchanted_forest"
-    STORYGIFT_SPY_MISSION = "storygift_spy_mission"
+    # STORYGIFT_SPY_MISSION = "storygift_spy_mission"  # REMOVED
     # New premium themes
     STORYGIFT_COSMIC_DREAMER = "storygift_cosmic_dreamer"
     STORYGIFT_MIGHTY_GUARDIAN = "storygift_mighty_guardian"
@@ -59,7 +59,7 @@ class Theme(str, Enum):
     STORYGIFT_BIRTHDAY_MAGIC = "storygift_birthday_magic"
     # Newest premium themes (Safari & Dream Weaver)
     STORYGIFT_SAFARI_ADVENTURE = "storygift_safari_adventure"
-    STORYGIFT_DREAM_WEAVER = "storygift_dream_weaver"
+    # STORYGIFT_DREAM_WEAVER = "storygift_dream_weaver"  # REMOVED
     STORYGIFT_SECRET_AGENT = "storygift_secret_agent"
 
     # Legacy themes (for backward compatibility)

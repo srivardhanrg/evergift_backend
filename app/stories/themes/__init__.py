@@ -15,7 +15,7 @@ from app.stories.themes.storygift_birthday_magic import STORYGIFT_BIRTHDAY_MAGIC
 
 # Import newest premium themes (Safari & Dream Weaver)
 from app.stories.themes.storygift_safari_adventure import STORYGIFT_SAFARI_ADVENTURE_THEME
-from app.stories.themes.storygift_dream_weaver import STORYGIFT_DREAM_WEAVER_THEME
+# from app.stories.themes.storygift_dream_weaver import STORYGIFT_DREAM_WEAVER_THEME  # REMOVED
 from app.stories.themes.storygift_secret_agent import STORYGIFT_SECRET_AGENT_THEME
 
 
@@ -33,7 +33,7 @@ AVAILABLE_THEMES = {
 
     # Newest premium themes
     "storygift_safari_adventure": STORYGIFT_SAFARI_ADVENTURE_THEME,
-    "storygift_dream_weaver": STORYGIFT_DREAM_WEAVER_THEME,
+    # "storygift_dream_weaver": STORYGIFT_DREAM_WEAVER_THEME,  # REMOVED
     "storygift_secret_agent": STORYGIFT_SECRET_AGENT_THEME,
 }
 

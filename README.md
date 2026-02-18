@@ -207,8 +207,9 @@ magictales_backend/
 │   │   │   └── inpainting.py   # Face inpainting service
 │   │   │
 │   │   ├── pipelines/          # High-level generation pipelines
-│   │   │   ├── storybook_pipeline.py   # Main photorealistic pipeline
-│   │   │   └── cartoon3d_pipeline.py   # 3D cartoon style pipeline
+│   │   │   ├── photorealistic_pipeline.py    # Photorealistic style pipeline
+│   │   │   ├── cartoon_twostage_pipeline.py  # Two-stage cartoon (scene + face swap)
+│   │   │   └── cartoon3d_pipeline.py         # DEPRECATED - not used
 │   │   │
 │   │   └── utils/
 │   │       └── face_utils.py   # Face processing utilities
@@ -716,10 +717,14 @@ THEMES = {
 
 ### Art Styles
 
-| Style | Description | Prompt Modifications |
-|-------|-------------|---------------------|
-| `photorealistic` | Realistic, cinematic look | Higher detail, realistic lighting |
-| `cartoon_3d` | Pixar/Disney-style 3D | Stylized, softer features, vibrant colors |
+| Style | Description | Pipeline Used |
+|-------|-------------|---------------|
+| `photorealistic` | Realistic, cinematic look | PhotorealisticPipeline (nano-banana + VLM face analysis) |
+| `cartoon_3d` | Pixar/Disney-style animation | CartoonTwoStagePipeline (scene generation + face swap) |
+
+**CartoonTwoStagePipeline (Recommended for Cartoon Style):**
+- Stage 1: Scene generation with NanoBanana (strong prompt adherence)
+- Stage 2: Face swap with Segmind FaceSwap Comic (perfect identity preservation)
 
 ### Pipeline Code Flow
 

@@ -82,7 +82,12 @@ class PhotorealisticPipeline:
                 )
 
             if response.status_code == 200:
-                result = response.json()
+                try:
+                    result = response.json()
+                except Exception as json_err:
+                    logger.error("VLM returned invalid JSON", error=str(json_err))
+                    return "a cute child"
+
                 analysis_result = result.get("output", "")
 
                 latency = int((time.time() - start_time) * 1000)
@@ -97,7 +102,7 @@ class PhotorealisticPipeline:
                 logger.error(
                     "VLM analysis failed",
                     status_code=response.status_code,
-                    response=response.text
+                    response=response.text[:200] if response.text else "No response"
                 )
                 return "a cute child"
 
@@ -114,7 +119,8 @@ class PhotorealisticPipeline:
         child_gender: str,
         analyzed_features: Optional[str] = None,
         aspect_ratio: str = "5:4",
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
+        **kwargs  # Accept extra params (scene_type, preview_id, etc.) from shared caller
     ) -> GenerationResult:
         """
         Generate single image with face analysis.
@@ -169,11 +175,28 @@ class PhotorealisticPipeline:
                 )
 
             if response.status_code == 200:
-                result = response.json()
+                try:
+                    result = response.json()
+                except Exception as json_err:
+                    return GenerationResult(
+                        success=False,
+                        error_message=f"API returned invalid JSON: {str(json_err)}",
+                        latency_ms=int((time.time() - start_time) * 1000),
+                        model_used=self.model_name
+                    )
+
                 images = result.get("images", [])
 
                 if images and len(images) > 0:
                     image_url = images[0].get("url")
+
+                    if not image_url:
+                        return GenerationResult(
+                            success=False,
+                            error_message="API returned empty image URL",
+                            latency_ms=int((time.time() - start_time) * 1000),
+                            model_used=self.model_name
+                        )
 
                     latency = int((time.time() - start_time) * 1000)
 
@@ -204,7 +227,7 @@ class PhotorealisticPipeline:
                     )
             else:
                 error_msg = f"Generation API error: {response.status_code}"
-                logger.error(error_msg, response_text=response.text)
+                logger.error(error_msg, response_text=response.text[:200] if response.text else "No response")
 
                 return GenerationResult(
                     success=False,
@@ -262,14 +285,18 @@ class PhotorealisticPipeline:
         logger.info(f"Generating {page_count} pages in {'testing' if testing_mode else 'production'} mode")
 
         # ============================================================
-        # VLM ANALYSIS - COMMENTED OUT FOR TESTING
-        # To re-enable: uncomment the line below and comment out the fallback
+        # VLM FACE ANALYSIS - Enabled for production quality
+        # Provides detailed facial description for identity preservation
         # ============================================================
-        # analyzed_features = await self.analyze_face(face_url)
-        # ============================================================
-        # FALLBACK - Using simplified identity anchor (face image is source of truth)
-        analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
-        # ============================================================
+        try:
+            analyzed_features = await self.analyze_face(face_url)
+            if analyzed_features == "a cute child":
+                # VLM returned fallback, use enhanced generic anchor
+                analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
+                logger.warning("VLM returned fallback description, using generic anchor")
+        except Exception as e:
+            logger.error("VLM analysis failed, using fallback", error=str(e))
+            analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
 
         successful_pages = []
         failed_pages = []
@@ -296,8 +323,8 @@ class PhotorealisticPipeline:
 
                 if result.success:
                     storage_path = f"final/{preview_id}/page_{page_number:02d}.jpg"
-                    stored_url = await self.storage.store_from_url(
-                        result.image_url, storage_path
+                    stored_url = await self.storage.download_and_upload(
+                        result.image_url, storage_path, content_type="image/jpeg"
                     )
 
                     successful_pages.append({

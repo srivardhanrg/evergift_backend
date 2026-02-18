@@ -56,7 +56,7 @@ STORYGIFT_OCEAN_EXPLORER_THEME = StoryTemplate(
             page_number=4,
             scene_description="Riding the wise sea turtle",
             scene_type="journey",
-            realistic_prompt="""Iconic turtle ride. The child named {name} sitting on the broad back of an enormous ancient sea turtle with intricate geometric patterns and coral growth on shell, small colorful fish living in the turtle's shell ecosystem. Child holding gently to edge of shell, leaning forward with wonder, hair and fins flowing behind from movement. Turtle's wise, kind face visible from side angle, large gentle eye full of ancient wisdom. They're gliding through open blue water with sun rays from above, kelp forest passing below, school of fish accompanying them. Sense of graceful movement through water, peaceful companionship. Child looks small on the massive turtle. Beautiful underwater lighting, magical atmosphere.""",
+            realistic_prompt="""Iconic turtle ride. The child named {name} sitting upright on the broad back of an enormous ancient sea turtle with intricate geometric patterns and coral growth on shell. Child sitting tall and confident, facing toward camera with joyful adventurous expression, face clearly visible and detailed, taking up a prominent portion of the frame. Hair and fins flowing gently from movement. Small colorful fish swimming alongside. Turtle's wise shell visible beneath the child, they're gliding through open crystal-clear blue water with golden sun rays streaming from above, kelp forest passing below, school of fish accompanying them. Sense of graceful movement through water, peaceful companionship. Beautiful underwater lighting with warm light illuminating the child's face, magical atmosphere. Child's face is the absolute focal point of the composition.""",
             story_text="A wise old sea turtle with a shell covered in beautiful patterns glided over. 'Welcome to our kingdom, {name},' she said in a gentle voice. 'Would you like to see something magical? Climb on!' {name} carefully held on as they began an incredible journey.",
             costume="wearing magical aquatic outfit, sitting on turtle"
         ),
@@ -94,10 +94,10 @@ STORYGIFT_OCEAN_EXPLORER_THEME = StoryTemplate(
         # === PAGE 8 - THE MAGICAL NECKLACE ===
         PageTemplate(
             page_number=8,
-            scene_description="Receiving the magical shell necklace",
-            scene_type="ceremony",
-            realistic_prompt="""Gift-giving ceremony. Close-up intimate moment showing Ocean Queen's graceful hands placing a delicate golden chain with glowing shell pendant around the child named {name}'s neck. Child looking down at the beautiful necklace with wonder and gratitude, hands coming up to touch it gently. The shell pendant emits a soft golden-turquoise glow. Queen's kind face visible in background, smiling warmly, her crown of pearls catching light. Soft focus on background showing palace interior, other sea creatures watching the special moment with happy expressions. Beautiful rim lighting on characters from bioluminescent sources, warm and magical atmosphere. Emotional connection between characters, feels like a coronation or blessing. Touching moment of honor and friendship.""",
-            story_text="The Queen placed a special necklace around {name}'s neck—a golden shell that would always carry the magic of the ocean. 'Whenever you need courage or wonder, hold this close and remember: you are always welcome in our kingdom, brave explorer {name}.'",
+            scene_description="Receiving the magical shell necklace from the wise octopus",
+            scene_type="looking_down",
+            realistic_prompt="""Gift-giving ceremony. Close-up intimate moment showing a wise, friendly octopus guardian with shimmering purple-gold tentacles carefully placing a delicate golden chain with glowing shell pendant around the child named {name}'s neck. Child looking down at the beautiful necklace with wonder and gratitude, hands coming up to touch it gently. The shell pendant emits a soft golden-turquoise glow illuminating the child's face from below. The octopus has kind, intelligent eyes and its tentacles are decorated with tiny pearls and sea gems. Soft focus on background showing palace interior with coral archways, other sea creatures watching the special moment with happy expressions. Beautiful bioluminescent rim lighting on characters, warm and magical atmosphere. No other human-like faces in the scene, only the child and the octopus. Touching moment of honor and friendship.""",
+            story_text="The wise octopus guardian, keeper of the ocean's secrets, placed a special necklace around {name}'s neck with gentle tentacles—a golden shell that would always carry the magic of the ocean. 'Whenever you need courage or wonder, hold this close and remember: you are always welcome in our kingdom, brave explorer {name}.'",
             costume="wearing magical aquatic outfit, receiving golden shell necklace"
         ),
 
@@ -115,7 +115,7 @@ STORYGIFT_OCEAN_EXPLORER_THEME = StoryTemplate(
         PageTemplate(
             page_number=10,
             scene_description="Bedtime ocean dreams",
-            scene_type="resolution",
+            scene_type="sleeping",
             realistic_prompt="""Peaceful bedtime scene. The child named {name} in pajamas tucked into bed, holding the golden shell necklace that glows softly in their hand. Eyes closed with peaceful smile, clearly dreaming. Above the bed, dream bubbles or a soft magical mist shows glimpses of the underwater kingdom: the sea turtle, the palace, colorful fish, the Ocean Queen waving. Ocean-themed decorations in the bedroom including shells on shelf, fish mobile, ocean painting. Moonlight streams through window reflecting on the floor like water. The shell's glow casts gentle patterns on the ceiling like underwater light caustics. Warm, safe, magical atmosphere. The sense that the ocean adventure lives on in dreams and the magic will return whenever needed.""",
             story_text="That night, {name} fell asleep holding the magical shell, dreaming of coral palaces and dancing fish. The Ocean Queen had been right—the ocean would always be there, waiting for the next adventure. And somewhere in the deep blue sea, {name}'s friends were waving goodnight.",
             costume="wearing pajamas, holding glowing shell necklace"

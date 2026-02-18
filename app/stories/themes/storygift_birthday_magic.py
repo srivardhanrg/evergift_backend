@@ -18,7 +18,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
     # Cover page settings for typography-ready composition
     cover_costume="wearing a golden birthday crown and festive party outfit, hands clasped in wish-making pose",
     cover_header_atmosphere="Magical sparkles and confetti swirling in pink, purple, and gold against a dreamy bokeh background of party lights",
-    cover_magical_elements="Sitting before an elaborate multi-tiered birthday cake with lit candles creating warm glow on face. Eyes closed in wish-making moment. Swirling magical sparkles and confetti emerging from the candles. Presents wrapped in shimmering paper stacked around.",
+    cover_magical_elements="Close-up portrait framing, face filling upper third of image. Eyes closed in wish-making moment with soft smile. Elaborate multi-tiered birthday cake with lit candles creating warm golden glow illuminating face from below. Swirling magical sparkles and confetti emerging from the candles framing the face. Presents wrapped in shimmering paper softly blurred behind. Face is the absolute focal point, sharply detailed with perfect skin texture.",
     cover_footer_description="Colorful balloons floating with glowing strings, magical golden hour party atmosphere",
     pages=[
         # === PAGE 1 - THE SPECIAL DAY ===
@@ -26,7 +26,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
             page_number=1,
             scene_description="Magical birthday morning",
             scene_type="discovery",
-            realistic_prompt="""Magical morning awakening. The child named {name} waking up in cozy bedroom, sitting up in bed with big excited smile, sunlight streaming through window creating god rays filled with dancing dust particles that look like tiny sparkles. Room decorated with birthday decorations including banner saying 'Happy Birthday!' and balloons tied to bedpost, presents on a table. Child wearing birthday pajamas, stretching arms up in joy. Through window, the world outside looks especially beautiful with bluebird on windowsill, flowers in bloom, sunshine golden and warm. Calendar on wall has today's date circled with hearts. Magical warm lighting, sense of excitement and specialness, everything has a subtle celebratory glow. Child's excited face clearly visible and detailed, showing pure birthday joy. Cozy bedroom with soft morning light.""",
+            realistic_prompt="""Magical morning awakening, medium close-up portrait. The child named {name} sitting up in bed with big excited smile, face prominently filling the frame, sharp focus on facial features. Sunlight streaming through window creating god rays filled with dancing dust particles that look like tiny sparkles, warm light illuminating face. Room decorated with birthday decorations including banner saying 'Happy Birthday!' and balloons tied to bedpost, presents on a table slightly out of focus in background. Child wearing birthday pajamas, stretching arms up in joy. Through window, the world outside looks especially beautiful with bluebird on windowsill. Calendar on wall has today's date circled with hearts. Magical warm lighting, sense of excitement and specialness. Child's face is the absolute focal point, three-quarter view, clearly visible and detailed with sharp skin texture, showing pure birthday joy.""",
             story_text="Today was the most special day of the year—{name}'s birthday! The sun seemed to shine a little brighter, the birds sang a little sweeter, and even the morning air felt like it was full of magic, just for {name}.",
             costume="wearing birthday pajamas"
         ),
@@ -34,9 +34,9 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
         # === PAGE 2 - BIRTHDAY BREAKFAST ===
         PageTemplate(
             page_number=2,
-            scene_description="Family birthday breakfast",
-            scene_type="bonding",
-            realistic_prompt="""Warm family breakfast scene. Bright kitchen with morning light through window. The child named {name} sitting at breakfast table wearing golden paper birthday crown with gems, hands clasped together, eyes scrunched closed making a wish. In front of them: stack of fluffy pancakes with strawberries, whipped cream, chocolate chips, single lit candle on top casting warm glow on child's face. Parents standing behind with loving expressions, hands on child's shoulders. Kitchen decorated with homemade birthday decorations, 'Happy Birthday' banner visible. Golden sparkles beginning to swirl around the candle flame subtly. Cozy, love-filled family atmosphere, warm golden light. Child's face prominently lit by candle glow, expression of concentrated wishing clearly visible and detailed.""",
+            scene_description="Birthday breakfast wish",
+            scene_type="sleeping",
+            realistic_prompt="""Warm birthday breakfast scene. Bright kitchen with morning light through window. The child named {name} sitting alone at breakfast table wearing golden paper birthday crown with gems, hands clasped together, eyes scrunched closed making a wish, face clearly lit by candle glow from below. In front of them: stack of fluffy pancakes with strawberries, whipped cream, chocolate chips, single lit candle on top casting warm glow on child's face. Kitchen decorated with homemade birthday decorations, 'Happy Birthday' banner visible. Golden sparkles beginning to swirl around the candle flame subtly. Cozy love-filled atmosphere, warm golden light. Child's face prominently lit by candle glow, expression of concentrated wishing clearly visible and detailed. Only the child at the table, no other people visible.""",
             story_text="At breakfast, {name}'s family had prepared a special birthday surprise—pancakes stacked high with {name}'s favorite toppings, and right on top was a single candle. 'Make a wish before breakfast!' said Mom with a warm smile. {name} closed their eyes and wished with all their heart.",
             costume="wearing birthday crown and party outfit"
         ),
@@ -84,11 +84,11 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
         # === PAGE 7 - FAMILY MEMORIES ===
         PageTemplate(
             page_number=7,
-            scene_description="Family shares favorite memories",
+            scene_description="Magical memory gallery",
             scene_type="intimate",
-            realistic_prompt="""Emotional family moment. Intimate scene in softly lit room, peaceful and warm. The child named {name} sitting on couch with parents on either side, grandparent beside them. Each family member sharing loving words that appear in the air as beautiful glowing golden text. Floating photographs of memories and words like 'kind', 'brave', 'creative' in golden script around them. Twinkle hovering above, wand creating the memory visualization magic. Child's face lit by warm golden glow, expression showing overwhelmed happiness, eyes shining with happy tears. Warm soft golden hour lighting, intimate composition. Child's emotional joyful face clearly visible and detailed, this is the heart of the story.""",
+            realistic_prompt="""Magical memory gallery moment. Intimate scene in a softly lit enchanted room. The child named {name} walking through a glowing corridor of floating golden picture frames, each frame containing a shimmering memory scene from the past year — learning to ride a bike, blowing out last year's candles, a fun day at the park, reading a favorite book. Each memory glows with warm golden light. Twinkle the fairy flying beside {name}, wand creating new memory frames that materialize from sparkles. Words like 'kind', 'brave', 'creative', 'loved' float in beautiful golden calligraphy script between the frames. Child's face lit by warm golden glow from the memories, expression showing overwhelmed happiness, eyes shining with happy tears. Warm soft golden hour lighting, intimate composition. Child's emotional joyful face clearly visible and detailed, this is the heart of the story.""",
             story_text="Twinkle led {name} to a quiet room, and with the gentlest magic, created something no gift could ever buy—a perfect moment. There, {name}'s family stood together, and one by one, they each shared their favorite memory of {name} from the past year. Every word sparkled in the air like stars.",
-            costume="wearing birthday outfit, sitting with family"
+            costume="wearing birthday outfit, walking through memory gallery"
         ),
 
         # === PAGE 8 - MAGICAL TAPESTRY ===
@@ -96,7 +96,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
             page_number=8,
             scene_description="Memories woven into magical tapestry",
             scene_type="wonder",
-            realistic_prompt="""Magical tapestry creation. Living room at twilight, party winding down peacefully. Above, Twinkle is weaving together magical ribbons of light in different colors. Each ribbon contains miniature scenes from the day's celebration. The ribbons weave into an elaborate glowing tapestry floating like aurora borealis, casting beautiful multi-colored light below. The child named {name} standing in center looking up with wonder and contentment, arms slightly raised in awe, face illuminated by the magical light. Parents nearby, faces glowing warmly. Through windows, stars are appearing in evening sky. Beautiful volumetric lighting, spectacular but peaceful. Child's wonder-filled face clearly visible and detailed, looking up at the magical memories.""",
+            realistic_prompt="""Magical tapestry creation. Living room at twilight, party winding down peacefully. Above, Twinkle is weaving together magical ribbons of light in different colors. Each ribbon contains miniature scenes from the day's celebration — dancing, cake, friends laughing, the fairy's first appearance. The ribbons weave into an elaborate glowing tapestry floating like aurora borealis, casting beautiful multi-colored light across the room. The child named {name} standing alone in center of room looking up with wonder and contentment, arms slightly raised in awe, face illuminated by the magical light from above. Through large windows, stars are appearing in the evening sky, moonlight mixing with the magical glow. Beautiful volumetric lighting, spectacular but peaceful. Child's wonder-filled face clearly visible and detailed, looking up at the magical memories. Only child and fairy in the scene.""",
             story_text="As the day turned to evening, Twinkle gathered all the magical moments from {name}'s birthday and wove them into a beautiful glowing tapestry that floated above. 'This,' she said, 'is made of love, laughter, and wishes. It will keep this day alive in your heart forever, {name}.'",
             costume="wearing birthday outfit, looking up in wonder"
         ),
@@ -106,7 +106,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
             page_number=9,
             scene_description="Twinkle says farewell",
             scene_type="farewell",
-            realistic_prompt="""Perfect bedtime farewell. The child named {name} in pajamas sitting on edge of bed in peaceful bedroom with party decorations still visible. Twinkle the fairy hovering at eye level in front of them, both holding hands, looking into each other's eyes with love. Fairy is beginning to dissolve into golden sparkles from feet upward, creating beautiful particle effect. Soft nightlight glow in room, stars through window. On nightstand: birthday crown and framed family photo. Parents visible in doorway with soft loving smiles. Child's face expression is peaceful, content, full of gratitude, beautifully lit by fairy's gentle glow. Child's face clearly visible and detailed, showing bittersweet emotion. Emotional, frame-worthy image.""",
+            realistic_prompt="""Perfect bedtime farewell. The child named {name} in pajamas sitting on edge of bed in peaceful bedroom with party decorations still visible. Twinkle the fairy hovering at eye level in front of them, both holding hands, looking into each other's eyes with love. Fairy is beginning to dissolve into golden sparkles from feet upward, creating beautiful particle effect. Soft nightlight glow in room, stars through window. On nightstand: birthday crown and a small glowing keepsake from the day's magic. Room quiet and intimate, only child and fairy present. Child's face expression is peaceful, content, full of gratitude, beautifully lit by fairy's gentle glow. Child's face clearly visible and detailed, showing bittersweet emotion. Emotional, frame-worthy image.""",
             story_text="As {name} got ready for bed that night, Twinkle prepared to leave. 'Will I see you again?' asked {name}. The fairy smiled. 'Every birthday, if you believe. But remember—the real magic isn't the wishes that come true. It's knowing how loved you are.' She kissed {name}'s forehead, and in a puff of sparkles, she was gone. But {name} could still feel the magic... because love IS magic, and {name} had so much of it.",
             costume="wearing pajamas, holding hands with fairy"
         ),
@@ -115,7 +115,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
         PageTemplate(
             page_number=10,
             scene_description="Peaceful sleep full of love",
-            scene_type="resolution",
+            scene_type="sleeping",
             realistic_prompt="""Perfect storybook ending. The child named {name} peacefully asleep in bed, covers tucked up, soft smile on sleeping face illuminated by gentle moonlight. On the pillow next to them, a single golden sparkle glows gently, the last trace of Twinkle's magic. The birthday crown on the nightstand, a floating balloon settled in the corner. Through the window, a shooting star crosses the night sky, moonlight creates soft patterns on the bed. Above the bed, barely visible, the magical tapestry of memories has transformed into a gentle dream. Warm, safe, peaceful atmosphere. Child's peaceful sleeping face clearly visible and detailed, soft smile showing happy dreams. A perfect ending capturing the magic of being loved.""",
             story_text="That night, {name} slept better than ever before, dreaming of dancing fairies and magical wishes. On the nightstand, a single sparkle glowed softly—Twinkle's promise that the magic of birthdays never really ends. Because the best gift of all isn't something you can unwrap. It's being surrounded by people who love you. And {name} had plenty of that.",
             costume="wearing pajamas, peacefully sleeping"

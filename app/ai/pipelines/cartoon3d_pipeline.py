@@ -180,7 +180,12 @@ class Cartoon3DPipeline:
                 )
 
             if response.status_code == 200:
-                result = response.json()
+                try:
+                    result = response.json()
+                except Exception as json_err:
+                    logger.error("VLM returned invalid JSON", error=str(json_err))
+                    return "a young child with natural, expressive features"
+
                 analysis_result = result.get("output", "")
 
                 latency = int((time.time() - start_time) * 1000)
@@ -196,7 +201,7 @@ class Cartoon3DPipeline:
                 logger.error(
                     "VLM analysis failed",
                     status_code=response.status_code,
-                    response_text=response.text
+                    response_text=response.text[:200] if response.text else "No response"
                 )
                 return "a young child with natural, expressive features"
 
@@ -213,7 +218,8 @@ class Cartoon3DPipeline:
         child_gender: str,
         analyzed_features: Optional[str] = None,
         aspect_ratio: str = "5:4",  # Default for story pages, use "1:1" for covers
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
+        **kwargs  # Accept extra params (scene_type, preview_id, etc.) from shared caller
     ) -> GenerationResult:
         """
         Generate single image using NanoBanana with cartoon-style prompts.
@@ -279,11 +285,28 @@ class Cartoon3DPipeline:
                 )
 
             if response.status_code == 200:
-                result = response.json()
+                try:
+                    result = response.json()
+                except Exception as json_err:
+                    return GenerationResult(
+                        success=False,
+                        error_message=f"API returned invalid JSON: {str(json_err)}",
+                        latency_ms=int((time.time() - start_time) * 1000),
+                        model_used=self.model_name
+                    )
+
                 images = result.get("images", [])
 
                 if images and len(images) > 0:
                     image_url = images[0].get("url")
+
+                    if not image_url:
+                        return GenerationResult(
+                            success=False,
+                            error_message="API returned empty image URL",
+                            latency_ms=int((time.time() - start_time) * 1000),
+                            model_used=self.model_name
+                        )
 
                     latency = int((time.time() - start_time) * 1000)
 
@@ -317,7 +340,7 @@ class Cartoon3DPipeline:
                 error_msg = f"Cartoon3D API error: {response.status_code}"
                 logger.error(
                     error_msg,
-                    response_text=response.text,
+                    response_text=response.text[:200] if response.text else "No response",
                     url="https://fal.run/fal-ai/nano-banana/edit"
                 )
 
@@ -410,8 +433,8 @@ class Cartoon3DPipeline:
 
                 if result.success:
                     storage_path = f"final/{preview_id}/page_{page_number:02d}.jpg"
-                    stored_url = await self.storage.store_from_url(
-                        result.image_url, storage_path
+                    stored_url = await self.storage.download_and_upload(
+                        result.image_url, storage_path, content_type="image/jpeg"
                     )
 
                     successful_pages.append({
@@ -493,7 +516,7 @@ FACIAL REFERENCE: {analyzed_features}
 
 {CINEMATIC_PAINTING_STYLE.strip()}
 
-FINAL OUTPUT: A premium cinematic digital painting worthy of a $500 commissioned artwork.
+FINAL OUTPUT: A premium cinematic 2d cartoon digital painting worthy of a $500 commissioned artwork.
 The {child_age}-year-old {gender_word} should be immediately recognizable to their parents."""
 
         return enhanced_prompt

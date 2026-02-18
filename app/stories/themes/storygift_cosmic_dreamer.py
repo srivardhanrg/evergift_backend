@@ -126,7 +126,7 @@ STORYGIFT_COSMIC_DREAMER_THEME = StoryTemplate(
         PageTemplate(
             page_number=10,
             scene_description="Back in bed with stardust jar glowing",
-            scene_type="resolution",
+            scene_type="sleeping",
             realistic_prompt="""Cozy, heartwarming bedroom scene. The child named {name} tucked into bed in cozy pajamas, hugging a glowing jar of golden stardust close to chest. Child's peaceful, content face resting on the pillow with a gentle sleepy smile, eyes softly closed or half-closed. The stardust jar casts a soft warm golden glow on the child's serene face. Through the window, the bright star twinkles in the night sky as if saying goodnight. Soft bedroom lighting, cozy blankets, stuffed space toys nearby. Child's face is the emotional focal point, clearly visible, peaceful expression. Warm, loving atmosphere. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting.""",
             story_text="Safe in bed, {name} hugged the jar of stardust close—proof that the adventure was real. The stars twinkled outside the window as if to say goodnight. {name} smiled and whispered, 'Dreams really do come true.' And in sleep that night, {name} danced among the stars once more.",
             costume="wearing cozy pajamas"
