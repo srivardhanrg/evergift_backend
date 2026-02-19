@@ -120,6 +120,7 @@ class PhotorealisticPipeline:
         analyzed_features: Optional[str] = None,
         aspect_ratio: str = "5:4",
         seed: Optional[int] = None,
+        face_expression: str = "",
         **kwargs  # Accept extra params (scene_type, preview_id, etc.) from shared caller
     ) -> GenerationResult:
         """
@@ -148,10 +149,15 @@ class PhotorealisticPipeline:
                 prompt, child_name, child_age, child_gender, analyzed_features
             )
 
+            # Append page-specific expression to prompt for single-call photorealistic pipeline
+            if face_expression:
+                enhanced_prompt = enhanced_prompt.rstrip() + f"\n\nChild's facial expression: {face_expression}."
+
             logger.info(
                 "Starting photorealistic generation",
                 prompt_length=len(enhanced_prompt),
-                child_name=child_name
+                child_name=child_name,
+                face_expression=face_expression or "from prompt"
             )
 
             async with httpx.AsyncClient(timeout=60.0) as client:

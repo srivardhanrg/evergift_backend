@@ -117,24 +117,26 @@ async def get_my_creations(request: Request):
                 "session_id", session_id
             ).order("created_at", desc=True).limit(50).execute()
         
-        # Filter out expired previews in Python
+        # Check which previews have been paid for (paid orders never expire)
         all_previews = result.data or []
+        all_preview_ids = [p["preview_id"] for p in all_previews]
+        paid_previews = set()
+
+        if all_preview_ids:
+            orders = db.table("orders").select("preview_id").in_("preview_id", all_preview_ids).execute()
+            paid_previews = {o["preview_id"] for o in (orders.data or [])}
+
+        # Filter out expired previews in Python (paid orders are exempt from expiry)
         previews = []
         for p in all_previews:
             try:
                 expires_at = datetime.fromisoformat(p["expires_at"].replace("Z", "+00:00")).replace(tzinfo=None)
-                if expires_at > now:
+                if expires_at > now or p["preview_id"] in paid_previews:
                     previews.append(p)
             except (ValueError, KeyError):
                 pass
-        
-        # Check if each preview has been paid for
+
         preview_ids = [p["preview_id"] for p in previews]
-        paid_previews = set()
-        
-        if preview_ids:
-            orders = db.table("orders").select("preview_id").in_("preview_id", preview_ids).execute()
-            paid_previews = {o["preview_id"] for o in (orders.data or [])}
         
         # Get job_ids for any in-progress generations
         job_map = {}

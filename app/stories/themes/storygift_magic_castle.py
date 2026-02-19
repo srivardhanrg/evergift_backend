@@ -28,9 +28,10 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=1,
             scene_description="Arrival at the magic school gates",
             scene_type="arrival",
-            realistic_prompt="""Wide establishing shot. The child wizard named {name} stands in the foreground looking up at a massive gothic castle gate made of dark iron, castle towers disappearing into the mist. To the right of the gate, sitting on a high stone pedestal, is Professor Hoot - a giant brown wise owl wearing large round reading glasses and a small black graduation cap. Cinematic lighting with golden morning rays breaking through mist. Child's face showing awe and nervous excitement, clearly visible and detailed in the dramatic lighting. The child is wearing elegant wizard robes.""",
+            realistic_prompt="""Dramatic arrival scene. The child wizard named {name} stands prominently in the foreground, face turned naturally toward camera at a relaxed 3/4 angle — expression of awe and nervous excitement, eyes wide, taking in the enormity of the moment. The massive gothic castle gate made of dark iron rises impressively behind and above the child, castle towers disappearing into the mist. Professor Hoot — a giant brown wise owl wearing large round reading glasses and a small black graduation cap — sits on a high stone pedestal to the side. Child's face is the clear PRIMARY FOCAL POINT, well-lit by warm golden morning rays breaking through mist. Child large and clearly detailed in frame, face prominently visible. The child is wearing elegant wizard robes.""",
             story_text="The morning mist clung to the cobblestones as the Grand Academy of Arcane Arts finally came into view. Standing before the massive iron gates was the school's oldest guardian. Professor Hoot was not merely an owl; he was a giant, ancient sentinel wearing thick spectacles.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="wide-eyed awe and nervous excitement, eyebrows slightly raised, mouth slightly open in wonder"
         ),
 
         # PAGE 2 (Scene 1 - Right Panel)
@@ -40,7 +41,8 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             scene_type="arrival",
             realistic_prompt="""Magical spell-casting moment. Close-up of the child wizard named {name} with wand extended toward camera, brilliant golden magic sparks erupting from wand tip. Child's face lit dramatically by the magical glow, expression showing fierce concentration and determination. Professor Hoot (giant wise owl with glasses and graduation cap) visible in soft focus background, watching approvingly. The ancient iron gate lock glowing with magical energy. Child positioned at three-quarter angle, face prominently visible and detailed, eyes focused with magical power. Dramatic cinematic lighting from the spell. The child is wearing elegant wizard robes.""",
             story_text="He adjusted his glasses with a wing tip and peered down. The test had begun before the first step was even taken. 'Only the worthy may pass,' hooted Professor Hoot as {name} shouted 'ALOHOMORA!' and magic sparks illuminated the ancient lock.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="fierce concentration and determination, eyes focused with intensity, jaw set with resolve"
         ),
 
         # === SCENE 2 - BEAST TAMING CLASS ===
@@ -50,9 +52,10 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=3,
             scene_description="Beast Taming class begins",
             scene_type="action",
-            realistic_prompt="""Dramatic courtyard scene. A reinforced wooden crate in the center of a stone courtyard is shaking violently with purple smoke leaking from cracks. The child wizard named {name} standing cautiously, holding wand at the ready, watching the mysterious crate with mix of fear and curiosity. Stone castle walls in background. Dramatic lighting from purple smoke glow. Child's face showing nervous anticipation, expression clearly visible and detailed. The child is wearing wizard robes.""",
+            realistic_prompt="""Dramatic courtyard scene. The child wizard named {name} standing cautiously in the foreground, face turned naturally at a relaxed 3/4 angle — expression of nervous anticipation and curiosity, wand raised and at the ready, eyes glancing toward the shaking crate. Child's face is the clear PRIMARY FOCAL POINT, lit by warm neutral daylight from above — natural skin tone fully preserved. The eerie purple smoke from the crate fills the background and surroundings with atmospheric colour but does NOT cast directly onto the child's face. The mysterious reinforced wooden crate shaking violently in the background, purple smoke leaking from every crack, other students backing away behind it. Stone castle walls framing the scene. Child positioned prominently, face large and well-defined. The child is wearing wizard robes.""",
             story_text="The courtyard was buzzing as the Beast Taming class began. In the center sat a wooden crate that shook violently. Purple smoke leaked from every crack as students backed away nervously. 'It's gonna blow!' someone shouted.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="nervous anticipation and cautious curiosity, slightly tensed expression, alert and watchful"
         ),
 
         # PAGE 4 (Scene 2 - Right Panel)
@@ -60,7 +63,7 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=4,
             scene_description="Meeting Sparky the dragon",
             scene_type="bonding",
-            realistic_prompt="""Heartwarming bonding scene in stone courtyard. The child named {name} kneeling while facing toward camera at three-quarter angle, body positioned to show full face clearly to viewer. The child is looking down affectionately at Sparky (tiny adorable baby dragon, red with orange wings) in the open wooden crate beside them. Child's face lit with gentle smile showing compassion and wonder, offering a treat to the baby dragon who is breathing a tiny puff of harmless smoke. CRITICAL: Child's face must be clearly visible to camera showing frontal or three-quarter view, NOT profile view. Castle walls in background. Warm afternoon sunlight illuminating the child's face from the side without washing out natural skin tone. Child's gentle smiling face clearly visible and detailed with authentic skin tone, showing emotional connection with the baby dragon. The child is wearing wizard robes.""",
+            realistic_prompt="""Heartwarming bonding scene in stone courtyard. The child named {name} kneeling at eye level, face turned naturally toward camera at a relaxed 3/4 angle — gentle smile showing compassion and wonder. Sparky (tiny adorable baby dragon, red with orange wings) perched on the rim of the open wooden crate directly in front of the child at arm height — close enough that the child can offer a treat at eye level without tilting their head down. Sparky breathing a tiny harmless puff of smoke, looking up at the child with big curious eyes. Child's hand extended gently forward offering a treat, face is the clear PRIMARY FOCAL POINT. Warm afternoon sunlight illuminating the child's face from the side. Castle walls in background. Child's gentle smiling face clearly visible and detailed, showing emotional connection with the baby dragon. The child is wearing wizard robes.""",
             story_text="With a pop, the lid flew open, revealing Sparky—a baby dragon with the hiccups. Every time he hiccuped, a smoke ring puffed from his nose. He wasn't scary; he was just hungry. '{name} offered a treat, realizing 'You're just hungry, aren't you?'",
             costume="wearing wizard robes"
         ),
@@ -72,9 +75,10 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=5,
             scene_description="Learning to fly on broomstick",
             scene_type="action",
-            realistic_prompt="""Dynamic action shot. The child named {name} straddling a wooden magical broomstick, hovering just above the grass, feet kicking off the ground to launch. Dust swirling around them dramatically. Child gripping broom handle tight with both hands, expression of pure determination and excitement on their face. Wind beginning to blow their hair and robes. Child's determined excited face clearly visible and detailed showing the thrill of first flight. The child is wearing wizard robes.""",
+            realistic_prompt="""Magical first flight moment. The child named {name} sitting tall and upright on a wooden magical broomstick hovering just above the grass, face turned naturally toward camera at a relaxed 3/4 angle — expression of pure determination and thrilled excitement, chin raised confidently. One hand gripping the broom handle at their side, the other raised slightly in triumphant readiness. Robes and hair gently stirring from the magical levitation energy. Dust swirling softly around the broom beneath them. Child's face is the clear PRIMARY FOCAL POINT, well-lit by warm afternoon sunlight, face large and clearly detailed. School grounds and castle walls in background. Child sitting upright and proud — the pose of a natural flyer. The child is wearing wizard robes.""",
             story_text="By afternoon, the winds picked up for Advanced Flight. The broomstick vibrated in hand, alive with enchantment. While others wobbled, a surge of confidence took hold. 'Time to fly!' {name} declared with determination.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="pure determination and thrilled excitement, confident grin, eyes bright with anticipation"
         ),
 
         # PAGE 6 (Scene 3 - Right Panel)
@@ -82,9 +86,10 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=6,
             scene_description="Flying through the castle grounds",
             scene_type="flight",
-            realistic_prompt="""Exhilarating flight scene. The child named {name} zooming through a stone ring high in the sky on a broomstick, face turned toward camera showing pure joy and accomplishment. Wind rushing through hair, robes flowing dramatically behind. Castle grounds and clouds visible far below. Golden afternoon sunlight catching child's triumphant expression. Child's joyful face clearly visible and detailed, showing the thrill of successful flight. The child is wearing wizard robes.""",
+            realistic_prompt="""Exhilarating flight scene. The child named {name} zooming through a stone ring high in the sky on a broomstick, face naturally forward-facing and prominent — head upright, eyes bright with exhilaration scanning the open sky ahead with pure freedom and joy, gaze engaged with the rushing wind and clouds rather than a stiff posed look. Wind rushing through hair, robes flowing dramatically behind. Castle grounds and clouds visible far below. Golden afternoon sunlight from the side illuminating the child's face warmly and naturally. Child's joyful triumphant expression clearly visible and detailed, face the clear focal point. The child is wearing wizard robes.""",
             story_text="With a command of 'UP!', the broom shot into the sky. The wind rushed past ears like a roaring river. The ground became a quilt of green and grey. 'I did it!' {name} shouted with pure exhilaration as they soared through stone rings in the sky.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="pure exhilaration and joy, windswept happiness, triumphant grin, eyes bright with freedom"
         ),
 
         # === SCENE 4 - THE ANCIENT LIBRARY ===
@@ -96,7 +101,8 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             scene_type="mischief",
             realistic_prompt="""Intimate library exploration scene. The child named {name} sitting at an ancient wooden table in the magnificent library, face angled toward camera at three-quarter view, carefully opening a large dusty leather-bound book with golden magical symbols on its cover. Child's face illuminated by soft warm glow emanating from the book's pages (lighting enhances features without changing skin tone), expression showing wonder and mischievous curiosity. Midnight (a sleek black cat with glowing yellow eyes and silver collar) sitting beside them on the table watching intently. Towering magical bookshelves in background, sunbeams filtering through high windows catching dust motes like sparkles. CRITICAL: Maintain accurate skin tone despite magical glow - the golden light should add warmth and highlights without desaturating, lightening, or changing the child's natural complexion and ethnic features. Child's curious fascinated face clearly visible and detailed with authentic skin tone preserved, lit by the magical book's glow with all facial features fully visible. The child is wearing wizard robes.""",
             story_text="The Ancient Library was quiet until curiosity took over. Midnight, the library cat, dozed peacefully as {name} reached for an ancient tome. 'Just one peek...' they whispered, not knowing what magic would unfold.",
-            costume="wearing wizard robes"
+            costume="wearing wizard robes",
+            face_expression="wide-eyed wonder and mischievous curiosity, soft conspiratorial smile, eyebrows raised with intrigue"
         ),
 
         # PAGE 8 (Scene 4 - Right Panel)
@@ -104,7 +110,7 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=8,
             scene_description="Chaos in the magical library",
             scene_type="chaos",
-            realistic_prompt="""Magical chaos scene in the library. Hundreds of books flying like a flock of birds across the high-ceilinged room. Midnight (a sleek black cat with glowing yellow eyes and silver collar) leaping mid-air to catch one. The child named {name} near a table with expression of surprised delight and playful alarm, trying to catch flying books. Dramatic lighting from stained glass windows. Child's amused surprised face clearly visible and detailed, showing fun amidst the chaos. The child is wearing wizard robes.""",
+            realistic_prompt="""Magical chaos scene in the library. Hundreds of books flying like a flock of birds across the high-ceilinged room. Midnight (a sleek black cat with glowing yellow eyes and silver collar) leaping mid-air to catch one in the background. The child named {name} standing near the table, face turned naturally at a relaxed 3/4 angle — expression of surprised delight and playful alarm, laughing with arms partially raised as a large flying book swoops toward them from in front, eyes glancing at the swooping book with amused alarm. Child's face is the clear PRIMARY FOCAL POINT, lit by warm neutral candlelight from the nearby desk candle — natural skin tone fully preserved. The colourful stained glass light paints the background walls and swirling books with beautiful rainbow colour but does NOT cast directly onto the child's face. Flying books swirling all around in the background creating the chaos. Child's amused laughing expression front and centre, clearly visible and detailed. The child is wearing wizard robes.""",
             story_text="A sneeze disturbed the dust, and suddenly the books woke up! Leather-bound covers flapped like heavy wings in a paper storm. Midnight sprang into action, treating the flying literature like birds. 'MEOW! Got it!' seemed to say as {name} called 'Down boy!' It was chaos, but fun.",
             costume="wearing wizard robes"
         ),
@@ -116,7 +122,7 @@ STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
             page_number=9,
             scene_description="Peaceful moment on the tower balcony",
             scene_type="peaceful",
-            realistic_prompt="""Magical peaceful night scene. The child named {name} in elegant formal wizard robes leaning against a stone balcony railing of the Astronomy Tower, face turned slightly toward camera showing peaceful contemplative expression illuminated by soft silver moonlight. Midnight the sleek black cat with glowing yellow eyes and silver collar sits beside them, both gazing at the spectacular twin moons rising over the castle. Child's face shows wonder and contentment, detailed features visible in the beautiful moonlight. Village lights twinkle far below. Dark blue starry sky with magical auroras. Warm golden light from tower windows behind. Intimate portrait composition, child's serene face clearly visible and detailed. Dreamy magical atmosphere.""",
+            realistic_prompt="""Magical peaceful night scene. The child named {name} in elegant formal wizard robes standing at the stone balcony railing of the Astronomy Tower, face turned naturally at a relaxed 3/4 angle — expression of peaceful wonder and contentment, soft gentle smile, eyes drifting gently toward the village lights and moons below rather than staring straight at camera. Midnight the sleek black cat with glowing yellow eyes and silver collar sitting beside them on the railing, both at ease. The spectacular twin moons rise large and luminous in the dark blue starry sky behind the child. Magical auroras shimmer in the sky behind them. Village lights twinkling far below. Warm golden light from tower windows to the side-front illuminates the child's face naturally — moonlight casting a beautiful soft silver rim glow from behind, outlining the hair and robes. Child's face is the clear PRIMARY FOCAL POINT, primarily lit by warm golden window light with skin tone fully preserved. Intimate portrait composition. Dreamy magical atmosphere.""",
             story_text="As the twin moons rose, the castle quieted down. Standing on the balcony of the Astronomy Tower, looking out over the glittering lights of the village, everything felt magical. Midnight purred contentedly, a faithful companion in this new adventure.",
             costume="wearing elegant formal wizard robes"
         ),

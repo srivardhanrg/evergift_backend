@@ -81,16 +81,16 @@ EXPRESSION_MAP = {
 
     # Neutral/Subtle expressions (empty - preserve natural expression from photo)
     "arrival": "",
-    "preparation": "",
+    "preparation": "confident, determined, ready for action",
     "transformation": "",
     "revelation": "",
     "ceremony": "",
     "briefing": "",
     "stealth": "",
-    "infiltration": "",
+    "infiltration": "clever knowing smile, secretive alertness",
     "confrontation": "",
     "encounter": "",
-    "investigation": "",
+    "investigation": "focused, concentrating, analytical, determined",
 }
 
 
@@ -393,7 +393,8 @@ class CartoonTwoStagePipeline:
         seed: Optional[int] = None,
         scene_type: str = "",
         preview_id: str = "",
-        page_number: int = 0
+        page_number: int = 0,
+        face_expression: str = ""
     ) -> GenerationResult:
         """
         Generate a single illustrated page with the child's face.
@@ -448,14 +449,22 @@ class CartoonTwoStagePipeline:
 
             # ==========================================
             # GET EXPRESSION PROMPT
+            # Priority: page-level face_expression > EXPRESSION_MAP > keyword fallback
             # ==========================================
-            expression_prompt = get_expression_for_scene(scene_type, prompt)
-
-            logger.info(
-                "Expression determined for face swap",
-                scene_type=scene_type,
-                expression=expression_prompt if expression_prompt else "natural (from photo)"
-            )
+            if face_expression:
+                expression_prompt = face_expression
+                logger.info(
+                    "Expression from page template (face_expression)",
+                    page_number=page_number,
+                    expression=expression_prompt
+                )
+            else:
+                expression_prompt = get_expression_for_scene(scene_type, prompt)
+                logger.info(
+                    "Expression from EXPRESSION_MAP fallback",
+                    scene_type=scene_type,
+                    expression=expression_prompt if expression_prompt else "natural (from photo)"
+                )
 
             # ==========================================
             # STAGE 2: Face swap with Segmind

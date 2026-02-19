@@ -293,10 +293,11 @@ async def generate_storygift_preview(
                     continue
 
                 # Generate image with pipeline (photorealistic or cartoon3d)
-                # Get scene_type from page template for expression mapping in cartoon pipeline
+                # Get scene_type and face_expression from page template
                 scene_type = getattr(page_template, 'scene_type', None) or ""
+                face_expression = getattr(page_template, 'face_expression', None) or ""
 
-                logger.info(f"Generating page {page_num} with {style} pipeline", child_age=child_age, child_gender=child_gender, scene_type=scene_type)
+                logger.info(f"Generating page {page_num} with {style} pipeline", child_age=child_age, child_gender=child_gender, scene_type=scene_type, face_expression=face_expression or "fallback")
 
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,
@@ -307,7 +308,8 @@ async def generate_storygift_preview(
                     analyzed_features=analyzed_features,
                     scene_type=scene_type,
                     preview_id=preview_id,
-                    page_number=page_num
+                    page_number=page_num,
+                    face_expression=face_expression
                 )
 
                 if result.success and result.image_url:
@@ -616,10 +618,11 @@ async def generate_remaining_pages_and_pdf(
                             logger.warning(f"No prompt found for page {page_num}, skipping")
                             continue
                         
-                        # Get scene_type from page template for expression mapping
+                        # Get scene_type and face_expression from page template
                         scene_type = getattr(page_template, 'scene_type', None) or ""
+                        face_expression = getattr(page_template, 'face_expression', None) or ""
 
-                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender, scene_type=scene_type)
+                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender, scene_type=scene_type, face_expression=face_expression or "fallback")
 
                         # Generate using stored analyzed_features for consistency
                         result = await pipeline.generate_with_face_analysis(
@@ -631,7 +634,8 @@ async def generate_remaining_pages_and_pdf(
                             analyzed_features=analyzed_features,
                             scene_type=scene_type,
                             preview_id=preview_id,
-                            page_number=page_num
+                            page_number=page_num,
+                            face_expression=face_expression
                         )
 
                         if result.success and result.image_url:

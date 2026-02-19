@@ -365,7 +365,15 @@ async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
             logger.info("Order already exists, skipping creation", order_id=order_id)
         else:
             db.table("orders").insert(order_data).execute()
-        
+
+        # CRITICAL: Update preview status to PURCHASED so frontend detects payment
+        db.table("previews").update({
+            "status": PreviewStatus.PURCHASED.value,
+            "generation_phase": "generating_full"
+        }).eq("preview_id", preview_id).execute()
+
+        logger.info("TEST: Preview status updated to PURCHASED", preview_id=preview_id)
+
         # Queue PDF generation - must pass child_name
         child_name_from_preview = preview.get("child_name", "Child")
         background_tasks.add_task(

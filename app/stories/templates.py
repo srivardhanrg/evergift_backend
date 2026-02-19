@@ -11,13 +11,16 @@ class PageTemplate:
     """Template for a single story page."""
     page_number: int
     scene_description: str
-    realistic_prompt: str     # For NanoBanana pipeline (photorealistic)
+    realistic_prompt: str     # For NanoBanana pipeline (photorealistic) - expression already embedded here
     story_text: str           # Text with {name} placeholder
     artistic_prompt: Optional[str] = None  # For comic book style with Flux Dev + Face Swap
     costume: Optional[str] = None
     scene_type: Optional[str] = None  # For cinematic enhancement: "heroic", "intimate", "action", etc.
     camera_style: Optional[str] = None  # Override camera angle if needed
     lighting_style: Optional[str] = None  # Override lighting if needed
+    face_expression: Optional[str] = None  # Page-specific expression for Segmind face swap (cartoon pipeline)
+                                           # Also appended to prompt in photorealistic pipeline for clarity
+                                           # e.g. "pure breathless laughter, mouth open, eyes wide with joy"
 
 
 # Base cover prompt template with zone-based composition for typography

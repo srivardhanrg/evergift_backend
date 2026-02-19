@@ -38,7 +38,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
             page_number=2,
             scene_description="Examining the magical map",
             scene_type="discovery",
-            realistic_prompt="""Close up detail shot. The magical map showing a winding path through a forest, a purple stream, and pillow mountains with an 'X' mark. The child named {name} pointing at the treasure spot, face showing intense curiosity and excitement about the adventure ahead. Map looks hand-drawn and magical. Child's eager focused face clearly visible and detailed. The child is wearing comfortable indoor clothes.""",
+            realistic_prompt="""Magical map discovery scene. The child named {name} holding the colorful hand-drawn map at chest height, head upright and face naturally forward-facing, eyes glancing down at the map with intense curiosity and excitement — head stays mostly upright so face is prominent and clearly visible, only the eyes directed at the treasure spot being pointed at. The map shows a winding path through a forest, a purple stream, pillow mountains and an 'X' mark. Child's eager expression clearly visible and detailed, face well-lit by window light. The child is wearing comfortable indoor clothes.""",
             story_text="The map was unlike anything {name} had ever seen before. It showed a winding path through an enchanted forest, a purple singing stream, and mountains that looked like soft pillows. There was even an 'X' marking the treasure spot!",
             costume="wearing comfortable indoor clothes"
         ),
@@ -50,7 +50,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
             page_number=3,
             scene_description="Entering the magical forest",
             scene_type="journey",
-            realistic_prompt="""Magical forest entrance. Giant trees with heart-shaped sparkling leaves. A glowing silver dust trail winding through the grass. The child named {name} walking along the path, face showing pure amazement at the magical surroundings. Dappled sunlight creating beautiful atmosphere. Child's wonder-filled face clearly visible and detailed. The child is wearing comfortable outdoor clothes.""",
+            realistic_prompt="""Magical forest entrance. Giant trees with heart-shaped sparkling leaves surround a glowing silver dust trail winding through the emerald grass. The child named {name} walking along the path in three-quarter view, face naturally forward-facing and prominent — head gently angled as eyes take in the magical surroundings ahead and to the sides, not a side profile walking shot. Dappled sunlight filtering through the canopy from above illuminates the child's face naturally. Child's wonder-filled expression clearly visible and detailed, face the focal point of the composition. The child is wearing comfortable outdoor clothes.""",
             story_text="Stepping into the enchanted forest felt like entering a dream. Giant trees with heart-shaped leaves sparkled in the sunlight, and a shimmering silver trail of magical dust wound through the emerald grass. 'So shiny!' {name} whispered in wonder.",
             costume="wearing comfortable outdoor clothes"
         ),
@@ -72,7 +72,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
             page_number=5,
             scene_description="Crossing the singing stream",
             scene_type="challenge",
-            realistic_prompt="""Action adventure shot. A beautiful blue singing stream flowing through woods with purple round stepping stones perfectly spaced. The child named {name} carefully stepping from one stone to another, face showing concentration and playful joy. Musical notes floating in the air above the magical water. Child's joyful focused face clearly visible and detailed. The child is wearing comfortable outdoor clothes.""",
+            realistic_prompt="""Action adventure shot. A beautiful blue singing stream flowing through woods with purple round stepping stones perfectly spaced. The child named {name} mid-hop between stones, face naturally forward-facing and prominent — head upright, eyes glancing briefly down at the next stone with playful concentration, only a gentle downward eye movement rather than a steep head drop. Child caught in a joyful moment of leaping, expression of playful joy and focus clearly visible and detailed. Musical notes floating in the air above the magical water. Sunlight from above illuminates the child's face naturally. Child's face is the clear focal point. The child is wearing comfortable outdoor clothes.""",
             story_text="The silver trail led to the most amazing discovery yet - the Singing Stream! The crystal-clear water bubbled and gurgled in perfect harmony, and purple stepping stones created a path across. 'Hop! Hop!' laughed {name}, dancing from stone to stone.",
             costume="wearing comfortable outdoor clothes"
         ),
@@ -82,7 +82,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
             page_number=6,
             scene_description="The magical musical water",
             scene_type="wonder",
-            realistic_prompt="""Magical moment close-up. The child named {name} balanced on a purple stone, face looking down at the water with wonder and delight as ripples form musical clefs and notes. Water glowing softly with magical light. Musical sparkles dancing in the air. Child's amazed face reflected in the magical water, expression clearly visible and detailed. The child is wearing comfortable outdoor clothes.""",
+            realistic_prompt="""Magical moment close-up. The child named {name} balanced on a purple stone, face naturally forward-facing and prominent — head gently tilted as eyes look at the glowing musical ripples swirling around the stone just below, only a soft downward eye movement with head staying mostly upright. Expression of wonder and delight clearly visible and detailed. Water glowing softly with magical light, musical clef and note patterns forming in the ripples around the stone. Musical sparkles dancing in the air above. No face reflection visible in the water — only the magical musical symbols on the surface. Warm natural light from above illuminates child's face clearly. The child is wearing comfortable outdoor clothes.""",
             story_text="Each time {name} stepped on a stone, the water sang a different note! The ripples formed magical musical symbols that danced across the surface, creating the most beautiful melody the forest had ever heard.",
             costume="wearing comfortable outdoor clothes"
         ),
@@ -104,7 +104,7 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
             page_number=8,
             scene_description="Climbing the soft mountains",
             scene_type="adventure",
-            realistic_prompt="""Whimsical climbing scene. The child named {name} climbing up a soft slope that looks like a giant duvet, face showing pure delight and laughter. Feathers floating around like soft snow. Pastel dreamy lighting with magical sparkles. Child's joyful laughing face clearly visible and detailed, showing the fun of this magical adventure. The child is wearing comfortable outdoor clothes.""",
+            realistic_prompt="""Whimsical climbing scene. The child named {name} climbing up a soft slope that looks like a giant duvet — face naturally forward-facing and prominent, head upright as eyes glance upward toward the summit above with pure delight and laughter, not in side profile. Three-quarter view with face well-lit by the soft pastel dreamy light from above. Feathers floating around like soft snow. Magical sparkles in the air. Child's joyful laughing expression clearly visible and detailed, face the focal point of the composition. The child is wearing comfortable outdoor clothes.""",
             story_text="Climbing the pillow mountains was like bouncing on the world's softest, most magical bed. With each step, feathers danced through the air like gentle snowflakes, and the whole mountainside whispered secrets of ancient adventures.",
             costume="wearing comfortable outdoor clothes"
         ),
@@ -125,8 +125,9 @@ STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
         PageTemplate(
             page_number=10,
             scene_description="A magical friendship",
-            scene_type="sleeping",
-            realistic_prompt="""Close up portrait. The child named {name} is smiling with eyes closed, gently hugging Pip the squirrel with a fluffy tail. Soft magical sparkles surround them in the golden sunset light. A feeling of warmth, friendship, and happiness fills the scene. The child is wearing comfortable outdoor clothes.""",
+            scene_type="bonding",
+            face_expression="warm joyful smile, eyes soft and bright with happiness, radiant contentment",
+            realistic_prompt="""Close up portrait. The child named {name} holding Pip the squirrel gently at chest level — face naturally forward-facing, eyes soft and warm with a beaming joyful smile, radiating happiness and contentment. Face fully unobstructed, Pip held at chest height not pressed against the face. Warm golden sunset light illuminating the child's face naturally from the side-front, skin tone preserved beautifully. Soft magical sparkles surrounding them. A feeling of warmth, friendship, and happiness fills the scene. Child's joyful expression is the clear emotional focal point. The child is wearing comfortable outdoor clothes.""",
             story_text="As the golden sun painted the sky in magical colors, {name} knew this was just the beginning of many adventures to come. With a gentle hug, Pip whispered, 'See you next time, brave explorer!' And {name} smiled, knowing the enchanted forest would always be there, waiting for the next magical journey.",
             costume="wearing comfortable outdoor clothes"
         ),

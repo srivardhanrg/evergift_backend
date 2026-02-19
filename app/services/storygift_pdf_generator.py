@@ -124,34 +124,33 @@ class StoryGiftPDFGeneratorService:
         story_pages: List[Dict[str, Any]],
         cover_image_url: Optional[str]
     ) -> Dict[str, bytes]:
-        """Download all images concurrently for faster processing."""
-        images = {}
-        
+        """Download all images in parallel for fast processing."""
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # Download cover image
-            if cover_image_url:
-                try:
-                    response = await client.get(cover_image_url)
-                    response.raise_for_status()
-                    images['cover'] = response.content
-                    logger.info("Cover image downloaded")
-                except Exception as e:
-                    logger.warning(f"Failed to download cover image: {e}")
 
-            # Download page images
+            async def fetch(key: str, url: str):
+                try:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    return key, response.content
+                except Exception as e:
+                    logger.warning(f"Failed to download image {key}: {e}")
+                    return key, None
+
+            # Build all download tasks at once
+            tasks = []
+            if cover_image_url:
+                tasks.append(fetch('cover', cover_image_url))
             for i, page in enumerate(story_pages):
                 page_num = page.get('page', i + 1)
                 image_url = page.get('image_url', '')
-                
                 if image_url:
-                    try:
-                        response = await client.get(image_url)
-                        response.raise_for_status()
-                        images[f'page_{page_num}'] = response.content
-                    except Exception as e:
-                        logger.warning(f"Failed to download page {page_num} image: {e}")
+                    tasks.append(fetch(f'page_{page_num}', image_url))
 
-        logger.info(f"Downloaded {len(images)} images for PDF")
+            # Download all images concurrently
+            results = await asyncio.gather(*tasks)
+
+        images = {key: data for key, data in results if data is not None}
+        logger.info(f"Downloaded {len(images)}/{len(tasks)} images for PDF (parallel)")
         return images
 
     def _create_pdf(

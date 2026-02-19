@@ -32,9 +32,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=1,
             scene_description="Receiving the secret mission",
             scene_type="discovery",
-            realistic_prompt="""Dramatic discovery scene. The child named {name} in casual home clothes sitting at bedroom desk, face illuminated by glowing blue holographic message projecting from a mysterious high-tech device. Child looking at the holographic display with a gentle curious expression, natural relaxed face. The holographic display shows "TOP SECRET" text and mission briefing. Dim bedroom background with posters on wall, dramatic lighting from the hologram casting blue glow on child's face. Child's face is the focal point, clearly visible and detailed, lit dramatically by the holographic light. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Cinematic spy movie atmosphere.""",
+            realistic_prompt="""Dramatic discovery scene. The child named {name} in casual home clothes sitting at bedroom desk, looking at a glowing blue holographic message projecting from a mysterious high-tech device. Child's face turned naturally at a relaxed 3/4 angle — eyes directed at the holographic display with wide curious excitement, not staring at the camera. The holographic display shows "TOP SECRET" text and mission briefing, casting its blue glow on the display and the surrounding room. Child's face is the focal point, clearly visible and detailed, lit by warm ambient room light from the front that preserves natural skin tone — the blue hologram glow illuminates the display and reflects on background walls but does not wash directly over the child's face. Dim bedroom background with posters on wall. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Cinematic spy movie atmosphere.""",
             story_text="It started like any ordinary evening—until a mysterious device appeared with a glowing message. 'Agent {name}, your mission awaits. The city needs you!' This was going to be the adventure of a lifetime!",
-            costume="wearing casual home clothes"
+            costume="wearing casual home clothes",
+            face_expression="curious, wide-eyed excitement, awestruck, eagerly leaning in"
         ),
 
         # === PAGE 2 - SPY HEADQUARTERS ===
@@ -42,9 +43,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=2,
             scene_description="Training at spy headquarters",
             scene_type="preparation",
-            realistic_prompt="""Futuristic spy headquarters scene. The child named {name} standing in a high-tech gadget room wearing a sleek black junior spy suit with silver accents. Child facing camera with confident smile, holding a cool spy gadget in one hand. Behind them: wall of high-tech equipment, screens showing mission data, robotic arms, and glowing display cases with spy tools. A friendly mentor figure in background. Blue and silver lighting creates premium atmosphere. Child's determined confident face clearly visible and detailed, showing readiness for the mission. Eyes bright with excitement.""",
+            realistic_prompt="""Futuristic spy headquarters scene. The child named {name} standing in a high-tech gadget room wearing a sleek black junior spy suit with silver accents. Child at a relaxed 3/4 angle, confident smile, holding a cool spy gadget in one hand. Behind them: wall of high-tech equipment, screens showing mission data, robotic arms, and glowing display cases with spy tools. A friendly mentor figure in background. Blue and silver lighting fills the room atmosphere and background equipment. Child's face lit by warm neutral overhead light from the front — cool blue atmosphere stays on background screens and gadgets, not casting over the child's face. Child's determined confident face clearly visible and detailed, natural skin tone fully preserved, showing readiness for the mission. Eyes bright with excitement.""",
             story_text="At the secret headquarters, {name} received special training and amazing gadgets—a watch that could do anything, a suit that could become any disguise! 'Your first mission begins now, Agent {name}!'",
-            costume="wearing sleek black junior spy suit with silver accents"
+            costume="wearing sleek black junior spy suit with silver accents",
+            face_expression="confident, determined, ready for action, eager"
         ),
 
         # === PAGE 3 - UNDERCOVER: DOCTOR ===
@@ -54,7 +56,8 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             scene_type="infiltration",
             realistic_prompt="""Hospital undercover scene. The child named {name} dressed as a young doctor in crisp white medical coat with stethoscope around neck, standing in a modern hospital corridor. Child's face turned toward camera with clever knowing expression, one eyebrow slightly raised, holding a clipboard while secretly checking a high-tech spy device hidden in their pocket. Clean white hospital environment with medical equipment visible. Soft professional lighting illuminating child's focused intelligent face. Child's face clearly visible and detailed, showing the thrill of the secret mission. Professional yet playful atmosphere.""",
             story_text="Disguise one: Doctor! At City Hospital, {name} searched for the hidden clue. With stethoscope in hand and spy skills sharp, our agent found the secret code hidden in the medicine cabinet!",
-            costume="wearing white doctor coat with stethoscope"
+            costume="wearing white doctor coat with stethoscope",
+            face_expression="clever knowing smile, one eyebrow slightly raised, alert and playfully confident"
         ),
 
         # === PAGE 4 - UNDERCOVER: POLICE OFFICER ===
@@ -62,9 +65,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=4,
             scene_description="Undercover as a police officer",
             scene_type="investigation",
-            realistic_prompt="""Police station scene. The child named {name} dressed as a junior police officer in smart blue uniform with shiny badge, standing at a computer terminal in an evidence room. Child's face lit by the glow of multiple screens showing case files, expression of concentration and discovery as they find important information. Police station background with filing cabinets, evidence boards with connected photos. Child posed at three-quarter angle, face clearly showing the excitement of cracking the case. Child's determined detective face clearly visible and detailed. Dramatic blue screen glow lighting.""",
+            realistic_prompt="""Police station scene. The child named {name} dressed as a junior police officer in smart blue uniform with shiny badge, standing at a computer terminal in an evidence room. Child's face turned naturally at a relaxed 3/4 angle — eyes directed at the screens with focused concentration, expression of discovery as important information is found. Police station background with filing cabinets, evidence boards with connected photos. Child's face clearly visible and detailed, well-lit by warm overhead desk lamp illuminating face from the front — blue screen glow contained to the screens and background behind the child, not washing over the child's face. Natural skin tone fully preserved. Child's determined detective face the focal point.""",
             story_text="Disguise two: Police Officer! The clue led {name} to the police station. Using clever detective skills, our agent accessed the secret files and discovered where the villain was hiding!",
-            costume="wearing blue police officer uniform with badge"
+            costume="wearing blue police officer uniform with badge",
+            face_expression="focused, concentrating, analytical, the thrill of cracking the case"
         ),
 
         # === PAGE 5 - UNDERCOVER: FIREFIGHTER ===
@@ -74,7 +78,8 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             scene_type="rescue",
             realistic_prompt="""Heroic firefighter rescue scene. The child named {name} in full firefighter gear with yellow jacket and helmet, emerging from a smoky building entrance carrying a small puppy to safety. Child's face showing brave determination and compassion, looking toward camera with heroic expression. Orange fire glow in background, smoke effects, fire truck visible with flashing lights. Fellow firefighters cheering in background. Child's courageous face is the focal point, clearly visible and detailed, lit by the dramatic fire glow. Heroic action pose, cape of smoke behind. Cinematic drama.""",
             story_text="Disguise three: Firefighter! A building was in trouble—and so was a trapped friend with vital information. {name} suited up, rushed in bravely, and saved the day! Another clue discovered!",
-            costume="wearing yellow firefighter jacket and helmet"
+            costume="wearing yellow firefighter jacket and helmet",
+            face_expression="brave determination and compassion, heroic, caring, resolute"
         ),
 
         # === PAGE 6 - UNDERCOVER: SCIENTIST ===
@@ -82,9 +87,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=6,
             scene_description="Undercover as a scientist",
             scene_type="discovery",
-            realistic_prompt="""High-tech laboratory scene. The child named {name} dressed as a young scientist in white lab coat and safety goggles pushed up on forehead, standing at a futuristic workstation with glowing test tubes and holographic displays. Child holding a glowing vial, face showing a calm focused expression, natural relaxed smile, looking at the vial with curiosity. Colorful bubbling liquids, laser equipment, DNA helix holograms in background. Child's face clearly visible and detailed, lit by the colorful glow of the experiments. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Premium science fiction laboratory aesthetic.""",
+            realistic_prompt="""High-tech laboratory scene. The child named {name} dressed as a young scientist in white lab coat and safety goggles pushed up on forehead, standing at a futuristic workstation. Child holding a glowing vial raised to eye level at arm's length, face turned naturally at a relaxed 3/4 angle — eyes glancing at the vial with gentle curiosity, head mostly upright so face remains clearly prominent. Colorful bubbling liquids, laser equipment, DNA helix holograms visible in the background. Child's face clearly visible and detailed, lit by soft warm neutral overhead lab lighting from above-front — colorful glow from the experiments stays on the glowing vial and background equipment, not washing multi-color light directly onto the child's face. Natural skin tone fully preserved. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Premium science fiction laboratory aesthetic.""",
             story_text="Disguise four: Scientist! In the secret laboratory, {name} discovered the villain's formula. With quick thinking and steady hands, our agent created an antidote to save everyone!",
-            costume="wearing white lab coat with safety goggles"
+            costume="wearing white lab coat with safety goggles",
+            face_expression="calm focused wonder, quiet intensity, gentle curious smile"
         ),
 
         # === PAGE 7 - UNDERCOVER: CHEF ===
@@ -94,7 +100,8 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             scene_type="infiltration",
             realistic_prompt="""Luxury restaurant kitchen scene. The child named {name} dressed as a professional chef in pristine white chef's coat and tall chef's hat, positioned at a gleaming stainless steel counter. Child's face turned toward camera with a clever secretive smile, one hand stirring a pot while the other secretly holds a tiny spy camera. Fancy kitchen with copper pots, flames from stove, gourmet food being prepared. Other chefs working in background. Warm golden kitchen lighting illuminating child's mischievous clever face. Child's face clearly visible and detailed, showing the fun of the undercover mission.""",
             story_text="Disguise five: Chef! The villain was hosting a fancy dinner. Dressed as a chef, {name} snuck into the kitchen, overheard the evil plan, and gathered the final piece of the puzzle!",
-            costume="wearing white chef coat and tall chef hat"
+            costume="wearing white chef coat and tall chef hat",
+            face_expression="clever secretive smile, mischievous delight, playful alertness"
         ),
 
         # === PAGE 8 - UNDERCOVER: PILOT ===
@@ -102,9 +109,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=8,
             scene_description="Undercover as a pilot",
             scene_type="chase",
-            realistic_prompt="""Exciting cockpit scene. The child named {name} dressed as an airplane pilot in professional uniform with captain's hat and aviator sunglasses pushed up on their head, seated in an aircraft cockpit. Child gripping the control yoke with both hands, face showing intense focus and excitement, looking toward camera with determined expression. Through cockpit windows: dramatic clouds and sunset sky. Control panels with glowing buttons and screens visible. Child's thrilled focused face is the focal point, clearly visible and detailed, lit by cockpit instrument glow and sunset light. Action movie energy.""",
+            realistic_prompt="""Exciting cockpit scene. The child named {name} dressed as an airplane pilot in professional uniform with captain's hat and aviator sunglasses pushed up on their head, seated in an aircraft cockpit. Child gripping the control yoke with both hands, face turned naturally at a relaxed 3/4 angle — eyes scanning forward with intense focus and thrill, determined expression. Through cockpit windows: dramatic clouds and warm sunset sky flooding in. Child's face is the focal point, clearly visible and detailed, lit by warm golden sunset light coming through the cockpit windows from the front-side — cockpit instrument glow stays on the panels below, not casting upward light onto the face. Natural skin tone fully preserved. Action movie energy.""",
             story_text="Disguise six: Pilot! The villain tried to escape by plane, but Agent {name} was ready. Taking the controls like a pro, our hero gave chase through the clouds!",
-            costume="wearing pilot uniform with captain's hat"
+            costume="wearing pilot uniform with captain's hat",
+            face_expression="intense focus and thrill, determined, exhilarated, quick-thinking"
         ),
 
         # === PAGE 9 - MISSION COMPLETE ===
@@ -112,7 +120,7 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=9,
             scene_description="Final showdown and victory",
             scene_type="triumph",
-            realistic_prompt="""Triumphant rooftop scene at sunset. The child named {name} in sleek black spy suit standing heroically on a city rooftop, the captured villain (cartoonish, not scary) being led away by friendly agents in background. Child's face turned toward camera with proud victorious smile, one hand on hip in confident pose, wind slightly blowing their hair. Golden sunset light creating beautiful rim lighting around child. City skyline glittering behind. Child's triumphant joyful face is the absolute focal point, clearly visible and detailed, glowing in the warm sunset light. Victory pose, cinematic heroic shot.""",
+            realistic_prompt="""Triumphant rooftop scene at sunset. The child named {name} in sleek black spy suit standing heroically on a city rooftop, the captured villain (cartoonish, not scary) being led away by friendly agents in background. Child's face turned naturally at a relaxed 3/4 angle — proud victorious smile, eyes bright with satisfaction, one hand on hip in confident pose, wind slightly blowing their hair. Warm golden sunset light from the side-front illuminates the child's face naturally, preserving skin tone — sunset also creates a beautiful golden rim glow outlining the hair and shoulders from behind. City skyline glittering behind. Child's triumphant joyful face is the absolute focal point, clearly visible and detailed. Victory pose, cinematic heroic shot.""",
             story_text="Mission complete! On the city rooftop, {name} confronted the villain and saved the day. The city was safe, all thanks to the bravest, cleverest secret agent ever!",
             costume="wearing sleek black spy suit"
         ),
@@ -122,9 +130,10 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
             page_number=10,
             scene_description="Medal ceremony and celebration",
             scene_type="resolution",
-            realistic_prompt="""Elegant award ceremony scene. Close-up of the child named {name} in a formal black suit with a shiny gold medal being placed around their neck. Child's face beaming with pride and happiness, warm genuine smile, eyes sparkling with joy. Soft bokeh background showing clapping agents and celebration, but child is the clear focus. Warm golden spotlight illuminating child's proud happy face. Confetti floating gently in the air. Child's radiant smiling face clearly visible and detailed, the medal gleaming against the formal suit. Emotional, celebratory, frame-worthy portrait.""",
+            realistic_prompt="""Elegant award ceremony scene. Close-up of the child named {name} in a formal black suit with a shiny gold medal being placed around their neck. Child's face turned naturally at a relaxed 3/4 angle, beaming with pride and happiness, warm genuine smile, eyes sparkling with joy. Soft bokeh background showing clapping agents and celebration, but child is the clear focus. Warm golden light from the front illuminates child's proud happy face naturally, preserving skin tone — not a harsh downward spotlight. Confetti floating gently in the air. Child's radiant smiling face clearly visible and detailed, the medal gleaming against the formal suit. Emotional, celebratory, frame-worthy portrait.""",
             story_text="At headquarters, {name} received the Golden Star Medal—the highest honor for a secret agent. But the best reward? Knowing that being brave, clever, and kind can make the whole world better.",
-            costume="wearing formal black suit with gold medal"
+            costume="wearing formal black suit with gold medal",
+            face_expression="beaming pride and happiness, radiant joy, warm fulfilled smile, eyes sparkling"
         ),
     ]
 )
