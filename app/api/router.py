@@ -4,8 +4,8 @@ Main API router that combines all endpoints.
 
 from fastapi import APIRouter
 
-from app.api.endpoints import upload, preview, status, download, health, my_creations, regenerate
-from app.api.webhooks import shopify
+from app.api.endpoints import upload, preview, status, download, health, my_creations, regenerate, print_order
+from app.api.webhooks import shopify, lulu
 from app.config import get_settings
 
 # Create main API router
@@ -19,6 +19,7 @@ api_router.include_router(status.router, tags=["status"])
 api_router.include_router(download.router, tags=["download"])
 api_router.include_router(regenerate.router, tags=["regenerate"])
 api_router.include_router(my_creations.router, tags=["my-creations"])
+api_router.include_router(print_order.router, tags=["print"])
 
 # Development & Test endpoints - ONLY in development/testing mode
 # Set TESTING_MODE_ENABLED=true in .env for local development
@@ -37,3 +38,4 @@ health_router.include_router(health.router, tags=["health"])
 # Webhook router
 webhook_router = APIRouter()
 webhook_router.include_router(shopify.router, prefix="/shopify", tags=["webhooks"])
+webhook_router.include_router(lulu.router, prefix="/lulu", tags=["webhooks"])

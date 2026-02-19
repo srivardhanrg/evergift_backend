@@ -12,6 +12,7 @@ from app.models.database import get_db
 from app.models.enums import OrderStatus, PreviewStatus
 from app.core.security import verify_shopify_webhook, verify_shop_domain
 from app.background.tasks import generate_pdf
+from app.background.lulu_tasks import submit_lulu_print_job
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -65,25 +66,36 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
             logger.info("Order already processed", order_id=order_id)
             return {"success": True, "message": "Order already processed"}
 
-        # Step 4: Extract preview_id from line item properties
-        # Note: Frontend sends '_preview_id' (underscore prefix hides from customer)
-        # We check for both 'preview_id' and '_preview_id' for compatibility
+        # Step 4: Extract preview_id + detect order type (digital PDF vs physical book)
+        # Frontend sends '_preview_id' (underscore prefix hides from customer)
+        # '_order_type' can be 'digital' or 'physical' — set by frontend at cart add
         preview_id = None
+        order_type = "digital"  # Default to digital
         line_items = webhook_data.get("line_items", [])
+        physical_variant_id = str(settings.shopify_physical_variant_id or "")
 
         for item in line_items:
             properties = item.get("properties", [])
+            variant_id = str(item.get("variant_id", ""))
+
+            # Detect physical book order by variant ID
+            if physical_variant_id and variant_id == physical_variant_id:
+                order_type = "physical"
+
             for prop in properties:
                 prop_name = prop.get("name", "")
-                # Check for both '_preview_id' (hidden) and 'preview_id' (visible)
                 if prop_name in ("_preview_id", "preview_id"):
                     preview_id = prop.get("value")
                     logger.info("Found preview_id in line item",
                                property_name=prop_name,
                                preview_id=preview_id)
-                    break
+                if prop_name == "_order_type":
+                    order_type = prop.get("value", "digital")
+
             if preview_id:
                 break
+
+        logger.info("Order type detected", order_type=order_type, order_id=order_id)
 
         if not preview_id:
             logger.error("No preview_id found in line items", order_id=order_id)
@@ -199,16 +211,33 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         
         logger.info("Preview status updated to PURCHASED", preview_id=preview_id)
 
-        # Step 6: Queue PDF generation (remaining pages + PDF)
-        # Get child_name from preview data (stored when preview was created)
+        # Step 6: Queue background jobs based on order type
         child_name_from_preview = preview.get("child_name", "Child")
-        
-        background_tasks.add_task(
-            generate_pdf,
-            order_id=order_id,
-            preview_id=preview_id,
-            child_name=child_name_from_preview  # CRITICAL: Required by generate_pdf
-        )
+
+        if order_type == "physical":
+            # Physical book: generate remaining pages AND submit to Lulu for printing
+            # generate_pdf generates pages 6-10; submit_lulu_print_job waits for them then prints
+            logger.info("Physical book order — queueing page generation + Lulu print job", order_id=order_id)
+            background_tasks.add_task(
+                generate_pdf,
+                order_id=order_id,
+                preview_id=preview_id,
+                child_name=child_name_from_preview
+            )
+            background_tasks.add_task(
+                submit_lulu_print_job,
+                order_id=order_id,
+                preview_id=preview_id,
+            )
+        else:
+            # Digital PDF: generate remaining pages + digital PDF only
+            logger.info("Digital PDF order — queueing page generation", order_id=order_id)
+            background_tasks.add_task(
+                generate_pdf,
+                order_id=order_id,
+                preview_id=preview_id,
+                child_name=child_name_from_preview
+            )
 
         logger.info(
             "Order processed successfully",

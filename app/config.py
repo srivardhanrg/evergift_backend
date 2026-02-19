@@ -5,7 +5,7 @@ Application settings loaded from environment variables.
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator
 from functools import lru_cache
-from typing import Self
+from typing_extensions import Self
 
 
 class Settings(BaseSettings):
@@ -71,6 +71,15 @@ class Settings(BaseSettings):
     shopify_shop_domain: str = ""
     shopify_webhook_secret: str = ""
     shopify_api_secret: str = ""  # For App Proxy HMAC verification
+    shopify_product_variant_id: str = ""       # Digital PDF product variant
+    shopify_physical_variant_id: str = ""      # Physical book product variant (triggers Lulu)
+
+    # Lulu Print API
+    lulu_client_key: str = ""
+    lulu_client_secret: str = ""
+    lulu_api_base: str = "https://api.sandbox.lulu.com"
+    lulu_auth_url: str = "https://api.sandbox.lulu.com/auth/realms/glasstree/protocol/openid-connect/token"
+    lulu_pod_package_id: str = "0850X0850FCPRESS080CW444GXX"  # 8.5x8.5" premium color saddle stitch
 
     # Rate Limiting
     rate_limit_previews_per_day: int = 3

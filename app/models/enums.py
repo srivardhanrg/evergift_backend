@@ -46,6 +46,19 @@ class BookStyle(str, Enum):
     CARTOON_3D = "cartoon_3d"  # Disney/Pixar 3D animation style
 
 
+class LuluPrintStatus(str, Enum):
+    """Status of a Lulu print order."""
+    PENDING = "pending"
+    SUBMITTED = "submitted"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    IN_PRODUCTION = "in_production"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
 class Theme(str, Enum):
     """Available story themes."""
     # Primary StoryGift themes (superior quality, 10 pages each)
