@@ -54,9 +54,11 @@ def _build_download_response(
                 "filename": f"page_{img_data['page']:02d}.jpg",
             })
 
-    days_remaining = max(
-        0, (expires_at - datetime.utcnow().replace(tzinfo=expires_at.tzinfo)).days
-    )
+    now = datetime.utcnow()
+    # Make both naive or both aware for subtraction
+    if expires_at.tzinfo is not None:
+        now = now.replace(tzinfo=expires_at.tzinfo)
+    days_remaining = max(0, (expires_at - now).days)
 
     return DownloadResponse(
         status="ready",
@@ -265,10 +267,37 @@ async def get_download(identifier: str):
         )
 
 
+def _parse_datetime(dt_str: str) -> datetime:
+    """Parse a datetime string, handling Python 3.10 fromisoformat limitations.
+
+    Python 3.10 only accepts 0, 3, or 6 fractional digits. Supabase/Postgres
+    can return 5 digits (e.g. '2026-03-21T04:28:36.03677+00:00'), so we
+    normalize fractional seconds to 6 digits before parsing.
+    """
+    import re
+
+    clean = dt_str.strip()
+    if clean.endswith("Z"):
+        clean = clean[:-1]
+
+    # Strip timezone offset, parse as naive
+    tz_match = re.search(r'[+-]\d{2}:\d{2}$', clean)
+    if tz_match:
+        clean = clean[:tz_match.start()]
+
+    # Normalize fractional seconds to exactly 6 digits
+    frac_match = re.search(r'\.(\d+)$', clean)
+    if frac_match:
+        frac = frac_match.group(1).ljust(6, '0')[:6]
+        clean = clean[:frac_match.start()] + '.' + frac
+
+    return datetime.fromisoformat(clean)
+
+
 def _get_expiry(order: dict | None, preview: dict) -> datetime:
     """Calculate expiry datetime from order or preview creation time."""
     if order and order.get("expires_at"):
-        return datetime.fromisoformat(order["expires_at"].replace("Z", "+00:00"))
+        return _parse_datetime(order["expires_at"])
 
     # Default: 30 days from creation
     created_str = (
@@ -276,5 +305,5 @@ def _get_expiry(order: dict | None, preview: dict) -> datetime:
         or preview.get("created_at")
         or datetime.utcnow().isoformat()
     )
-    created_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+    created_at = _parse_datetime(created_str)
     return created_at + timedelta(days=30)
