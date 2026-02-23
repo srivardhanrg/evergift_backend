@@ -165,7 +165,7 @@ async def get_print_by_preview(preview_id: str):
     """Get print order status by preview ID (used by frontend preview page)."""
     db = get_db()
     result = db.table("print_orders").select(
-        "print_order_id,order_id,preview_id,lulu_status,tracking_number,estimated_delivery,shipped_at,delivered_at,created_at"
+        "print_order_id,order_id,preview_id,lulu_status,tracking_number,tracking_url,carrier,estimated_delivery,shipped_at,delivered_at,created_at"
     ).eq("preview_id", preview_id).execute()
 
     if not result.data:

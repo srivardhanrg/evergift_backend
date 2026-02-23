@@ -147,7 +147,8 @@ async def create_print_job(
     headers = await _lulu_headers()
 
     payload = {
-        "contact_email": shipping_address.get("email", "support@storygift.in"),
+        # contact_email is for Lulu to contact about print issues, NOT customer email
+        "contact_email": "support@storygift.in",
         "line_items": [
             {
                 "title": f"{child_name}'s MagicTales Storybook",

@@ -40,6 +40,7 @@ logger = structlog.get_logger()
 # Lulu 8.5 x 8.5" saddle stitch print spec
 # ---------------------------------------------------------------------------
 BLEED = 0.125 * inch                        # 0.125 inch bleed on all sides
+SAFETY_MARGIN = 0.50 * inch                 # Lulu requires 0.50" from trim edge for all content
 PAGE_W = (8.5 + 2 * 0.125) * inch          # 8.75" trimmed + bleed (both sides)
 PAGE_H = (8.5 + 2 * 0.125) * inch          # 8.75"
 
@@ -113,7 +114,7 @@ def _draw_story_page(
 
     # ---- Story text ----
     if story_text:
-        text_padding = BLEED + 0.15 * inch
+        text_padding = BLEED + SAFETY_MARGIN   # 0.50" from trim edge (Lulu requirement)
         text_width = PAGE_W - 2 * text_padding
         c.setFillColor(TEXT_COLOR)
         c.setFont("Helvetica", BODY_FONT_SIZE)
@@ -145,7 +146,7 @@ def _draw_story_page(
     if not is_cover and page_number > 0:
         c.setFont("Helvetica", 8)
         c.setFillColor(HexColor("#AAAAAA"))
-        c.drawRightString(PAGE_W - BLEED - 0.1 * inch, BLEED + 0.05 * inch, str(page_number))
+        c.drawRightString(PAGE_W - BLEED - SAFETY_MARGIN, BLEED + 0.25 * inch, str(page_number))
 
 
 def _draw_blank_page(c: canvas.Canvas) -> None:
@@ -320,7 +321,7 @@ async def generate_cover_pdf(
     c.setFont("Helvetica", 10)
     c.drawCentredString(
         (bleed + trim_w) / 2,
-        0.4 * inch,
+        bleed + SAFETY_MARGIN,  # 0.50" from trim edge (was 0.275" - too close)
         "A personalised storybook by StoryGift · storygift.in",
     )
 

@@ -169,15 +169,19 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         # Extract shipping address
         shipping_address = None
         if webhook_data.get("shipping_address"):
+            shopify_addr = webhook_data["shipping_address"]
             shipping_address = {
-                "first_name": webhook_data["shipping_address"].get("first_name"),
-                "last_name": webhook_data["shipping_address"].get("last_name"),
-                "address1": webhook_data["shipping_address"].get("address1"),
-                "address2": webhook_data["shipping_address"].get("address2"),
-                "city": webhook_data["shipping_address"].get("city"),
-                "province": webhook_data["shipping_address"].get("province"),
-                "country": webhook_data["shipping_address"].get("country"),
-                "zip": webhook_data["shipping_address"].get("zip"),
+                "first_name":    shopify_addr.get("first_name"),
+                "last_name":     shopify_addr.get("last_name"),
+                "address1":      shopify_addr.get("address1"),
+                "address2":      shopify_addr.get("address2"),
+                "city":          shopify_addr.get("city"),
+                "province":      shopify_addr.get("province"),
+                "province_code": shopify_addr.get("province_code"),   # e.g. "MH" not "Maharashtra"
+                "country":       shopify_addr.get("country"),
+                "country_code":  shopify_addr.get("country_code"),    # e.g. "IN" not "India"
+                "zip":           shopify_addr.get("zip"),
+                "phone":         shopify_addr.get("phone"),           # required by Lulu
             }
 
         # Step 5: Create order record

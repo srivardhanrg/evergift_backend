@@ -336,6 +336,160 @@ Made with love by StoryGift
             text_content=text_content
         )
 
+    async def send_book_shipped_email(
+        self,
+        to_email: str,
+        child_name: str,
+        tracking_number: str,
+        tracking_url: str,
+        carrier: str = "Carrier",
+        estimated_delivery: Optional[str] = None
+    ) -> bool:
+        """
+        Send "Your Book Has Shipped!" notification email.
+        Triggered by Lulu webhook when print job status is SHIPPED.
+
+        Args:
+            to_email: Customer email
+            child_name: Child's name in the story
+            tracking_number: Carrier tracking number
+            tracking_url: URL to track the package
+            carrier: Shipping carrier name (UPS, FedEx, DHL, etc.)
+            estimated_delivery: Optional estimated delivery date
+        """
+        subject = f"📦 {child_name}'s Storybook Has Shipped!"
+
+        # Build delivery estimate section if available
+        delivery_section = ""
+        delivery_text = ""
+        if estimated_delivery:
+            delivery_section = f"""
+                            <div style="background: #d1fae5; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
+                                <p style="margin: 0; color: #065f46; font-size: 14px;">
+                                    📅 <strong>Estimated Delivery:</strong> {estimated_delivery}
+                                </p>
+                            </div>
+"""
+            delivery_text = f"\nEstimated Delivery: {estimated_delivery}"
+
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f4ff;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 30px; text-align: center; border-radius: 16px 16px 0 0;">
+                            <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">
+                                📦 Your Book Has Shipped!
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Exciting news! <strong>{child_name}'s</strong> personalized storybook is on its way to you!
+                            </p>
+
+                            <!-- Tracking Info Box -->
+                            <div style="background: #f3e8ff; border-radius: 12px; padding: 24px; margin: 20px 0;">
+                                <p style="margin: 0 0 8px; color: #7c3aed; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                    Tracking Information
+                                </p>
+                                <p style="margin: 0 0 4px; color: #6b7280; font-size: 14px;">
+                                    Carrier: <strong style="color: #1f2937;">{carrier}</strong>
+                                </p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                                    Tracking #: <strong style="color: #1f2937;">{tracking_number}</strong>
+                                </p>
+                            </div>
+{delivery_section}
+                            <!-- Track Package Button -->
+                            <table role="presentation" style="width: 100%; margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{tracking_url}" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 18px; font-weight: 700; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);">
+                                            🚚 Track Your Package
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- What to expect -->
+                            <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 30px;">
+                                <p style="margin: 0 0 15px; color: #1f2937; font-size: 16px; font-weight: 600;">
+                                    What to expect:
+                                </p>
+                                <ul style="margin: 0; padding: 0 0 0 20px; color: #4b5563; font-size: 14px; line-height: 1.8;">
+                                    <li>📖 Premium hardcover storybook</li>
+                                    <li>🎨 Vibrant, full-color illustrations</li>
+                                    <li>✨ A treasured keepsake for {child_name}</li>
+                                </ul>
+                            </div>
+
+                            <p style="margin: 30px 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
+                                Questions about your order? Reply to this email or contact us at support@storygift.in
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f9fafb; padding: 20px 30px; text-align: center; border-radius: 0 0 16px 16px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 12px;">
+                                Made with ❤️ by StoryGift
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                                © 2026 StoryGift. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+        text_content = f"""
+Your Book Has Shipped!
+
+Exciting news! {child_name}'s personalized storybook is on its way to you!
+
+Tracking Information:
+Carrier: {carrier}
+Tracking #: {tracking_number}{delivery_text}
+
+Track your package: {tracking_url}
+
+What to expect:
+- Premium hardcover storybook
+- Vibrant, full-color illustrations
+- A treasured keepsake for {child_name}
+
+Questions about your order? Contact us at support@storygift.in
+
+Made with love by StoryGift
+© 2026 StoryGift
+"""
+
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content
+        )
+
 
 # Singleton instance
 _email_service: Optional[EmailService] = None

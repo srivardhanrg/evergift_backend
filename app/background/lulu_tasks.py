@@ -29,8 +29,11 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
     """
     Convert Shopify shipping address format to Lulu's format.
 
-    Shopify: first_name, last_name, address1, address2, city, province, country, zip
-    Lulu:    name, street1, street2, city, state_code, country_code, postcode, phone_number
+    Shopify fields (from webhook):
+        first_name, last_name, address1, address2, city,
+        province, province_code, country, country_code, zip, phone
+    Lulu fields:
+        name, street1, street2, city, state_code, country_code, postcode, phone_number
     """
     shopify_addr = order.get("shipping_address") or {}
 
@@ -47,7 +50,7 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
         "country_code": shopify_addr.get("country_code") or shopify_addr.get("country", "IN"),
         "postcode": shopify_addr.get("zip", ""),
         "phone_number": shopify_addr.get("phone", ""),
-        "email": order.get("customer_email", "support@storygift.in"),
+        # Note: email not passed to Lulu - contact_email is set in lulu_service.py
     }
 
 
