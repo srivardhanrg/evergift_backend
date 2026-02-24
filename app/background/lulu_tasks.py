@@ -13,7 +13,6 @@ Flow:
 """
 
 import json
-import asyncio
 from datetime import datetime
 import structlog
 
@@ -160,40 +159,32 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
                 return
 
         # ----------------------------------------------------------------
-        # 3. Wait for all 10 pages to be generated (physical orders run in
-        #    parallel with generate_pdf — we poll until complete)
+        # 3. Verify pages are ready (should always be true since we're called
+        #    from generate_remaining_pages_and_pdf AFTER PDF is created)
         # ----------------------------------------------------------------
-        max_wait_seconds = 900  # 15 minutes
-        poll_interval = 15
-        waited = 0
-        while waited < max_wait_seconds:
-            preview_resp = db.table("previews").select("hires_images,generation_phase").eq(
-                "preview_id", preview_id
-            ).execute()
-            if preview_resp.data:
-                phase = preview_resp.data[0].get("generation_phase", "")
-                hires = preview_resp.data[0].get("hires_images") or []
-                if isinstance(hires, str):
-                    try:
-                        import json as _json
-                        hires = _json.loads(hires)
-                    except Exception:
-                        hires = []
-                if phase == "complete" or len(hires) >= 10:
-                    preview = preview_resp.data[0]
-                    logger.info("All pages ready for Lulu", pages=len(hires), preview_id=preview_id)
-                    break
-                logger.info("Waiting for page generation", phase=phase, pages=len(hires), waited=waited)
-            await asyncio.sleep(poll_interval)
-            waited += poll_interval
-        else:
-            logger.error("Timed out waiting for page generation", preview_id=preview_id)
-            raise RuntimeError("Page generation timed out — cannot submit Lulu print job")
+        hires = preview.get("hires_images") or []
+        if isinstance(hires, str):
+            try:
+                import json as _json
+                hires = _json.loads(hires)
+            except Exception:
+                hires = []
 
-        # Reload full preview after waiting
-        preview_resp = db.table("previews").select("*").eq("preview_id", preview_id).execute()
-        if preview_resp.data:
-            preview = preview_resp.data[0]
+        phase = preview.get("generation_phase", "")
+        if phase not in ("complete", "pages_complete") and len(hires) < 10:
+            logger.error(
+                "Pages not ready for Lulu submission — this should not happen "
+                "since we're called after PDF generation",
+                phase=phase,
+                pages=len(hires),
+                preview_id=preview_id
+            )
+            raise RuntimeError(
+                f"Pages not ready: phase={phase}, pages={len(hires)}. "
+                "submit_lulu_print_job must be called after PDF generation."
+            )
+
+        logger.info("Pages verified ready for Lulu", pages=len(hires), preview_id=preview_id)
 
         # ----------------------------------------------------------------
         # 4. Collect pages from preview record

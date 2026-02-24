@@ -71,15 +71,18 @@ async def generate_full_preview(
 async def generate_pdf_from_order(
     order_id: str,
     preview_id: str,
-    child_name: str
+    child_name: str,
+    order_type: str = "digital"
 ):
     """
     Generate final PDF after payment.
+    For physical orders (order_type='physical'), also submits to Lulu after PDF is ready.
     """
     return await generate_storygift_pdf_from_order(
         order_id=order_id,
         preview_id=preview_id,
-        child_name=child_name
+        child_name=child_name,
+        order_type=order_type
     )
 
 

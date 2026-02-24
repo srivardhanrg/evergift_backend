@@ -12,7 +12,8 @@ from app.models.database import get_db
 from app.models.enums import OrderStatus, PreviewStatus
 from app.core.security import verify_shopify_webhook, verify_shop_domain
 from app.background.tasks import generate_pdf
-from app.background.lulu_tasks import submit_lulu_print_job
+# NOTE: submit_lulu_print_job is no longer queued separately.
+# It is called sequentially from within generate_pdf when order_type='physical'.
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -187,6 +188,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         # Step 5: Create order record
         order_data = {
             "order_id": order_id,
+            "order_type": order_type,  # 'digital' or 'physical' — stored for audit + frontend
             "order_number": str(order_number) if order_number else None,
             "preview_id": preview_id,
             "customer_email": customer_email,
@@ -215,33 +217,22 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         
         logger.info("Preview status updated to PURCHASED", preview_id=preview_id)
 
-        # Step 6: Queue background jobs based on order type
+        # Step 6: Queue background job — generate_pdf handles Lulu internally for physical orders
         child_name_from_preview = preview.get("child_name", "Child")
 
         if order_type == "physical":
-            # Physical book: generate remaining pages AND submit to Lulu for printing
-            # generate_pdf generates pages 6-10; submit_lulu_print_job waits for them then prints
-            logger.info("Physical book order — queueing page generation + Lulu print job", order_id=order_id)
-            background_tasks.add_task(
-                generate_pdf,
-                order_id=order_id,
-                preview_id=preview_id,
-                child_name=child_name_from_preview
-            )
-            background_tasks.add_task(
-                submit_lulu_print_job,
-                order_id=order_id,
-                preview_id=preview_id,
-            )
+            # Physical book: generate pages → PDF → Lulu (all sequential inside generate_pdf)
+            logger.info("Physical book order — queueing sequential generation + Lulu", order_id=order_id)
         else:
-            # Digital PDF: generate remaining pages + digital PDF only
             logger.info("Digital PDF order — queueing page generation", order_id=order_id)
-            background_tasks.add_task(
-                generate_pdf,
-                order_id=order_id,
-                preview_id=preview_id,
-                child_name=child_name_from_preview
-            )
+
+        background_tasks.add_task(
+            generate_pdf,
+            order_id=order_id,
+            preview_id=preview_id,
+            child_name=child_name_from_preview,
+            order_type=order_type
+        )
 
         logger.info(
             "Order processed successfully",

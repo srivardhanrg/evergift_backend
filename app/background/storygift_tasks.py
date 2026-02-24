@@ -521,7 +521,8 @@ async def generate_remaining_pages_and_pdf(
     order_id: str,
     preview_id: str,
     child_name: str,
-    max_retries: int = 3
+    max_retries: int = 3,
+    order_type: str = "digital"
 ):
     """
     Generate remaining 5 pages (6-10) after payment, then create full 10-page PDF.
@@ -740,6 +741,36 @@ async def generate_remaining_pages_and_pdf(
                     total_pages=len(all_story_pages),
                     pdf_url=pdf_url
                 )
+
+                # ── Lulu submission for physical orders ──
+                # Called AFTER PDF is ready — no polling needed
+                if order_type == "physical":
+                    logger.info(
+                        "Physical order — submitting to Lulu now that PDF is ready",
+                        order_id=order_id,
+                        preview_id=preview_id
+                    )
+                    try:
+                        from app.background.lulu_tasks import submit_lulu_print_job
+                        await submit_lulu_print_job(
+                            order_id=order_id,
+                            preview_id=preview_id
+                        )
+                        logger.info(
+                            "Lulu print job submitted successfully",
+                            order_id=order_id,
+                            preview_id=preview_id
+                        )
+                    except Exception as lulu_err:
+                        # Lulu failure should NOT fail the order — PDF is already saved
+                        # Can be retried manually via admin or the /print/order endpoint
+                        logger.error(
+                            "CRITICAL: Lulu submission failed — PDF ready but print not submitted. "
+                            "Manual retry may be needed.",
+                            order_id=order_id,
+                            preview_id=preview_id,
+                            error=str(lulu_err)
+                        )
             except Exception as pdf_error:
                 # PDF generation failed but pages are safe — mark as pdf_failed
                 # so the frontend can offer a regenerate button
@@ -822,7 +853,14 @@ async def generate_remaining_pages_and_pdf(
 
 
 # Legacy alias for backward compatibility
-async def generate_storygift_pdf_from_order(order_id: str, preview_id: str, child_name: str):
-    """Legacy wrapper - now generates remaining pages + PDF."""
-    return await generate_remaining_pages_and_pdf(order_id, preview_id, child_name)
+async def generate_storygift_pdf_from_order(
+    order_id: str,
+    preview_id: str,
+    child_name: str,
+    order_type: str = "digital"
+):
+    """Legacy wrapper - now generates remaining pages + PDF (+ Lulu for physical)."""
+    return await generate_remaining_pages_and_pdf(
+        order_id, preview_id, child_name, order_type=order_type
+    )
 
