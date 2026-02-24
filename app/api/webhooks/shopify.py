@@ -349,6 +349,7 @@ async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
         preview_id = webhook_data.get("preview_id")
         customer_email = webhook_data.get("customer_email", "test@example.com")
         order_id = webhook_data.get("order_id", f"test_{datetime.utcnow().timestamp()}")
+        order_type = webhook_data.get("order_type", "digital")
         
         if not preview_id:
             raise HTTPException(status_code=400, detail="preview_id is required")
@@ -371,6 +372,7 @@ async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
         # Create order record
         order_data = {
             "order_id": str(order_id),
+            "order_type": order_type,
             "order_number": "TEST-001",
             "preview_id": preview_id,
             "customer_email": customer_email,
@@ -398,13 +400,14 @@ async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
 
         logger.info("TEST: Preview status updated to PURCHASED", preview_id=preview_id)
 
-        # Queue PDF generation - must pass child_name
+        # Queue PDF generation - must pass child_name and order_type
         child_name_from_preview = preview.get("child_name", "Child")
         background_tasks.add_task(
             generate_pdf,
             order_id=str(order_id),
             preview_id=preview_id,
-            child_name=child_name_from_preview
+            child_name=child_name_from_preview,
+            order_type=order_type
         )
         
         logger.info(
