@@ -67,15 +67,18 @@ async def handle_lulu_webhook(request: Request):
             return {"success": True, "message": "Empty webhook body"}
 
         # 2. SECURITY: Verify HMAC signature in production
-        if settings.app_env == "production" and settings.lulu_webhook_secret:
-            signature = request.headers.get("X-Lulu-Signature", "")
+        # Lulu signs webhooks with your client secret (no separate webhook secret)
+        webhook_secret = settings.lulu_webhook_secret or settings.lulu_client_secret
+        if settings.app_env == "production" and webhook_secret:
+            # Lulu uses the header "Lulu-HMAC-SHA256" (NOT X-Lulu-Signature)
+            signature = request.headers.get("Lulu-HMAC-SHA256", "")
             if not signature:
-                logger.warning("Lulu webhook missing signature header")
+                logger.warning("Lulu webhook missing Lulu-HMAC-SHA256 header")
                 raise HTTPException(status_code=401, detail="Missing webhook signature")
 
-            # Compute expected HMAC-SHA256
+            # Compute expected HMAC-SHA256 using raw body
             expected_sig = hmac.new(
-                settings.lulu_webhook_secret.encode("utf-8"),
+                webhook_secret.encode("utf-8"),
                 body,
                 hashlib.sha256
             ).hexdigest()

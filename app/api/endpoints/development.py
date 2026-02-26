@@ -343,6 +343,23 @@ async def dev_info():
                 "description": "Check order and PDF generation status"
             },
             {
+                "endpoint": "POST /api/dev/lulu-webhooks/register",
+                "description": "Register webhook endpoint with Lulu (one-time setup)",
+                "required_fields": ["webhook_url"]
+            },
+            {
+                "endpoint": "GET /api/dev/lulu-webhooks",
+                "description": "List all registered Lulu webhooks"
+            },
+            {
+                "endpoint": "POST /api/dev/lulu-webhooks/{webhook_id}/test",
+                "description": "Send a test webhook from Lulu to your endpoint"
+            },
+            {
+                "endpoint": "DELETE /api/dev/lulu-webhooks/{webhook_id}",
+                "description": "Delete a registered Lulu webhook"
+            },
+            {
                 "endpoint": "GET /api/dev/info",
                 "description": "This info endpoint"
             }

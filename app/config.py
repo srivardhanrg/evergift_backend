@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     lulu_api_base: str = "https://api.sandbox.lulu.com"
     lulu_auth_url: str = "https://api.sandbox.lulu.com/auth/realms/glasstree/protocol/openid-connect/token"
     lulu_pod_package_id: str = "0850X0850FCPRESS080CW444GXX"  # 8.5x8.5" premium color saddle stitch
-    lulu_webhook_secret: str = ""  # For webhook HMAC verification (required in production)
+    lulu_webhook_secret: str = ""  # Set to your lulu_client_secret value — Lulu uses it to sign webhooks
 
     # Rate Limiting
     rate_limit_previews_per_day: int = 3

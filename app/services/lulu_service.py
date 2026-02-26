@@ -178,6 +178,26 @@ async def create_print_job(
         "external_id": order_id,  # Our order reference
     }
 
+    # Add webhook configuration at the root of the payload
+    # Lulu requires us to set the webhook URL per print job
+    if settings.app_env in ["production", "staging"]:
+        webhook_url = f"https://magictales-backend.onrender.com/webhooks/lulu/lulu"
+        # For testing, you could also configure this via env vars:
+        # webhook_url = settings.lulu_webhook_url
+        payload["event_notifications"] = [
+            {
+                "url": webhook_url,
+                "events": ["PRINT_JOB_STATUS_CHANGED"]
+            }
+        ]
+    elif os.getenv("LULU_WEBHOOK_URL"): # For local testing with Ngrok/Cloudflare
+        payload["event_notifications"] = [
+            {
+                "url": os.getenv("LULU_WEBHOOK_URL"),
+                "events": ["PRINT_JOB_STATUS_CHANGED"]
+            }
+        ]
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{settings.lulu_api_base}/print-jobs/",
@@ -319,6 +339,9 @@ async def cancel_print_job(lulu_job_id: str) -> bool:
             lulu_job_id=lulu_job_id,
         )
     return success
+
+
+
 
 
 # ---------------------------------------------------------------------------
