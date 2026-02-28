@@ -80,19 +80,26 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration - TESTING MODE: Allow all origins
-# TODO: Restore environment-aware CORS before production deployment
-# settings = get_settings()
-# if settings.app_env == "production":
-#     cors_origins = ["https://storygift.in", "https://www.storygift.in", ...]
-# else:
-#     cors_origins = ["http://localhost:3000", ...]
+# CORS Configuration - environment-aware (locked to production origins)
+if get_settings().app_env == "production":
+    cors_origins = [
+        "https://storygift.in",
+        "https://www.storygift.in",
+        "https://storygift-2061.myshopify.com",
+    ]
+else:
+    # Local development
+    cors_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TESTING: Allow all origins
-    allow_credentials=False,  # Must be False when using wildcard origins
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 

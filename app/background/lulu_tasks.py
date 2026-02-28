@@ -18,6 +18,7 @@ import structlog
 
 from app.config import get_settings
 from app.models.database import get_db
+from app.models.enums import OrderStatus, GenerationPhase
 from app.services.lulu_service import create_print_job, map_lulu_status
 from app.services.lulu_pdf_generator import generate_interior_pdf, generate_cover_pdf
 
@@ -180,7 +181,13 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
                 hires = []
 
         phase = preview.get("generation_phase", "")
-        if phase not in ("complete", "pages_complete") and len(hires) < 10:
+        # Valid phases: pages_complete (legacy), preparing_print (new physical flow), complete (digital)
+        valid_phases = (
+            GenerationPhase.PAGES_COMPLETE.value,
+            GenerationPhase.PREPARING_PRINT.value,
+            GenerationPhase.COMPLETE.value,
+        )
+        if phase not in valid_phases and len(hires) < 10:
             logger.error(
                 "Pages not ready for Lulu submission — this should not happen "
                 "since we're called after PDF generation",
@@ -250,9 +257,14 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             print_order_id = insert_resp.data[0].get("print_order_id") if insert_resp.data else None
 
         # ----------------------------------------------------------------
-        # 6. Submit to Lulu
+        # 6. Update phase to submitting_print and submit to Lulu
         # ----------------------------------------------------------------
         logger.info("Submitting print job to Lulu", order_id=order_id)
+
+        # Update preview phase to indicate Lulu submission in progress
+        db.table("previews").update({
+            "generation_phase": GenerationPhase.SUBMITTING_PRINT.value,
+        }).eq("preview_id", preview_id).execute()
 
         lulu_response = await create_print_job(
             interior_url=interior_url,
@@ -287,11 +299,23 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         else:
             db.table("print_orders").update(update_data).eq("order_id", order_id).execute()
 
+        # ----------------------------------------------------------------
+        # 8. Update preview phase to print_submitted and order to COMPLETED
+        # ----------------------------------------------------------------
+        db.table("previews").update({
+            "generation_phase": GenerationPhase.PRINT_SUBMITTED.value,
+        }).eq("preview_id", preview_id).execute()
+
+        db.table("orders").update({
+            "status": OrderStatus.COMPLETED.value,
+        }).eq("order_id", order_id).execute()
+
         logger.info(
             "Lulu print job submitted successfully",
             order_id=order_id,
             lulu_job_id=lulu_job_id,
             lulu_status=lulu_status_raw,
+            generation_phase=GenerationPhase.PRINT_SUBMITTED.value,
         )
 
     except Exception as e:
@@ -302,11 +326,27 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             error=str(e),
         )
 
-        # Record the failure in DB
+        # Record the failure in DB - update both print_orders and preview phase
         try:
             db.table("print_orders").update({
                 "lulu_status": "failed",
                 "last_error": str(e),
             }).eq("order_id", order_id).execute()
-        except Exception:
-            pass
+
+            # Set preview phase to print_failed (PDF is ready, Lulu submission failed)
+            db.table("previews").update({
+                "generation_phase": GenerationPhase.PRINT_FAILED.value,
+            }).eq("preview_id", preview_id).execute()
+
+            # Update order status to failed
+            db.table("orders").update({
+                "status": OrderStatus.FAILED.value,
+                "error_message": f"Lulu print submission failed: {str(e)}",
+            }).eq("order_id", order_id).execute()
+        except Exception as db_error:
+            logger.error(
+                "Failed to update database after Lulu submission error",
+                order_id=order_id,
+                preview_id=preview_id,
+                db_error=str(db_error),
+            )

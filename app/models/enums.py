@@ -59,6 +59,49 @@ class LuluPrintStatus(str, Enum):
     FAILED = "failed"
 
 
+class GenerationPhase(str, Enum):
+    """
+    Generation phase for preview/order lifecycle.
+
+    Digital order flow:
+        preview → generating_full → pages_complete → complete
+
+    Physical order flow:
+        preview → generating_full → pages_complete → preparing_print
+        → submitting_print → print_submitted
+
+    Error states:
+        pdf_failed - PDF generation failed (pages preserved, can retry)
+        print_failed - Lulu submission failed (PDF ready, can retry)
+        failed - Unrecoverable error
+    """
+    # Initial state
+    PREVIEW = "preview"
+
+    # Digital + Physical: Generating remaining pages (6-10)
+    GENERATING_FULL = "generating_full"
+
+    # Digital + Physical: All pages generated, creating PDF
+    PAGES_COMPLETE = "pages_complete"
+
+    # Digital only: PDF ready, order complete
+    COMPLETE = "complete"
+
+    # Physical only: Creating Lulu-specific PDFs (interior + cover wrap)
+    PREPARING_PRINT = "preparing_print"
+
+    # Physical only: Calling Lulu API to submit print job
+    SUBMITTING_PRINT = "submitting_print"
+
+    # Physical only: Lulu accepted the job, book is being printed
+    PRINT_SUBMITTED = "print_submitted"
+
+    # Error states
+    PDF_FAILED = "pdf_failed"
+    PRINT_FAILED = "print_failed"
+    FAILED = "failed"
+
+
 class Theme(str, Enum):
     """Available story themes."""
     # Primary StoryGift themes (superior quality, 10 pages each)

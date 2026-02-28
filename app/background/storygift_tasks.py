@@ -720,31 +720,33 @@ async def generate_remaining_pages_and_pdf(
                     cover_image_url=cover_url
                 )
                 
-                # Update preview with PDF URL and mark generation as complete
-                db.table("previews").update({
-                    "pdf_url": pdf_url,
-                    "status": PreviewStatus.PURCHASED.value,
-                    "generation_phase": "complete"
-                }).eq("preview_id", preview_id).execute()
-                
-                # Update order as completed
-                db.table("orders").update({
-                    "pdf_url": pdf_url,
-                    "status": OrderStatus.COMPLETED.value,
-                    "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
-                }).eq("order_id", order_id).execute()
-                
-                logger.info(
-                    "Full book generation completed successfully",
-                    order_id=order_id,
-                    preview_id=preview_id,
-                    total_pages=len(all_story_pages),
-                    pdf_url=pdf_url
-                )
-
-                # ── Lulu submission for physical orders ──
-                # Called AFTER PDF is ready — no polling needed
+                # Update preview with PDF URL
+                # For physical orders: set phase to "preparing_print" (Lulu submission pending)
+                # For digital orders: set phase to "complete" (ready for download)
                 if order_type == "physical":
+                    # Physical: PDF ready, now need to prepare and submit to Lulu
+                    db.table("previews").update({
+                        "pdf_url": pdf_url,
+                        "status": PreviewStatus.PURCHASED.value,
+                        "generation_phase": "preparing_print"
+                    }).eq("preview_id", preview_id).execute()
+
+                    # Order status stays as GENERATING_PDF until Lulu submission completes
+                    db.table("orders").update({
+                        "pdf_url": pdf_url,
+                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                    }).eq("order_id", order_id).execute()
+
+                    logger.info(
+                        "PDF generation complete for physical order, preparing for print",
+                        order_id=order_id,
+                        preview_id=preview_id,
+                        total_pages=len(all_story_pages),
+                        pdf_url=pdf_url
+                    )
+
+                    # ── Lulu submission for physical orders ──
+                    # Called AFTER PDF is ready — no polling needed
                     logger.info(
                         "Physical order — submitting to Lulu now that PDF is ready",
                         order_id=order_id,
@@ -756,6 +758,8 @@ async def generate_remaining_pages_and_pdf(
                             order_id=order_id,
                             preview_id=preview_id
                         )
+                        # Note: submit_lulu_print_job will update generation_phase to
+                        # "submitting_print" then "print_submitted" on success
                         logger.info(
                             "Lulu print job submitted successfully",
                             order_id=order_id,
@@ -763,7 +767,7 @@ async def generate_remaining_pages_and_pdf(
                         )
                     except Exception as lulu_err:
                         # Lulu failure should NOT fail the order — PDF is already saved
-                        # Can be retried manually via admin or the /print/order endpoint
+                        # Mark phase as print_failed so frontend can show appropriate message
                         logger.error(
                             "CRITICAL: Lulu submission failed — PDF ready but print not submitted. "
                             "Manual retry may be needed.",
@@ -771,6 +775,30 @@ async def generate_remaining_pages_and_pdf(
                             preview_id=preview_id,
                             error=str(lulu_err)
                         )
+                        db.table("previews").update({
+                            "generation_phase": "print_failed"
+                        }).eq("preview_id", preview_id).execute()
+                else:
+                    # Digital: PDF ready, order complete
+                    db.table("previews").update({
+                        "pdf_url": pdf_url,
+                        "status": PreviewStatus.PURCHASED.value,
+                        "generation_phase": "complete"
+                    }).eq("preview_id", preview_id).execute()
+
+                    db.table("orders").update({
+                        "pdf_url": pdf_url,
+                        "status": OrderStatus.COMPLETED.value,
+                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                    }).eq("order_id", order_id).execute()
+
+                    logger.info(
+                        "Digital book generation completed successfully",
+                        order_id=order_id,
+                        preview_id=preview_id,
+                        total_pages=len(all_story_pages),
+                        pdf_url=pdf_url
+                    )
             except Exception as pdf_error:
                 # PDF generation failed but pages are safe — mark as pdf_failed
                 # so the frontend can offer a regenerate button
