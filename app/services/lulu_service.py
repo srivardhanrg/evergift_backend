@@ -7,8 +7,10 @@ Handles OAuth2 authentication and all Lulu API interactions:
 - Print job creation
 - Status polling
 - Shipping options
+- Webhook registration
 """
 
+import os
 import time
 import httpx
 import structlog
@@ -103,7 +105,7 @@ async def calculate_print_cost(
         "shipping_address": {
             "country": country_code,
         },
-        "shipping_option": shipping_option,
+        "shipping_level": shipping_option,  # API field is shipping_level
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
@@ -173,30 +175,15 @@ async def create_print_job(
             "country_code": shipping_address.get("country_code", "IN"),
             "postcode": shipping_address.get("postcode", ""),
             "phone_number": shipping_address.get("phone_number", ""),
+            "email": shipping_address.get("email", ""),  # Required by Lulu API
         },
-        "shipping_option": shipping_option,
+        "shipping_level": shipping_option,  # API field is shipping_level
         "external_id": order_id,  # Our order reference
     }
 
-    # Add webhook configuration at the root of the payload
-    # Lulu requires us to set the webhook URL per print job
-    if settings.app_env in ["production", "staging"]:
-        webhook_url = f"https://magictales-backend.onrender.com/webhooks/lulu/lulu"
-        # For testing, you could also configure this via env vars:
-        # webhook_url = settings.lulu_webhook_url
-        payload["event_notifications"] = [
-            {
-                "url": webhook_url,
-                "events": ["PRINT_JOB_STATUS_CHANGED"]
-            }
-        ]
-    elif os.getenv("LULU_WEBHOOK_URL"): # For local testing with Ngrok/Cloudflare
-        payload["event_notifications"] = [
-            {
-                "url": os.getenv("LULU_WEBHOOK_URL"),
-                "events": ["PRINT_JOB_STATUS_CHANGED"]
-            }
-        ]
+    # NOTE: Webhooks must be registered separately via POST /webhooks/
+    # The event_notifications field in print job payload is not supported.
+    # Use register_webhook() to set up webhook before creating print jobs.
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
@@ -342,6 +329,138 @@ async def cancel_print_job(lulu_job_id: str) -> bool:
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# Webhook Management
+# ---------------------------------------------------------------------------
+
+async def register_webhook(webhook_url: str) -> dict:
+    """
+    Register a webhook URL with Lulu to receive PRINT_JOB_STATUS_CHANGED events.
+
+    This is a one-time setup. The webhook will be called whenever a print job
+    status changes (e.g., CREATED → IN_PRODUCTION → SHIPPED).
+
+    Args:
+        webhook_url: Full URL where Lulu should send webhook notifications
+                     e.g., "https://magictales-backend.onrender.com/webhooks/lulu/lulu"
+
+    Returns:
+        Lulu API response with webhook id, is_active, topics, url
+    """
+    settings = get_settings()
+    headers = await _lulu_headers()
+
+    payload = {
+        "topics": ["PRINT_JOB_STATUS_CHANGED"],
+        "url": webhook_url,
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{settings.lulu_api_base}/webhooks/",
+            json=payload,
+            headers=headers,
+        )
+
+    if resp.status_code not in (200, 201):
+        logger.error(
+            "Lulu webhook registration failed",
+            status=resp.status_code,
+            body=resp.text,
+            webhook_url=webhook_url,
+        )
+        raise RuntimeError(f"Lulu webhook registration failed: {resp.status_code} {resp.text}")
+
+    data = resp.json()
+    logger.info(
+        "Lulu webhook registered successfully",
+        webhook_id=data.get("id"),
+        is_active=data.get("is_active"),
+        url=data.get("url"),
+    )
+    return data
+
+
+async def list_webhooks() -> list:
+    """
+    List all registered webhooks for the current Lulu account.
+
+    Returns:
+        List of webhook configurations with id, is_active, topics, url
+    """
+    settings = get_settings()
+    headers = await _lulu_headers()
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(
+            f"{settings.lulu_api_base}/webhooks/",
+            headers=headers,
+        )
+
+    if resp.status_code != 200:
+        logger.error("Failed to list Lulu webhooks", status=resp.status_code)
+        raise RuntimeError(f"Failed to list webhooks: {resp.status_code}")
+
+    data = resp.json()
+    # Lulu returns paginated results
+    return data.get("results", [])
+
+
+async def delete_webhook(webhook_id: str) -> bool:
+    """
+    Delete a registered webhook.
+
+    Args:
+        webhook_id: UUID of the webhook to delete
+
+    Returns:
+        True if deleted successfully
+    """
+    settings = get_settings()
+    headers = await _lulu_headers()
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.delete(
+            f"{settings.lulu_api_base}/webhooks/{webhook_id}/",
+            headers=headers,
+        )
+
+    success = resp.status_code in (200, 204)
+    if not success:
+        logger.warning(
+            "Lulu webhook deletion failed",
+            status=resp.status_code,
+            webhook_id=webhook_id,
+        )
+    return success
+
+
+async def test_webhook(webhook_id: str) -> dict:
+    """
+    Send a test webhook from Lulu to verify the endpoint is working.
+
+    Args:
+        webhook_id: UUID of the webhook to test
+
+    Returns:
+        Test submission result
+    """
+    settings = get_settings()
+    headers = await _lulu_headers()
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{settings.lulu_api_base}/webhooks/{webhook_id}/test/",
+            headers=headers,
+        )
+
+    if resp.status_code not in (200, 201):
+        logger.error("Lulu webhook test failed", status=resp.status_code, webhook_id=webhook_id)
+        raise RuntimeError(f"Webhook test failed: {resp.status_code}")
+
+    return resp.json()
 
 
 # ---------------------------------------------------------------------------

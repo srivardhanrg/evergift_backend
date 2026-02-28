@@ -30,15 +30,24 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
 
     Shopify fields (from webhook):
         first_name, last_name, address1, address2, city,
-        province, province_code, country, country_code, zip, phone
-    Lulu fields:
-        name, street1, street2, city, state_code, country_code, postcode, phone_number
+        province, province_code, country, country_code, zip, phone, email
+    Lulu fields (required):
+        name, street1, city, country_code, postcode, phone_number, email
     """
     shopify_addr = order.get("shipping_address") or {}
 
     first = shopify_addr.get("first_name", "")
     last = shopify_addr.get("last_name", "")
     name = f"{first} {last}".strip() or order.get("customer_name", "Customer")
+
+    # Email can come from: shipping_address, order email, or preview customer_email
+    email = (
+        shopify_addr.get("email")
+        or order.get("email")
+        or order.get("customer_email")
+        or preview.get("customer_email")
+        or ""
+    )
 
     return {
         "name": name,
@@ -49,7 +58,7 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
         "country_code": shopify_addr.get("country_code") or shopify_addr.get("country", "IN"),
         "postcode": shopify_addr.get("zip", ""),
         "phone_number": shopify_addr.get("phone", ""),
-        # Note: email not passed to Lulu - contact_email is set in lulu_service.py
+        "email": email,  # Required by Lulu API
     }
 
 

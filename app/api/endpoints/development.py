@@ -13,6 +13,12 @@ from app.models.database import get_db
 from app.models.enums import OrderStatus, PreviewStatus
 from app.background.tasks import generate_pdf as generate_pdf_task
 from app.config import get_settings
+from app.services.lulu_service import (
+    register_webhook,
+    list_webhooks,
+    delete_webhook,
+    test_webhook,
+)
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -373,3 +379,103 @@ async def dev_info():
             "6. Download PDF: GET /api/download/{order_id}"
         ]
     }
+
+
+# ---------------------------------------------------------------------------
+# Lulu Webhook Management Endpoints
+# ---------------------------------------------------------------------------
+
+class WebhookRegisterRequest(BaseModel):
+    """Request model for webhook registration."""
+    webhook_url: str
+
+
+@router.post("/dev/lulu-webhooks/register")
+async def register_lulu_webhook(request: WebhookRegisterRequest):
+    """
+    Register a webhook URL with Lulu to receive print job status updates.
+
+    This is a one-time setup. Once registered, Lulu will send
+    PRINT_JOB_STATUS_CHANGED events to this URL whenever a print job
+    status changes (e.g., CREATED → IN_PRODUCTION → SHIPPED).
+
+    For production, use:
+    webhook_url: "https://magictales-backend.onrender.com/webhooks/lulu/lulu"
+    """
+    try:
+        result = await register_webhook(request.webhook_url)
+        return {
+            "success": True,
+            "message": "Webhook registered successfully",
+            "webhook": {
+                "id": result.get("id"),
+                "url": result.get("url"),
+                "topics": result.get("topics"),
+                "is_active": result.get("is_active"),
+            }
+        }
+    except Exception as e:
+        logger.error("Failed to register Lulu webhook", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/dev/lulu-webhooks")
+async def list_lulu_webhooks():
+    """
+    List all registered Lulu webhooks for the current account.
+
+    Use this to verify that webhooks are properly configured.
+    """
+    try:
+        webhooks = await list_webhooks()
+        return {
+            "success": True,
+            "webhooks": webhooks,
+            "count": len(webhooks),
+        }
+    except Exception as e:
+        logger.error("Failed to list Lulu webhooks", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/dev/lulu-webhooks/{webhook_id}/test")
+async def test_lulu_webhook(webhook_id: str):
+    """
+    Send a test webhook from Lulu to verify the endpoint is working.
+
+    This will send dummy data to your registered webhook URL.
+    Check your server logs to confirm receipt.
+    """
+    try:
+        result = await test_webhook(webhook_id)
+        return {
+            "success": True,
+            "message": "Test webhook sent. Check your server logs for receipt.",
+            "result": result,
+        }
+    except Exception as e:
+        logger.error("Failed to test Lulu webhook", webhook_id=webhook_id, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/dev/lulu-webhooks/{webhook_id}")
+async def delete_lulu_webhook(webhook_id: str):
+    """
+    Delete a registered Lulu webhook.
+
+    Use this to clean up old or incorrect webhook configurations.
+    """
+    try:
+        success = await delete_webhook(webhook_id)
+        if success:
+            return {
+                "success": True,
+                "message": f"Webhook {webhook_id} deleted successfully",
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Failed to delete webhook")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to delete Lulu webhook", webhook_id=webhook_id, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
