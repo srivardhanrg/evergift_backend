@@ -80,35 +80,14 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration - environment-aware (locked to production origins)
-if get_settings().app_env == "production":
-    cors_origins = [
-        "https://storygift.in",
-        "https://www.storygift.in",
-        "https://storygift-2061.myshopify.com",
-    ]
-else:
-    # Local development
-    cors_origins = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8000",
-    ]
-
+# CORS Configuration - open for testing, lock down before production
+# TODO: Restore origin restrictions after testing is complete
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    # Must list headers explicitly when allow_credentials=True (spec forbids * with credentials)
-    # These match exactly what buildHeaders() sends from client.ts
-    allow_headers=[
-        "Content-Type",
-        "X-Session-Id",
-        "X-Shopify-Customer-Id",
-        "X-Shopify-Customer-Email",
-        "Authorization",
-    ],
+    allow_origins=["*"],
+    allow_credentials=False,  # Must be False with wildcard origins
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
