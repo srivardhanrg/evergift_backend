@@ -100,7 +100,15 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    # Must list headers explicitly when allow_credentials=True (spec forbids * with credentials)
+    # These match exactly what buildHeaders() sends from client.ts
+    allow_headers=[
+        "Content-Type",
+        "X-Session-Id",
+        "X-Shopify-Customer-Id",
+        "X-Shopify-Customer-Email",
+        "Authorization",
+    ],
 )
 
 
