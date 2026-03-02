@@ -170,7 +170,7 @@ async def create_preview(
             shopify_customer_id=shopify_customer_id,
             session_id_prefix=session_id[:8] if session_id else None,
             is_guest=shopify_customer_id is None,
-            customer_email_domain=customer_email.split("@")[1] if customer_email and "@" in customer_email else None,
+            customer_email_domain=shopify_customer_email.split("@")[1] if shopify_customer_email and "@" in shopify_customer_email else None,
         )
 
         settings = get_settings()
