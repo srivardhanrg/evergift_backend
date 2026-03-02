@@ -114,6 +114,11 @@ async def get_download(identifier: str):
         # Step 2: Find preview (required)
         # =============================================
         preview_id = order["preview_id"] if order else identifier
+        if not order:
+            logger.info(
+                "No order found for identifier — treating as preview_id directly",
+                identifier=identifier,
+            )
         preview_response = db.table("previews").select("*").eq("preview_id", preview_id).execute()
 
         if not preview_response.data:
@@ -153,7 +158,12 @@ async def get_download(identifier: str):
                             "status": OrderStatus.COMPLETED.value,
                             "pdf_url": preview_pdf_url,
                         }).eq("order_id", order.get("order_id")).execute()
-                        logger.info("Auto-healed stuck order status", order_id=order.get("order_id"))
+                        logger.info(
+                            "Auto-healed stuck order status to COMPLETED",
+                            order_id=order.get("order_id"),
+                            old_status=order["status"],
+                            pdf_url=preview_pdf_url,
+                        )
                     except Exception as fix_err:
                         logger.warning("Failed to auto-heal order status", error=str(fix_err))
 
@@ -175,6 +185,14 @@ async def get_download(identifier: str):
                     "Preview marked complete but PDF not found on R2",
                     preview_id=preview_id,
                     pdf_url=preview_pdf_url,
+                )
+                logger.warning(
+                    "Returning pdf_missing: PDF not found on R2",
+                    identifier=identifier,
+                    preview_id=preview_id,
+                    expected_r2_path=pdf_path,
+                    generation_phase=generation_phase,
+                    all_pages_generated=all_pages_generated,
                 )
 
                 if all_pages_generated:

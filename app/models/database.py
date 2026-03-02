@@ -183,6 +183,42 @@ def _create_rest_client():
                         logger.error(f"REST update failed: {response.status_code} - {response.text}")
                         return RestSupabaseResponse(error=f"HTTP {response.status_code}: {response.text}")
 
+                # Handle delete operations
+                elif hasattr(self, '_is_delete') and self._is_delete:
+                    url = f"{self.base_url}/rest/v1/{self.table_name}"
+                    headers = {**self.headers, "Prefer": "return=representation"}
+
+                    # Add filters to URL params for WHERE clause (PostgREST format)
+                    params = {}
+                    if self._filters:
+                        for filter_expr in self._filters:
+                            if "=" in filter_expr:
+                                column, operator_value = filter_expr.split("=", 1)
+                                params[column] = operator_value
+
+                    if not params:
+                        # Safety guard: refuse to delete without a filter (would wipe entire table)
+                        logger.error("REST delete refused: no filters specified — would delete entire table")
+                        return RestSupabaseResponse(error="Delete requires at least one filter")
+
+                    response = requests.delete(url, headers=headers, params=params, timeout=30)
+
+                    if response.status_code in [200, 204]:
+                        try:
+                            if response.text.strip():
+                                result_data = response.json()
+                                if isinstance(result_data, list):
+                                    return RestSupabaseResponse(data=result_data)
+                                else:
+                                    return RestSupabaseResponse(data=[result_data])
+                            else:
+                                return RestSupabaseResponse(data=[])
+                        except Exception:
+                            return RestSupabaseResponse(data=[])
+                    else:
+                        logger.error(f"REST delete failed: {response.status_code} - {response.text}")
+                        return RestSupabaseResponse(error=f"HTTP {response.status_code}: {response.text}")
+
                 # Handle select operations
                 else:
                     # Build query parameters

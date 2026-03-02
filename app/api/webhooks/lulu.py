@@ -99,7 +99,17 @@ async def handle_lulu_webhook(request: Request):
         topic = payload.get("topic", "")
         data = payload.get("data", {})
 
-        logger.info("Lulu webhook received", topic=topic, lulu_job_id=data.get("id"))
+        # DEBUG: Log full webhook payload structure
+        logger.info(
+            "=== LULU WEBHOOK RECEIVED ===",
+            topic=topic,
+            lulu_job_id=data.get("id"),
+            external_id=data.get("external_id"),
+            status_name=data.get("status", {}).get("name"),
+            status_message=data.get("status", {}).get("message"),
+            payload_keys=list(payload.keys()),
+            data_keys=list(data.keys()) if data else [],
+        )
 
         if topic != "PRINT_JOB_STATUS_CHANGED":
             # Acknowledge but ignore other topics
@@ -148,9 +158,11 @@ async def handle_lulu_webhook(request: Request):
 
         if not result.data:
             logger.warning(
-                "No print_order found for Lulu job",
+                "No print_order found for Lulu job — webhook may be premature or for unknown order",
                 lulu_job_id=lulu_job_id,
-                external_id=external_id
+                external_id=external_id,
+                topic=topic,
+                lulu_status_raw=lulu_status_name,
             )
             return {"success": True, "message": "Print order not found"}
 
@@ -158,6 +170,21 @@ async def handle_lulu_webhook(request: Request):
         print_order_id = record.get("print_order_id")
         preview_id = record.get("preview_id")
         order_id = record.get("order_id")
+
+        # Get previous status for transition logging
+        previous_status = record.get("lulu_status", "unknown")
+
+        logger.info(
+            "Lulu status transition",
+            lulu_job_id=lulu_job_id,
+            external_order_id=external_id,
+            previous_status=previous_status,
+            new_status_raw=lulu_status_name,
+            new_status_mapped=mapped_status,
+            print_order_id=print_order_id,
+            order_id=order_id,
+            preview_id=preview_id,
+        )
 
         # 5. Build update payload
         update_data: dict = {
@@ -270,6 +297,15 @@ async def handle_lulu_webhook(request: Request):
                 carrier=carrier_name,
                 estimated_delivery=estimated_delivery
             )
+
+        logger.info(
+            "=== LULU WEBHOOK PROCESSED SUCCESSFULLY ===",
+            lulu_job_id=lulu_job_id,
+            order_id=order_id,
+            status_transition=f"{previous_status} -> {mapped_status}",
+            tracking_extracted=bool(tracking_number),
+            email_sent=bool(tracking_number and lulu_status_name.upper() == "SHIPPED"),
+        )
 
         return {"success": True, "message": "Status updated"}
 

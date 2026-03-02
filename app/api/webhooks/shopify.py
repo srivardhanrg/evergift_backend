@@ -19,6 +19,14 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
+def _mask_email(email: str) -> str:
+    """Mask email for logs: 'john@doe.com' → 'joh***@doe.com'"""
+    if not email or "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    return local[:3] + "***@" + domain
+
+
 @router.post("/order-paid")
 async def handle_order_paid(request: Request, background_tasks: BackgroundTasks):
     """
@@ -99,7 +107,18 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         logger.info("Order type detected", order_type=order_type, order_id=order_id)
 
         if not preview_id:
-            logger.error("No preview_id found in line items", order_id=order_id)
+            logger.error(
+                "preview_id NOT found in line_items — dumping properties for debug",
+                order_id=order_id,
+                line_items_properties=[
+                    {
+                        "variant_id": item.get("variant_id"),
+                        "sku": item.get("sku"),
+                        "properties": item.get("properties", []),
+                    }
+                    for item in line_items
+                ],
+            )
             # Still return 200 to acknowledge webhook
             return {"success": True, "message": "Webhook received but no preview_id found"}
 
@@ -143,7 +162,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
                     preview_id=preview_id,
                     order_id=order_id,
                     hours_since_expiry=round(hours_since_expiry, 2),
-                    customer_email=customer_email
+                    customer_email=_mask_email(customer_email)
                 )
                 # Still create order record for tracking, but mark as needing attention
                 order_data = {
@@ -238,7 +257,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
             "Order processed successfully",
             order_id=order_id,
             preview_id=preview_id,
-            customer_email=customer_email
+            customer_email=_mask_email(customer_email)
         )
 
         # Step 7: Return 200 immediately
@@ -296,9 +315,17 @@ async def handle_order_cancelled(request: Request):
 
         # Update order status if exists
         db = get_db()
-        db.table("orders").update({
+        update_result = db.table("orders").update({
             "status": OrderStatus.REFUNDED.value
         }).eq("order_id", order_id).execute()
+
+        if not update_result.data:
+            logger.warning(
+                "Order-cancelled webhook: no order record found to update",
+                order_id=order_id
+            )
+        else:
+            logger.info("Order cancelled and status updated", order_id=order_id)
 
         return {"success": True, "message": "Order cancellation processed"}
 

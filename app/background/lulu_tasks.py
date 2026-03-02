@@ -127,10 +127,19 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         order_id:   Shopify order ID (matches orders.order_id)
         preview_id: UUID of the preview (matches previews.preview_id)
     """
+    import time as _time
+    task_start_time = _time.monotonic()
+
     settings = get_settings()
     db = get_db()
 
-    logger.info("Starting Lulu print job submission", order_id=order_id, preview_id=preview_id)
+    logger.info(
+        "=== LULU PRINT JOB SUBMISSION STARTED ===",
+        order_id=order_id,
+        preview_id=preview_id,
+        lulu_api_base=settings.lulu_api_base,
+        is_sandbox="sandbox" in settings.lulu_api_base,
+    )
 
     try:
         # ----------------------------------------------------------------
@@ -220,9 +229,19 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         # ----------------------------------------------------------------
         # 4. Generate interior + cover PDFs
         # ----------------------------------------------------------------
-        logger.info("Generating Lulu interior PDF", preview_id=preview_id)
-        interior_url = await generate_interior_pdf(pages, preview_id, child_name)
+        pdf_start_time = _time.monotonic()
 
+        logger.info("Generating Lulu interior PDF", preview_id=preview_id, pages_count=len(pages))
+        interior_url = await generate_interior_pdf(pages, preview_id, child_name)
+        interior_duration_ms = round((_time.monotonic() - pdf_start_time) * 1000)
+        logger.info(
+            "Lulu interior PDF generated",
+            preview_id=preview_id,
+            interior_url=interior_url[:80] + "..." if interior_url else None,
+            duration_ms=interior_duration_ms,
+        )
+
+        cover_start_time = _time.monotonic()
         logger.info("Generating Lulu cover PDF", preview_id=preview_id)
         cover_url = await generate_cover_pdf(
             cover_image_url=cover_image_url,
@@ -230,11 +249,31 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             story_title=story_title,
             preview_id=preview_id,
         )
+        cover_duration_ms = round((_time.monotonic() - cover_start_time) * 1000)
+        logger.info(
+            "Lulu cover PDF generated",
+            preview_id=preview_id,
+            cover_url=cover_url[:80] + "..." if cover_url else None,
+            duration_ms=cover_duration_ms,
+        )
 
         # ----------------------------------------------------------------
         # 5. Insert or update print_orders record
         # ----------------------------------------------------------------
         shipping_address = _build_shipping_address(order, preview)
+
+        logger.info(
+            "Shipping address prepared for Lulu submission",
+            order_id=order_id,
+            name_initials=(shipping_address.get("name") or "")[:2] + "***",
+            city=shipping_address.get("city"),
+            state_code=shipping_address.get("state_code"),
+            country_code=shipping_address.get("country_code"),
+            postcode_prefix=(shipping_address.get("postcode") or "")[:3] + "***",
+            has_phone=bool(shipping_address.get("phone_number")),
+            has_email=bool(shipping_address.get("email")),
+            street1_present=bool(shipping_address.get("street1")),
+        )
         print_order_data = {
             "order_id": order_id,
             "preview_id": preview_id,
@@ -280,6 +319,15 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         lulu_status_raw = lulu_response.get("status", {}).get("name", "")
         mapped_status = map_lulu_status(lulu_status_raw)
 
+        logger.info(
+            "Lulu API response received",
+            order_id=order_id,
+            lulu_job_id=lulu_job_id,
+            lulu_status_raw=lulu_status_raw,
+            lulu_status_mapped=mapped_status,
+            response_keys=list(lulu_response.keys()) if lulu_response else [],
+        )
+
         # ----------------------------------------------------------------
         # 7. Update print_orders with Lulu response
         # ----------------------------------------------------------------
@@ -310,20 +358,27 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             "status": OrderStatus.COMPLETED.value,
         }).eq("order_id", order_id).execute()
 
+        total_duration_ms = round((_time.monotonic() - task_start_time) * 1000)
         logger.info(
-            "Lulu print job submitted successfully",
+            "=== LULU PRINT JOB SUBMITTED SUCCESSFULLY ===",
             order_id=order_id,
             lulu_job_id=lulu_job_id,
             lulu_status=lulu_status_raw,
             generation_phase=GenerationPhase.PRINT_SUBMITTED.value,
+            total_duration_ms=total_duration_ms,
+            interior_pdf_duration_ms=interior_duration_ms,
+            cover_pdf_duration_ms=cover_duration_ms,
         )
 
     except Exception as e:
+        total_duration_ms = round((_time.monotonic() - task_start_time) * 1000)
         logger.error(
-            "Lulu print job submission failed",
+            "=== LULU PRINT JOB SUBMISSION FAILED ===",
             order_id=order_id,
             preview_id=preview_id,
             error=str(e),
+            error_type=type(e).__name__,
+            total_duration_ms=total_duration_ms,
         )
 
         # Record the failure in DB - update both print_orders and preview phase

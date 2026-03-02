@@ -17,7 +17,7 @@ router = APIRouter()
 
 async def _get_job_status_internal(job_id: str):
     """Internal function to get job status (shared by both endpoints)."""
-    logger.info("Getting job status", job_id=job_id)
+    logger.debug("Getting job status", job_id=job_id)
 
     db = get_db()
 
@@ -181,7 +181,7 @@ async def get_full_status(preview_id: str):
     - Print order submission status (for physical orders)
     - Tracking info when available
     """
-    logger.info("Getting full status", preview_id=preview_id)
+    logger.debug("Getting full status", preview_id=preview_id)
 
     db = get_db()
 

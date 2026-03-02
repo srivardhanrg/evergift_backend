@@ -62,7 +62,8 @@ class StoryGiftPDFGeneratorService:
         child_name: str,
         story_pages: List[Dict[str, Any]],
         story_title: str,
-        cover_image_url: Optional[str] = None
+        cover_image_url: Optional[str] = None,
+        add_blank_back_page: bool = False,  # True for physical Lulu orders only
     ) -> str:
         """
         Generate StoryGift-style PDF from story pages.
@@ -94,18 +95,22 @@ class StoryGiftPDFGeneratorService:
                 page_images=page_images,
                 child_name=child_name,
                 story_title=story_title,
-                cover_image=page_images.get('cover')
+                cover_image=page_images.get('cover'),
+                add_blank_back_page=add_blank_back_page,
             )
 
             # Upload to storage
             storage_path = f"final/{preview_id}/storygift_book.pdf"
             pdf_url = await self.storage.upload_pdf(pdf_bytes, storage_path)
 
+            total_pages = 1 + len(story_pages) + (1 if add_blank_back_page else 0)  # cover + story + back
             logger.info(
                 "PDF generated successfully",
                 preview_id=preview_id,
                 pdf_url=pdf_url,
-                page_count=len(story_pages),
+                content_pages=len(story_pages),
+                total_pdf_pages=total_pages,
+                has_blank_back_page=add_blank_back_page,
                 size_bytes=len(pdf_bytes)
             )
 
@@ -159,7 +164,8 @@ class StoryGiftPDFGeneratorService:
         page_images: Dict[str, bytes],
         child_name: str,
         story_title: str,
-        cover_image: Optional[bytes] = None
+        cover_image: Optional[bytes] = None,
+        add_blank_back_page: bool = False,
     ) -> bytes:
         """Create the PDF using ReportLab canvas for precise control."""
         
@@ -181,12 +187,17 @@ class StoryGiftPDFGeneratorService:
                 page_num = page_data.get('page', i + 1)
                 story_text = page_data.get('story_text', page_data.get('text', ''))
                 image_bytes = page_images.get(f'page_{page_num}')
-                
+
                 self._draw_story_page(c, image_bytes, story_text, page_num)
-                
-                # Add page break (except for last page)
-                if i < len(story_pages) - 1:
-                    c.showPage()
+                c.showPage()  # commit every story page
+
+            # Add blank back page for Lulu physical orders only.
+            # This makes the PDF 12 pages (cover + 10 story + 1 blank back),
+            # matching the page_count: 12 declared in the Lulu print job payload.
+            # Digital PDFs do NOT get this page.
+            if add_blank_back_page:
+                self._draw_blank_back_page(c)
+                c.showPage()
 
             c.save()
 
@@ -420,6 +431,18 @@ class StoryGiftPDFGeneratorService:
             c.setFillColor(white)
             c.setFont("Times-Bold", 48)
             c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2, story_title)
+
+    def _draw_blank_back_page(self, c: canvas.Canvas):
+        """Draw a blank white back page for Lulu print jobs.
+        
+        Lulu requires an even page count for saddle-stitch books.
+        Our content is 11 pages (1 cover + 10 story), so we add 1 blank
+        white back page to reach 12, matching page_count: 12 in the payload.
+        This page is NEVER sent to users or shown in previews.
+        """
+        c.setFillColor(white)
+        c.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
+        logger.info("Drew blank back page for Lulu print job")
 
     def _draw_letter_spaced_text(
         self,

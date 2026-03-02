@@ -549,9 +549,13 @@ async def generate_remaining_pages_and_pdf(
                 order_id=order_id,
                 preview_id=preview_id,
                 child_name=safe_child_name,
+                order_type=order_type,
                 attempt=retry_count + 1,
                 max_retries=max_retries
             )
+
+            # Track generation duration from this attempt onward
+            generation_start = datetime.utcnow()
 
             # Get preview data from database
             db = get_db()
@@ -566,6 +570,13 @@ async def generate_remaining_pages_and_pdf(
             existing_hires = preview_data.get("hires_images", [])
             existing_story_pages = preview_data.get("story_pages", [])
             analyzed_features = preview_data.get("analyzed_features", "a cute child")
+            if analyzed_features == "a cute child":
+                logger.warning(
+                    "analyzed_features not found in DB — using fallback. "
+                    "Face consistency across pages may be affected.",
+                    preview_id=preview_id,
+                    order_id=order_id,
+                )
             photo_url = preview_data.get("photo_url")
             theme = preview_data.get("theme", "storygift_enchanted_forest")
             style = preview_data.get("style", "photorealistic")
@@ -683,6 +694,14 @@ async def generate_remaining_pages_and_pdf(
                     "preview_page_count": len(story_pages),
                     "generation_phase": "pages_complete"
                 }).eq("preview_id", preview_id).execute()
+
+                logger.info(
+                    "All 10 pages generated — intermediate milestone reached",
+                    order_id=order_id,
+                    preview_id=preview_id,
+                    hires_count=len(hires_images),
+                    story_pages_count=len(story_pages),
+                )
             
             # ============================================
             # Now generate full 10-page PDF
@@ -712,12 +731,17 @@ async def generate_remaining_pages_and_pdf(
                     cover_url = all_hires[0]["url"]
                     logger.info("No dedicated cover found, using first page as cover")
                 
+                # Physical orders get a blank back page appended so the PDF has
+                # exactly 12 pages (cover + 10 story + 1 blank back), matching
+                # page_count: 12 declared in the Lulu print job payload.
+                # Digital orders keep 11 pages — the back page is Lulu-only.
                 pdf_url = await pdf_generator.generate_storygift_pdf(
                     preview_id=preview_id,
                     child_name=safe_child_name,
                     story_pages=all_story_pages,
                     story_title=story_title,
-                    cover_image_url=cover_url
+                    cover_image_url=cover_url,
+                    add_blank_back_page=(order_type == "physical"),
                 )
                 
                 # Update preview with PDF URL
@@ -742,7 +766,8 @@ async def generate_remaining_pages_and_pdf(
                         order_id=order_id,
                         preview_id=preview_id,
                         total_pages=len(all_story_pages),
-                        pdf_url=pdf_url
+                        pdf_url=pdf_url,
+                        duration_sec=round((datetime.utcnow() - generation_start).total_seconds(), 1),
                     )
 
                     # ── Lulu submission for physical orders ──
@@ -797,7 +822,8 @@ async def generate_remaining_pages_and_pdf(
                         order_id=order_id,
                         preview_id=preview_id,
                         total_pages=len(all_story_pages),
-                        pdf_url=pdf_url
+                        pdf_url=pdf_url,
+                        duration_sec=round((datetime.utcnow() - generation_start).total_seconds(), 1),
                     )
             except Exception as pdf_error:
                 # PDF generation failed but pages are safe — mark as pdf_failed
@@ -805,7 +831,8 @@ async def generate_remaining_pages_and_pdf(
                 logger.error(
                     "PDF generation failed (pages are preserved)",
                     preview_id=preview_id,
-                    error=str(pdf_error)
+                    error=str(pdf_error),
+                    exc_info=True,
                 )
                 db.table("previews").update({
                     "generation_phase": "pdf_failed"
@@ -846,7 +873,8 @@ async def generate_remaining_pages_and_pdf(
                 order_id=order_id,
                 preview_id=preview_id,
                 error=str(e),
-                retries_remaining=max_retries - retry_count
+                retries_remaining=max_retries - retry_count,
+                exc_info=True,
             )
             
             if retry_count < max_retries:

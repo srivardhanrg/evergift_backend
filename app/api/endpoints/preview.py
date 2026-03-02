@@ -166,7 +166,11 @@ async def create_preview(
             "Creating preview",
             child_name=preview_request.child_name,
             theme=preview_request.theme,
-            shopify_customer_id=shopify_customer_id
+            style=preview_request.style.value,
+            shopify_customer_id=shopify_customer_id,
+            session_id_prefix=session_id[:8] if session_id else None,
+            is_guest=shopify_customer_id is None,
+            customer_email_domain=customer_email.split("@")[1] if customer_email and "@" in customer_email else None,
         )
 
         settings = get_settings()
@@ -283,7 +287,8 @@ async def save_notification_email(
         if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
             raise HTTPException(status_code=400, detail="Invalid email format")
 
-        logger.info("Saving notification email", preview_id=preview_id, email=email)
+        _email_domain = email.split("@")[1] if "@" in email else "unknown"
+        logger.info("Saving notification email", preview_id=preview_id, email_domain=_email_domain)
 
         db = get_db()
 
@@ -440,7 +445,7 @@ async def get_preview(preview_id: str):
     """
 
     try:
-        logger.info("Getting preview", preview_id=preview_id)
+        logger.debug("Getting preview", preview_id=preview_id)
 
         db = get_db()
 

@@ -88,6 +88,9 @@ async def calculate_print_cost(
     Returns a dict with:
         total_cost_incl_tax, print_cost, shipping_cost, currency
     """
+    import time as _time
+    start_time = _time.monotonic()
+
     settings = get_settings()
     headers = await _lulu_headers()
 
@@ -108,6 +111,14 @@ async def calculate_print_cost(
         "shipping_level": shipping_option,  # API field is shipping_level
     }
 
+    logger.info(
+        "Lulu API request - calculating cost",
+        endpoint=f"{settings.lulu_api_base}/print-job-cost-calculations/",
+        country_code=country_code,
+        shipping_level=shipping_option,
+        quantity=quantity,
+    )
+
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
             f"{settings.lulu_api_base}/print-job-cost-calculations/",
@@ -115,12 +126,25 @@ async def calculate_print_cost(
             headers=headers,
         )
 
+    duration_ms = round((_time.monotonic() - start_time) * 1000)
+
     if resp.status_code not in (200, 201):
-        logger.error("Lulu cost calculation failed", status=resp.status_code, body=resp.text)
+        logger.error(
+            "Lulu cost calculation failed",
+            status=resp.status_code,
+            body=resp.text,
+            duration_ms=duration_ms,
+        )
         raise RuntimeError(f"Lulu cost calc failed: {resp.status_code} {resp.text}")
 
     data = resp.json()
-    logger.info("Lulu cost calculated", data=data)
+    logger.info(
+        "Lulu cost calculated successfully",
+        total_cost=data.get("total_cost_incl_tax"),
+        currency=data.get("currency"),
+        shipping_cost=data.get("shipping_cost"),
+        duration_ms=duration_ms,
+    )
     return data
 
 
@@ -145,6 +169,9 @@ async def create_print_job(
 
     Returns the full Lulu API response (contains id, status, etc.)
     """
+    import time as _time
+    start_time = _time.monotonic()
+
     settings = get_settings()
     headers = await _lulu_headers()
 
@@ -185,6 +212,24 @@ async def create_print_job(
     # The event_notifications field in print job payload is not supported.
     # Use register_webhook() to set up webhook before creating print jobs.
 
+    # DEBUG: Log sanitized request payload
+    logger.info(
+        "Lulu API request - creating print job",
+        endpoint=f"{settings.lulu_api_base}/print-jobs/",
+        order_id=order_id,
+        pod_package_id=settings.lulu_pod_package_id,
+        quantity=quantity,
+        shipping_level=shipping_option,
+        shipping_country=shipping_address.get("country_code", "IN"),
+        shipping_city=shipping_address.get("city", ""),
+        shipping_state=shipping_address.get("state_code", ""),
+        has_phone=bool(shipping_address.get("phone_number")),
+        has_email=bool(shipping_address.get("email")),
+        has_street1=bool(shipping_address.get("street1")),
+        interior_url_prefix=interior_url[:50] + "..." if interior_url else None,
+        cover_url_prefix=cover_url[:50] + "..." if cover_url else None,
+    )
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
             f"{settings.lulu_api_base}/print-jobs/",
@@ -192,21 +237,31 @@ async def create_print_job(
             headers=headers,
         )
 
+    duration_ms = round((_time.monotonic() - start_time) * 1000)
+
     if resp.status_code not in (200, 201):
         logger.error(
             "Lulu print job creation failed",
             status=resp.status_code,
             body=resp.text,
             order_id=order_id,
+            duration_ms=duration_ms,
         )
         raise RuntimeError(f"Lulu print job failed: {resp.status_code} {resp.text}")
 
     data = resp.json()
+
+    # DEBUG: Log full success response for debugging
     logger.info(
-        "Lulu print job created",
+        "Lulu print job created successfully",
         lulu_job_id=data.get("id"),
-        status=data.get("status", {}).get("name"),
+        status_name=data.get("status", {}).get("name"),
+        status_message=data.get("status", {}).get("message"),
         order_id=order_id,
+        duration_ms=duration_ms,
+        costs=data.get("costs"),
+        estimated_shipping=data.get("estimated_shipping_dates"),
+        response_keys=list(data.keys()),
     )
     return data
 
@@ -469,8 +524,8 @@ async def test_webhook(webhook_id: str) -> dict:
 
 LULU_STATUS_MAP = {
     "CREATED": "submitted",
-    "NEW": "submitted",
-    "ACCEPTED": "accepted",
+    "NEW": "submitted",           # Legacy status - kept for backwards compatibility
+    "ACCEPTED": "accepted",       # Legacy status - kept for backwards compatibility
     "REJECTED": "rejected",
     "UNPAID": "pending",
     "PAYMENT_IN_PROGRESS": "pending",
@@ -478,8 +533,9 @@ LULU_STATUS_MAP = {
     "PRODUCTION_READY": "accepted",
     "IN_PRODUCTION": "in_production",
     "SHIPPED": "shipped",
-    "DELIVERED": "delivered",
-    "CANCELLED": "cancelled",
+    "DELIVERED": "delivered",     # Not in official Lulu API but kept for internal use
+    "CANCELED": "cancelled",      # Official Lulu spelling (American English)
+    "CANCELLED": "cancelled",     # British spelling - kept for backwards compatibility
     "ERROR": "failed",
 }
 

@@ -171,10 +171,19 @@ async def generate_interior_pdf(
     Returns:
         R2 public URL of the uploaded PDF
     """
+    import time as _time
+    start_time = _time.monotonic()
+
     settings = get_settings()
     storage = StorageService()
 
-    logger.info("Generating Lulu interior PDF", preview_id=preview_id, child_name=child_name)
+    logger.info(
+        "Generating Lulu interior PDF - starting",
+        preview_id=preview_id,
+        child_name=child_name,
+        input_pages_count=len(pages),
+        target_pages=TOTAL_PAGES,
+    )
 
     # Download all images concurrently
     image_tasks = {}
@@ -226,7 +235,18 @@ async def generate_interior_pdf(
         path=r2_key,
     )
 
-    logger.info("Interior PDF uploaded", url=pdf_url, pages=drawn, preview_id=preview_id)
+    duration_ms = round((_time.monotonic() - start_time) * 1000)
+    pdf_size_kb = round(len(pdf_bytes) / 1024, 1)
+
+    logger.info(
+        "Interior PDF generated and uploaded",
+        preview_id=preview_id,
+        url=pdf_url[:80] + "..." if pdf_url else None,
+        pages_drawn=drawn,
+        images_downloaded=len(image_bytes_map),
+        pdf_size_kb=pdf_size_kb,
+        duration_ms=duration_ms,
+    )
     return pdf_url
 
 
@@ -258,7 +278,19 @@ async def generate_cover_pdf(
     Returns:
         R2 public URL of the uploaded cover PDF
     """
+    import time as _time
+    start_time = _time.monotonic()
+
     storage = StorageService()
+
+    logger.info(
+        "Generating Lulu cover PDF - starting",
+        preview_id=preview_id,
+        child_name=child_name,
+        story_title=story_title[:30] + "..." if len(story_title) > 30 else story_title,
+        has_cover_image=bool(cover_image_url),
+        spine_width_inches=spine_width_inches,
+    )
 
     trim_w = 8.5 * inch
     trim_h = 8.5 * inch
@@ -350,5 +382,15 @@ async def generate_cover_pdf(
         path=r2_key,
     )
 
-    logger.info("Cover PDF uploaded", url=cover_url, preview_id=preview_id)
+    duration_ms = round((_time.monotonic() - start_time) * 1000)
+    pdf_size_kb = round(len(pdf_bytes) / 1024, 1)
+
+    logger.info(
+        "Cover PDF generated and uploaded",
+        preview_id=preview_id,
+        url=cover_url[:80] + "..." if cover_url else None,
+        pdf_size_kb=pdf_size_kb,
+        duration_ms=duration_ms,
+        has_cover_image=bool(cover_img_bytes),
+    )
     return cover_url

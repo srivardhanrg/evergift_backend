@@ -2,7 +2,8 @@
 FastAPI application setup.
 """
 
-from fastapi import FastAPI, Request
+import time
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -91,6 +92,25 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log every HTTP request with method, path, status code, and duration."""
+    start = time.monotonic()
+    response: Response = await call_next(request)
+    duration_ms = round((time.monotonic() - start) * 1000, 1)
+    # Skip noisy health-check polling from Render's uptime monitor
+    if request.url.path not in ("/health", "/"):
+        logger.info(
+            "HTTP request",
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+            duration_ms=duration_ms,
+            client_ip=request.client.host if request.client else None,
+        )
+    return response
+
+
 @app.exception_handler(ZelavoBaseException)
 async def zelavo_exception_handler(request: Request, exc: ZelavoBaseException):
     """Handle custom Zelavo exceptions."""
@@ -121,9 +141,11 @@ async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions."""
     logger.error(
         "Unexpected exception occurred",
+        method=request.method,
+        path=str(request.url.path),
         exception=exc.__class__.__name__,
         message=str(exc),
-        path=str(request.url)
+        exc_info=True,
     )
 
     return JSONResponse(
