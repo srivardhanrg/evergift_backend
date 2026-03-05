@@ -21,6 +21,7 @@ from app.models.database import get_db
 from app.models.enums import OrderStatus, GenerationPhase
 from app.services.lulu_service import create_print_job, map_lulu_status
 from app.services.lulu_pdf_generator import generate_interior_pdf, generate_cover_pdf
+from app.stories.themes import get_theme
 
 logger = structlog.get_logger()
 
@@ -190,7 +191,20 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         order = order_resp.data[0]
 
         child_name = preview.get("child_name", "Child")
-        story_title = f"{child_name}'s Magical Adventure"
+        # Derive story title from the actual theme — each theme has its own title template
+        # e.g. Ocean Explorer → "{name}'s Underwater Kingdom", not "Magical Adventure"
+        _theme_id = preview.get("theme", "")
+        try:
+            _template = get_theme(_theme_id)
+            story_title = _template.get_title(child_name)
+        except Exception:
+            # Fallback: generic title if theme not found (should never happen in practice)
+            logger.warning(
+                "Could not load theme for story title — using generic fallback",
+                theme_id=_theme_id,
+                preview_id=preview_id,
+            )
+            story_title = f"{child_name}'s Magical Adventure"
 
         # ----------------------------------------------------------------
         # 2. Check if print_order already exists (idempotency)
@@ -244,7 +258,7 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         logger.info("Pages verified ready for Lulu", pages=len(hires), preview_id=preview_id)
 
         # ----------------------------------------------------------------
-        # 4. Collect pages from preview record
+        # 4. Collect interior pages and resolve cover image URL
         # ----------------------------------------------------------------
         pages = _collect_pages(preview)
         if len(pages) < 2:
@@ -255,8 +269,25 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             )
             return
 
-        cover_page = next((p for p in pages if p["page_number"] == 0), None)
-        cover_image_url = cover_page["image_url"] if cover_page else None
+        # The cover image is stored in previews.cover_url (a dedicated column set during
+        # preview generation). It is NOT in hires_images or preview_images — those arrays
+        # only contain story pages 1-10. _collect_pages() will never find page 0.
+        cover_image_url = preview.get("cover_url") or None
+        cover_url_source = "preview.cover_url"
+
+        if not cover_image_url:
+            # Fallback for legacy orders where cover_url column may not be populated:
+            # use the first hires_image (page 1) as the cover image.
+            cover_page = next((p for p in pages if p["page_number"] == 1), None)
+            cover_image_url = cover_page["image_url"] if cover_page else None
+            cover_url_source = "hires_images[page_1]_fallback"
+
+        logger.info(
+            "Cover image URL resolved for Lulu cover PDF",
+            preview_id=preview_id,
+            has_cover_image=bool(cover_image_url),
+            source=cover_url_source,
+        )
 
         # ----------------------------------------------------------------
         # 4. Generate interior + cover PDFs

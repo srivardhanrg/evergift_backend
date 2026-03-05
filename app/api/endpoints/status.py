@@ -224,9 +224,20 @@ async def get_full_status(preview_id: str):
                 )
 
         # Determine order type
+        # If order_type is explicitly set in DB, use it.
+        # If NULL (older orders / expired-preview path), infer from whether a
+        # print_orders record exists — physical orders always have one.
         order_type = None
         if order:
-            order_type = order.get("order_type", "digital")
+            stored_type = order.get("order_type")
+            if stored_type:
+                order_type = stored_type
+            elif print_order_data is not None:
+                # Has a print_order record → must be physical
+                order_type = "physical"
+            else:
+                # No print_order and no stored type → digital
+                order_type = "digital"
 
         # Determine UI state flags
         generating_phases = {

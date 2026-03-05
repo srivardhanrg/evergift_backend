@@ -181,18 +181,24 @@ async def create_print_job(
         "line_items": [
             {
                 "title": f"{child_name}'s MagicTales Storybook",
-                "cover": {
-                    "source_url": cover_url,
-                },
-                "interior": {
-                    "source_url": interior_url,
-                },
-                "pod_package_id": settings.lulu_pod_package_id,
                 "quantity": quantity,
-                "page_count": 12,
+                # Lulu API requires cover/interior/pod_package_id nested inside
+                # printable_normalization (the shorthand flat structure causes 500 errors)
+                "printable_normalization": {
+                    "pod_package_id": settings.lulu_pod_package_id,
+                    "cover": {
+                        "source_url": cover_url,
+                    },
+                    "interior": {
+                        "source_url": interior_url,
+                    },
+                },
             }
         ],
-        "production_delay": 0,
+        # production_delay must be 60–2880 minutes per Lulu API docs.
+        # 0 is invalid and causes a 500 Internal Server Error on their servers.
+        # 60 minutes gives a 1-hour window to cancel before printing starts.
+        "production_delay": 60,
         "shipping_address": {
             "name": shipping_address.get("name", ""),
             "street1": shipping_address.get("street1", ""),

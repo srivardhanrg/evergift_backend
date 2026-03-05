@@ -167,6 +167,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
                 # Still create order record for tracking, but mark as needing attention
                 order_data = {
                     "order_id": order_id,
+                    "order_type": order_type,  # preserve the detected type even for expired orders
                     "order_number": str(order_number) if order_number else None,
                     "preview_id": preview_id,
                     "customer_email": customer_email,
@@ -326,6 +327,55 @@ async def handle_order_cancelled(request: Request):
             )
         else:
             logger.info("Order cancelled and status updated", order_id=order_id)
+
+        # ── Cancel Lulu print job if order has a pending physical print ──
+        # Look up print_order for this order
+        print_result = db.table("print_orders").select(
+            "print_order_id,lulu_print_job_id,lulu_status"
+        ).eq("order_id", order_id).execute()
+
+        if print_result.data:
+            po = print_result.data[0]
+            lulu_job_id = po.get("lulu_print_job_id")
+            lulu_status = po.get("lulu_status", "")
+
+            # Can only cancel before IN_PRODUCTION
+            cancellable_statuses = ("submitted", "accepted", "pending")
+            cancellable = lulu_status in cancellable_statuses
+
+            if lulu_job_id and cancellable:
+                from app.services.lulu_service import cancel_print_job
+                try:
+                    cancelled = await cancel_print_job(lulu_job_id)
+                    if cancelled:
+                        db.table("print_orders").update({
+                            "lulu_status": "cancelled"
+                        }).eq("print_order_id", po["print_order_id"]).execute()
+                        logger.info(
+                            "Lulu print job cancelled on order cancellation",
+                            order_id=order_id,
+                            lulu_job_id=lulu_job_id
+                        )
+                    else:
+                        logger.warning(
+                            "Lulu cancellation failed (may already be IN_PRODUCTION)",
+                            order_id=order_id,
+                            lulu_job_id=lulu_job_id
+                        )
+                except Exception as cancel_err:
+                    logger.error(
+                        "Error calling Lulu cancel API",
+                        order_id=order_id,
+                        lulu_job_id=lulu_job_id,
+                        error=str(cancel_err)
+                    )
+            elif lulu_job_id and not cancellable:
+                logger.warning(
+                    "Order cancelled but Lulu job cannot be cancelled (already in production or shipped)",
+                    lulu_status=lulu_status,
+                    order_id=order_id,
+                    lulu_job_id=lulu_job_id
+                )
 
         return {"success": True, "message": "Order cancellation processed"}
 

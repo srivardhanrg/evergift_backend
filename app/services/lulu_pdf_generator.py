@@ -30,9 +30,26 @@ from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor, white, black
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import reportlab
+import os as _os
 
 from app.config import get_settings
 from app.services.storage import StorageService
+
+# ---------------------------------------------------------------------------
+# Register embeddable TTF fonts (Bitstream Vera — bundled with ReportLab)
+# Lulu requires ALL fonts to be embedded in the PDF.
+# Standard Type1 fonts (Helvetica etc.) are NOT embedded by ReportLab by default.
+# ---------------------------------------------------------------------------
+_RL_FONTS_DIR = _os.path.join(_os.path.dirname(reportlab.__file__), "fonts")
+pdfmetrics.registerFont(TTFont("Vera",      _os.path.join(_RL_FONTS_DIR, "Vera.ttf")))
+pdfmetrics.registerFont(TTFont("Vera-Bold", _os.path.join(_RL_FONTS_DIR, "VeraBd.ttf")))
+
+# Aliases so the rest of the code reads naturally
+FONT_REGULAR = "Vera"
+FONT_BOLD    = "Vera-Bold"
 
 logger = structlog.get_logger()
 
@@ -117,7 +134,7 @@ def _draw_story_page(
         text_padding = BLEED + SAFETY_MARGIN   # 0.50" from trim edge (Lulu requirement)
         text_width = PAGE_W - 2 * text_padding
         c.setFillColor(TEXT_COLOR)
-        c.setFont("Helvetica", BODY_FONT_SIZE)
+        c.setFont(FONT_REGULAR, BODY_FONT_SIZE)
 
         # Simple word-wrap
         words = story_text.split()
@@ -125,7 +142,7 @@ def _draw_story_page(
         current_line = ""
         for word in words:
             test_line = f"{current_line} {word}".strip()
-            if c.stringWidth(test_line, "Helvetica", BODY_FONT_SIZE) <= text_width:
+            if c.stringWidth(test_line, FONT_REGULAR, BODY_FONT_SIZE) <= text_width:
                 current_line = test_line
             else:
                 if current_line:
@@ -144,7 +161,7 @@ def _draw_story_page(
 
     # ---- Page number (subtle, bottom right, inside trim) ----
     if not is_cover and page_number > 0:
-        c.setFont("Helvetica", 8)
+        c.setFont(FONT_REGULAR, 8)
         c.setFillColor(HexColor("#AAAAAA"))
         c.drawRightString(PAGE_W - BLEED - SAFETY_MARGIN, BLEED + 0.25 * inch, str(page_number))
 
@@ -340,9 +357,9 @@ async def generate_cover_pdf(
     c.rect(front_x, wrap_h - overlay_h, front_w, overlay_h, fill=1, stroke=0)
 
     c.setFillColor(white)
-    c.setFont("Helvetica-Bold", 20)
+    c.setFont(FONT_BOLD, 20)
     c.drawCentredString(front_x + front_w / 2, wrap_h - 0.7 * inch, story_title[:40])
-    c.setFont("Helvetica", 14)
+    c.setFont(FONT_REGULAR, 14)
     c.drawCentredString(front_x + front_w / 2, wrap_h - 1.1 * inch, f"Starring {child_name}")
 
     # ---- Back cover (left half) ----
@@ -350,7 +367,7 @@ async def generate_cover_pdf(
     c.rect(0, 0, bleed + trim_w, wrap_h, fill=1, stroke=0)
 
     c.setFillColor(white)
-    c.setFont("Helvetica", 10)
+    c.setFont(FONT_REGULAR, 10)
     c.drawCentredString(
         (bleed + trim_w) / 2,
         bleed + SAFETY_MARGIN,  # 0.50" from trim edge (was 0.275" - too close)
@@ -368,7 +385,7 @@ async def generate_cover_pdf(
         c.translate(spine_x + spine / 2, wrap_h / 2)
         c.rotate(90)
         c.setFillColor(white)
-        c.setFont("Helvetica-Bold", 8)
+        c.setFont(FONT_BOLD, 8)
         c.drawCentredString(0, 0, f"{story_title} · {child_name}")
         c.restoreState()
 

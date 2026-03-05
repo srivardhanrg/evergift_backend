@@ -771,7 +771,9 @@ async def generate_remaining_pages_and_pdf(
                     )
 
                     # ── Lulu submission for physical orders ──
-                    # Called AFTER PDF is ready — no polling needed
+                    # Called AFTER PDF is ready — retry with exponential backoff.
+                    # NOTE: This block has its OWN try/except so Lulu failures can
+                    # never propagate to the outer PDF try/except handler.
                     logger.info(
                         "Physical order — submitting to Lulu now that PDF is ready",
                         order_id=order_id,
@@ -779,30 +781,74 @@ async def generate_remaining_pages_and_pdf(
                     )
                     try:
                         from app.background.lulu_tasks import submit_lulu_print_job
-                        await submit_lulu_print_job(
-                            order_id=order_id,
-                            preview_id=preview_id
-                        )
-                        # Note: submit_lulu_print_job will update generation_phase to
-                        # "submitting_print" then "print_submitted" on success
-                        logger.info(
-                            "Lulu print job submitted successfully",
-                            order_id=order_id,
-                            preview_id=preview_id
-                        )
-                    except Exception as lulu_err:
-                        # Lulu failure should NOT fail the order — PDF is already saved
-                        # Mark phase as print_failed so frontend can show appropriate message
+
+                        lulu_submitted = False
+                        lulu_backoff_delays = [10, 30, 60]  # seconds between retries
+
+                        for lulu_attempt in range(1, 4):  # max 3 attempts
+                            try:
+                                await submit_lulu_print_job(
+                                    order_id=order_id,
+                                    preview_id=preview_id
+                                )
+                                lulu_submitted = True
+                                logger.info(
+                                    "Lulu print job submitted successfully",
+                                    order_id=order_id,
+                                    preview_id=preview_id,
+                                    attempt=lulu_attempt
+                                )
+                                break
+                            except Exception as lulu_err:
+                                logger.warning(
+                                    f"Lulu submission attempt {lulu_attempt}/3 failed",
+                                    error=str(lulu_err),
+                                    order_id=order_id,
+                                    preview_id=preview_id,
+                                )
+                                if lulu_attempt < 3:
+                                    wait_sec = lulu_backoff_delays[lulu_attempt - 1]
+                                    logger.info(
+                                        f"Retrying Lulu submission in {wait_sec}s",
+                                        order_id=order_id,
+                                        next_attempt=lulu_attempt + 1
+                                    )
+                                    await asyncio.sleep(wait_sec)
+
+                        if not lulu_submitted:
+                            logger.error(
+                                "CRITICAL: Lulu submission failed after 3 attempts — manual retry needed",
+                                order_id=order_id,
+                                preview_id=preview_id,
+                            )
+                            db.table("previews").update({
+                                "generation_phase": "print_failed"
+                            }).eq("preview_id", preview_id).execute()
+                            # Also revert orders.status so frontend doesn't show
+                            # "Book ready" when the print submission failed
+                            db.table("orders").update({
+                                "status": OrderStatus.FAILED.value,
+                                "error_message": "Lulu print submission failed after 3 attempts"
+                            }).eq("order_id", order_id).execute()
+
+                    except Exception as _lulu_outer_err:
+                        # Catch any unexpected error from the retry machinery itself
+                        # (e.g., import errors, asyncio issues) so it never corrupts
+                        # the outer PDF try/except handler.
                         logger.error(
-                            "CRITICAL: Lulu submission failed — PDF ready but print not submitted. "
-                            "Manual retry may be needed.",
+                            "Unexpected error in Lulu retry block — setting print_failed",
+                            error=str(_lulu_outer_err),
                             order_id=order_id,
                             preview_id=preview_id,
-                            error=str(lulu_err)
+                            exc_info=True,
                         )
                         db.table("previews").update({
                             "generation_phase": "print_failed"
                         }).eq("preview_id", preview_id).execute()
+                        db.table("orders").update({
+                            "status": OrderStatus.FAILED.value,
+                            "error_message": f"Lulu retry machinery error: {str(_lulu_outer_err)}"
+                        }).eq("order_id", order_id).execute()
                 else:
                     # Digital: PDF ready, order complete
                     db.table("previews").update({
@@ -879,7 +925,8 @@ async def generate_remaining_pages_and_pdf(
             
             if retry_count < max_retries:
                 # Wait before retry (exponential backoff)
-                import asyncio
+                # NOTE: asyncio is imported at module level — do NOT re-import here
+                # as a local import would shadow it and cause UnboundLocalError.
                 await asyncio.sleep(2 ** retry_count)
                 continue
             else:
