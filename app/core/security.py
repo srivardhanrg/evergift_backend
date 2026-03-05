@@ -60,22 +60,31 @@ async def verify_shopify_webhook(request: Request, secret: str) -> bytes:
 
 def verify_shop_domain(request: Request, expected_domain: str) -> bool:
     """Verify webhook came from expected shop.
-    
+
+    Supports multiple domains via comma-separated list in expected_domain.
+    Example: "storygift-2061.myshopify.com,w8vbed-6m.myshopify.com"
+
     In development, this only logs a warning but allows the request.
     In production, this raises an exception on mismatch.
     """
     from app.config import get_settings
     settings = get_settings()
-    
+
     shop_domain = request.headers.get("X-Shopify-Shop-Domain")
-    if shop_domain != expected_domain:
-        logger.warning("Shop domain mismatch", received=shop_domain, expected=expected_domain)
-        
-        # In development, allow the request (for test webhooks)
-        if settings.app_env == "development":
-            logger.info("Allowing mismatched domain in development mode")
-            return True
-        
-        # In production, reject the request
-        raise HTTPException(status_code=401, detail="Invalid shop domain")
-    return True
+
+    # Support comma-separated list of allowed domains
+    allowed_domains = [d.strip() for d in expected_domain.split(",") if d.strip()]
+
+    if shop_domain in allowed_domains:
+        logger.info("Shop domain verified", received=shop_domain)
+        return True
+
+    logger.warning("Shop domain mismatch", received=shop_domain, allowed=allowed_domains)
+
+    # In development, allow the request (for test webhooks)
+    if settings.app_env == "development":
+        logger.info("Allowing mismatched domain in development mode")
+        return True
+
+    # In production, reject the request
+    raise HTTPException(status_code=401, detail="Invalid shop domain")

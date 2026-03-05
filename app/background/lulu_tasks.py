@@ -25,6 +25,18 @@ from app.services.lulu_pdf_generator import generate_interior_pdf, generate_cove
 logger = structlog.get_logger()
 
 
+def _truncate_field(value: str, max_length: int) -> str:
+    """Truncate a field to max_length, preserving whole words if possible."""
+    if not value or len(value) <= max_length:
+        return value
+    # Try to break at a space
+    truncated = value[:max_length]
+    last_space = truncated.rfind(" ")
+    if last_space > max_length // 2:
+        return truncated[:last_space].strip()
+    return truncated.strip()
+
+
 def _build_shipping_address(order: dict, preview: dict) -> dict:
     """
     Convert Shopify shipping address format to Lulu's format.
@@ -34,7 +46,15 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
         province, province_code, country, country_code, zip, phone, email
     Lulu fields (required):
         name, street1, city, country_code, postcode, phone_number, email
+
+    Lulu field limits:
+        name: 30 chars, street1: 30 chars, street2: 30 chars, city: 30 chars
     """
+    # Lulu API field character limits
+    LULU_MAX_NAME = 30
+    LULU_MAX_STREET = 30
+    LULU_MAX_CITY = 30
+
     shopify_addr = order.get("shipping_address") or {}
 
     first = shopify_addr.get("first_name", "")
@@ -50,11 +70,23 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
         or ""
     )
 
+    # Handle long addresses: if street1 > 30 chars, overflow to street2
+    street1 = shopify_addr.get("address1", "") or ""
+    street2 = shopify_addr.get("address2", "") or ""
+
+    if len(street1) > LULU_MAX_STREET:
+        # Try to split at a sensible point
+        overflow = street1[LULU_MAX_STREET:].strip()
+        street1 = _truncate_field(street1, LULU_MAX_STREET)
+        # Prepend overflow to street2
+        if overflow:
+            street2 = f"{overflow} {street2}".strip() if street2 else overflow
+
     return {
-        "name": name,
-        "street1": shopify_addr.get("address1", ""),
-        "street2": shopify_addr.get("address2", ""),
-        "city": shopify_addr.get("city", ""),
+        "name": _truncate_field(name, LULU_MAX_NAME),
+        "street1": _truncate_field(street1, LULU_MAX_STREET),
+        "street2": _truncate_field(street2, LULU_MAX_STREET),
+        "city": _truncate_field(shopify_addr.get("city", ""), LULU_MAX_CITY),
         "state_code": shopify_addr.get("province_code") or shopify_addr.get("province", ""),
         "country_code": shopify_addr.get("country_code") or shopify_addr.get("country", "IN"),
         "postcode": shopify_addr.get("zip", ""),
@@ -405,3 +437,6 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
                 preview_id=preview_id,
                 db_error=str(db_error),
             )
+
+        # Re-raise so caller knows submission failed
+        raise
