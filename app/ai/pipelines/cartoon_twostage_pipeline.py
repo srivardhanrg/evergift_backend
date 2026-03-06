@@ -9,6 +9,7 @@ Cost per image: ~$0.11 (NanoBanana $0.04 + Segmind $0.07)
 Cost per book (11 images): ~$1.21
 """
 
+import asyncio
 import time
 import structlog
 from typing import Optional, Dict, List, Any
@@ -331,15 +332,44 @@ class CartoonTwoStagePipeline:
             if expression_prompt:
                 payload["prompt"] = expression_prompt
 
-            async with httpx.AsyncClient(timeout=90.0) as client:
-                response = await client.post(
-                    self.segmind_endpoint,
-                    headers={
-                        "x-api-key": self.settings.segmind_api_key,
-                        "Content-Type": "application/json"
-                    },
-                    json=payload
-                )
+            # Retry up to 2 attempts on timeout (Segmind can be slow under load)
+            max_attempts = 2
+            last_error = None
+            response = None
+
+            for attempt in range(max_attempts):
+                try:
+                    if attempt > 0:
+                        wait_secs = 5 * attempt
+                        logger.warning(f"Stage 2 retry {attempt}/{max_attempts - 1} after {wait_secs}s wait")
+                        await asyncio.sleep(wait_secs)
+
+                    # Use separate connect vs read timeouts — connect should be fast,
+                    # but read can be slow since Segmind processes the image server-side
+                    timeout = httpx.Timeout(connect=10.0, read=150.0, write=30.0, pool=10.0)
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        response = await client.post(
+                            self.segmind_endpoint,
+                            headers={
+                                "x-api-key": self.settings.segmind_api_key,
+                                "Content-Type": "application/json"
+                            },
+                            json=payload
+                        )
+                    break  # Success — exit retry loop
+
+                except (httpx.ReadTimeout, httpx.ConnectTimeout) as timeout_err:
+                    last_error = timeout_err
+                    logger.warning(
+                        f"Stage 2 timeout on attempt {attempt + 1}/{max_attempts}",
+                        error=str(timeout_err),
+                        attempt=attempt + 1
+                    )
+                    if attempt == max_attempts - 1:
+                        raise  # Re-raise on final attempt
+
+            if response is None:
+                raise last_error or RuntimeError("Segmind face swap failed with no response")
 
             latency = int((time.time() - start_time) * 1000)
 
