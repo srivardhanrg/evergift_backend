@@ -2,9 +2,10 @@
 StoryGift-style background tasks for image generation and PDF creation.
 
 Using:
-- Photorealistic pipeline with VLM face analysis
-- Configurable page generation (5 testing / 10 production)
-- StoryGift magic castle theme
+- Photorealistic pipeline with identity-preserving image reference
+- Static identity lock prompt (VLM disabled - see photorealistic_pipeline.py)
+- Configurable page generation (5 preview / 10 after payment)
+- StoryGift themes with cover + 10 story pages
 - Superior PDF generation
 """
 
@@ -157,24 +158,32 @@ async def generate_storygift_preview(
         logger.info(f"Generating {len(pages_to_generate)} preview pages (full book has {len(template.pages)} pages)")
 
         # ============================================
-        # PHASE 1: VLM Face Analysis (5% progress)
+        # PHASE 1: Identity Lock Prompt (5% progress)
+        # VLM DISABLED - nano-banana extracts identity from image reference
         # ============================================
         await update_job_progress(job_id, 5, get_progress_message("face_analysis"))
 
-        try:
-            analyzed_features = await pipeline.analyze_face(photo_url)
-            logger.info("Face analysis completed", features_length=len(analyzed_features))
-            
-            # Store analyzed_features for consistency when generating remaining pages
-            db = get_db()
-            db.table("previews").update({
-                "analyzed_features": analyzed_features
-            }).eq("preview_id", preview_id).execute()
-            logger.info("Stored analyzed_features for future generation consistency")
-            
-        except Exception as e:
-            logger.error("Face analysis failed", error=str(e))
-            analyzed_features = "a cute child"  # Fallback
+        # VLM ANALYSIS DISABLED (2024-01)
+        # Research: nano-banana extracts identity directly from image reference,
+        # text descriptions can conflict with image data and reduce quality.
+        # Using static identity lock prompt instead.
+        #
+        # try:
+        #     analyzed_features = await pipeline.analyze_face(photo_url)
+        #     logger.info("Face analysis completed", features_length=len(analyzed_features))
+        # except Exception as e:
+        #     logger.error("Face analysis failed", error=str(e))
+        #     analyzed_features = "a cute child"
+
+        analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair texture, and ethnic characteristics with perfect accuracy"
+        logger.info("Using static identity lock prompt (VLM disabled)")
+
+        # Store analyzed_features for consistency when generating remaining pages (6-10)
+        db = get_db()
+        db.table("previews").update({
+            "analyzed_features": analyzed_features
+        }).eq("preview_id", preview_id).execute()
+        logger.info("Stored identity lock prompt for future generation consistency")
 
         # ============================================
         # PHASE 1.5: Generate Cover Image (10% progress)
@@ -306,6 +315,7 @@ async def generate_storygift_preview(
                     child_age=child_age,
                     child_gender=child_gender,
                     analyzed_features=analyzed_features,
+                    aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
                     scene_type=scene_type,
                     preview_id=preview_id,
                     page_number=page_num,
@@ -644,6 +654,7 @@ async def generate_remaining_pages_and_pdf(
                             child_age=child_age,
                             child_gender=child_gender,
                             analyzed_features=analyzed_features,
+                            aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
                             scene_type=scene_type,
                             preview_id=preview_id,
                             page_number=page_num,

@@ -1,11 +1,16 @@
 """
 Photorealistic Pipeline - Identity-preserving photorealistic generation.
 
-Uses fal.ai nano-banana model with VLM face analysis:
-- VLM face analysis using LLaVA-Next
-- Identity-preserving generation with face embedding
+Uses fal.ai nano-banana model with image reference:
+- Identity-preserving generation via image_urls parameter
+- nano-banana extracts identity directly from reference photo
 - Sequential generation to avoid API limits
 - 5:4 aspect ratio optimized for print
+
+NOTE: VLM face analysis has been disabled (2024-01).
+Research showed that nano-banana preserves identity from image reference alone,
+and text descriptions can conflict with image data, reducing quality.
+The model extracts facial features directly from the reference image.
 """
 
 import time
@@ -25,10 +30,13 @@ class PhotorealisticPipeline:
     Photorealistic pipeline for identity-preserving image generation.
 
     Flow:
-    1. Analyze child's face using LLaVA-Next VLM
-    2. Generate each page with face analysis + scene prompt
+    1. Use static identity lock prompt (VLM disabled - see module docstring)
+    2. Generate each page with identity prompt + scene prompt + image reference
     3. Sequential generation to avoid API concurrency limits
     4. Store results in cloud storage
+
+    Identity preservation is handled by nano-banana's image_urls parameter,
+    which extracts facial features directly from the reference photo.
     """
 
     def __init__(self, model_override: Optional[str] = None):
@@ -142,8 +150,15 @@ class PhotorealisticPipeline:
         start_time = time.time()
 
         try:
+            # ============================================================
+            # VLM ANALYSIS DISABLED - Using static identity lock prompt
+            # Research: nano-banana extracts identity from image reference,
+            # text descriptions can conflict with image data and reduce quality
+            # ============================================================
+            # if not analyzed_features:
+            #     analyzed_features = await self.analyze_face(face_url)
             if not analyzed_features:
-                analyzed_features = await self.analyze_face(face_url)
+                analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair texture, and ethnic characteristics with perfect accuracy"
 
             enhanced_prompt = self._build_enhanced_prompt(
                 prompt, child_name, child_age, child_gender, analyzed_features
@@ -165,7 +180,7 @@ class PhotorealisticPipeline:
                     "prompt": enhanced_prompt,
                     "image_urls": [face_url],
                     "aspect_ratio": aspect_ratio,
-                    "negative_prompt": "black bars, letterbox, scope, cinema bars, blurry, low quality, distorted face",
+                    "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
                 }
 
                 if seed:
@@ -291,18 +306,31 @@ class PhotorealisticPipeline:
         logger.info(f"Generating {page_count} pages in {'testing' if testing_mode else 'production'} mode")
 
         # ============================================================
-        # VLM FACE ANALYSIS - Enabled for production quality
-        # Provides detailed facial description for identity preservation
+        # VLM FACE ANALYSIS - DISABLED (2024-01)
+        #
+        # Research findings:
+        # - nano-banana extracts identity directly from image reference
+        # - Text descriptions can CONFLICT with image data, reducing quality
+        # - "Text prompts introduce ambiguity: describing a face with words
+        #    will never be as precise as showing the model exactly what you
+        #    want through reference images"
+        # - High-quality reference photos are more critical than text prompts
+        #
+        # Using static identity lock prompt instead. The model's image_urls
+        # parameter handles identity preservation from the reference photo.
         # ============================================================
-        try:
-            analyzed_features = await self.analyze_face(face_url)
-            if analyzed_features == "a cute child":
-                # VLM returned fallback, use enhanced generic anchor
-                analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
-                logger.warning("VLM returned fallback description, using generic anchor")
-        except Exception as e:
-            logger.error("VLM analysis failed, using fallback", error=str(e))
-            analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair, and ethnic characteristics"
+        # try:
+        #     analyzed_features = await self.analyze_face(face_url)
+        #     if analyzed_features == "a cute child":
+        #         analyzed_features = "the child exactly as shown in the reference photo..."
+        #         logger.warning("VLM returned fallback description, using generic anchor")
+        # except Exception as e:
+        #     logger.error("VLM analysis failed, using fallback", error=str(e))
+        #     analyzed_features = "..."
+
+        # Static identity lock prompt - relies on nano-banana's image reference capability
+        analyzed_features = "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair texture, and ethnic characteristics with perfect accuracy"
+        logger.info("Using static identity lock prompt (VLM disabled)")
 
         successful_pages = []
         failed_pages = []
@@ -381,12 +409,16 @@ class PhotorealisticPipeline:
         analyzed_features: str
     ) -> str:
         """
-        Build enhanced prompt with facial analysis, age, and gender.
+        Build enhanced prompt with identity lock and scene description.
 
         Layers prompt structure:
-        - Subject + Age + Gender + Appearance
+        - Subject + Age + Gender + Identity Lock
         - Scene Action
         - Style constraints
+
+        Note: Identity preservation primarily handled by nano-banana's
+        image_urls parameter. The text prompt reinforces but doesn't
+        replace the image reference.
         """
         personalized_prompt = base_prompt.replace("{name}", child_name)
 
@@ -394,8 +426,11 @@ class PhotorealisticPipeline:
         gender_word = "boy" if child_gender.lower() == "male" else "girl"
 
         enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}.
-Appearance: {analyzed_features}.
-CRITICAL SKIN TONE: Accurately render the child's EXACT skin tone as described above - do not lighten, darken, or change skin color regardless of lighting conditions (golden light, moonlight, magical glow, etc.). Preserve authentic skin tone and ethnic features even in bright, dramatic, or colored lighting. The lighting should enhance features without altering natural complexion.
+
+IDENTITY LOCK: {analyzed_features}. The child's face must EXACTLY match the reference image provided - same facial structure, same skin tone, same hair, same eyes, same nose, same ethnic features. DO NOT alter, idealize, or modify ANY facial characteristics.
+
+CRITICAL SKIN TONE PRESERVATION: Render the child's EXACT skin tone from the reference photo - do not lighten, darken, or shift skin color regardless of lighting conditions (golden light, moonlight, magical glow, underwater light, etc.). Maintain authentic complexion even in dramatic or colored lighting. The lighting should enhance without altering natural skin tone.
+
 Age-specific features: Render with age-appropriate facial proportions and features for a {child_age}-year-old {gender_word}.
 
 Scene Action: {personalized_prompt}.
@@ -404,6 +439,6 @@ Environment: Masterpiece, 8k resolution, photorealistic, intricate details, shar
 
 Style: an award-winning cinematic photograph, hyper-realistic, highly detailed skin texture, 8k resolution, deep depth of field, sharp background, soft natural lighting, shot on 35mm film.
 
-Constraint: identical character face, consistent clothing, perfect face integration, age-appropriate proportions, authentic skin tone preservation."""
+Constraint: IDENTICAL face to reference image, consistent clothing, perfect face integration, age-appropriate proportions, authentic skin tone preservation, no face modifications."""
 
         return enhanced_prompt

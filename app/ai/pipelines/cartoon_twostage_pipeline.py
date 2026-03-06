@@ -37,6 +37,7 @@ Quality: Premium children's book illustration, professional storybook art, print
 PREMIUM_CARTOON_NEGATIVE = """
 photorealistic, photograph, realistic skin texture, 3D CGI render, plastic,
 ugly, deformed, blurry, low quality, dark, scary, horror,
+black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame,
 face obscured, face in shadow, profile view, back to camera, face not visible,
 child looking away, face blocked by objects, side profile
 """
