@@ -97,9 +97,10 @@ STORYGIFT_COSMIC_DREAMER_THEME = StoryTemplate(
             page_number=7,
             scene_description="Floating in a beautiful colorful nebula",
             scene_type="wonder",
-            realistic_prompt="""Breathtaking nebula scene. The child named {name} in astronaut suit floating peacefully in space, surrounded by a magnificent swirling nebula of pink, purple, blue, and gold colors. The child's face shows peaceful awe, gentle smile, eyes reflecting the beautiful colors. Child's face illuminated primarily by soft warm neutral light from the front — the nebula colors create a beautiful rim and edge glow around the hair and suit outline but do NOT wash directly over the face. Child's natural skin tone fully preserved on face, no color cast from the nebula. Child positioned center frame, face clearly visible, front-facing, looking slightly upward in wonder. Stars twinkle in the background. Magical, dreamlike atmosphere. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Award-winning space photography quality.""",
+            realistic_prompt="""Breathtaking nebula scene. PORTRAIT COMPOSITION - The child named {name} in astronaut suit with HELMET COMPLETELY OFF (helmet held at side or not visible), standing confidently on a small glowing asteroid platform, surrounded by a magnificent swirling nebula of pink, purple, blue, and gold colors in the background. Child's face DIRECTLY FACING THE CAMERA - head straight, no tilt - with expression of peaceful awe and gentle wonder, soft smile. Child's face is the clear PRIMARY FOCAL POINT - takes up 25-30% of frame height, illuminated by soft warm neutral light from the front. The nebula colors create beautiful rim glow around hair and suit outline but do NOT wash over the face. Child's natural skin tone fully preserved, no color cast. Stars twinkle in the soft-focus background. Child's face large and clearly detailed. Award-winning space photography quality.""",
             story_text="The rocket carried {name} to the Rainbow Nebula—a magical cloud of colors swirling through space! Pink, purple, blue, and gold danced together like paint in water. 'It's like being inside a rainbow!' {name} gasped.",
-            costume="wearing astronaut suit"
+            costume="wearing astronaut suit, helmet off",
+            face_expression="peaceful awe and gentle wonder, soft amazed smile, eyes looking directly at camera, face straight forward"
         ),
 
         # === PAGE 8 - CATCHING STARDUST ===
@@ -107,9 +108,10 @@ STORYGIFT_COSMIC_DREAMER_THEME = StoryTemplate(
             page_number=8,
             scene_description="Collecting magical stardust in a jar",
             scene_type="bonding",
-            realistic_prompt="""Enchanting stardust collection scene. The child named {name} in astronaut suit, holding a glowing glass jar filled with swirling golden stardust at chest height, arms extended slightly forward. Child's face mostly forward-facing toward camera with only a slight, gentle downward tilt — face remains clearly and prominently visible. Soft peaceful smile, expression of wonder. The jar's warm golden glow illuminates the child's face from the front at chest level — natural frontal light, no harsh upward under-chin shadows. Space and stars visible in the soft-focus background. Child positioned in center frame, face clearly visible, three-quarter view toward camera. Intimate, magical moment. Child's natural skin tone preserved exactly as in reference photo regardless of scene lighting. Cinematic warm lighting.""",
+            realistic_prompt="""Enchanting stardust collection scene. PORTRAIT COMPOSITION - The child named {name} in astronaut suit with HELMET COMPLETELY OFF (no helmet visible), standing and holding a glowing glass jar filled with swirling golden stardust at chest height. Child's face DIRECTLY FACING THE CAMERA - head straight, no tilt, no downward look - with soft peaceful smile and expression of proud wonder, as if showing the treasure to the viewer. Child's face is the clear PRIMARY FOCAL POINT - takes up 25-30% of frame height. The jar's warm golden glow illuminates the child's face from below-front at chest level, creating soft warm lighting on face. Space and stars visible in the soft-focus background. Child's face large and clearly detailed, natural skin tone preserved. Intimate, magical moment. Cinematic warm lighting.""",
             story_text="Floating through the nebula, {name} discovered something magical—real stardust! Holding out a special jar, {name} watched as golden stardust swirled inside, glowing like captured sunshine. A treasure from the stars!",
-            costume="wearing astronaut suit"
+            costume="wearing astronaut suit, helmet off",
+            face_expression="soft peaceful smile, proud wonder, eyes looking directly at camera, face straight forward"
         ),
 
         # === PAGE 9 - HOMEWARD BOUND ===

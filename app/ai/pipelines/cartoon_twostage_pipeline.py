@@ -10,6 +10,7 @@ Cost per book (11 images): ~$1.21
 """
 
 import asyncio
+import hashlib
 import time
 import structlog
 from typing import Optional, Dict, List, Any
@@ -42,6 +43,19 @@ black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, 
 face obscured, face in shadow, profile view, back to camera, face not visible,
 child looking away, face blocked by objects, side profile
 """
+
+
+# =============================================================================
+# FACE SWAP PRIMER - prepended to Stage 1 prompt to ensure Segmind-friendly face
+# Segmind face swap works best when the placeholder face is frontal, clear, well-lit.
+# Moving this to the TOP of the prompt gives it maximum weight with nano-banana.
+# =============================================================================
+FACE_SWAP_PRIMER = """CRITICAL FACE POSITION RULES FOR FACE SWAP COMPATIBILITY:
+Child's face must be frontal or at most 30-degree angle from camera.
+Face must be large in frame — occupying at least 20% of image height.
+Face fully unobstructed: no hands, hair strands, or objects crossing the face area.
+Face evenly front-lit — no harsh side shadows splitting the face in half.
+Both eyes fully open and clearly visible. No profile views. No back-of-head shots."""
 
 
 # =============================================================================
@@ -219,8 +233,9 @@ class CartoonTwoStagePipeline:
         try:
             logger.info("Stage 1: Generating scene with NanoBanana", prompt_length=len(prompt))
 
-            # Build the full prompt with locked style
-            full_prompt = f"{PREMIUM_CARTOON_STYLE}\n\n{prompt}"
+            # Build the full prompt: face primer first (highest weight), then style, then scene
+            # FACE_SWAP_PRIMER is prepended so nano-banana prioritizes face position rules
+            full_prompt = f"{FACE_SWAP_PRIMER}\n\n{PREMIUM_CARTOON_STYLE}\n\n{prompt}"
 
             payload = {
                 "prompt": full_prompt,
@@ -315,16 +330,21 @@ class CartoonTwoStagePipeline:
                 scene_url=scene_image_url[:60] if scene_image_url else None
             )
 
+            # Deterministic per-page seed: varies by page so different pages use different
+            # noise patterns, avoiding clashes with variable Stage 1 outputs.
+            # preview_id + page_number gives a unique but reproducible seed.
+            page_seed = int(hashlib.md5(f"{preview_id}_{page_number}_stage2".encode()).hexdigest()[:8], 16) % 2147483647
+
             payload = {
                 "source_image": child_photo_url,    # Child's real face
                 "target_image": scene_image_url,    # Cartoon scene
                 "face_strength": 0.85,              # High identity preservation
                 "style_strength": 0.75,             # Adapt to cartoon style
-                "cfg": 1.6,
-                "steps": 15,                        # Balanced quality/speed
+                "cfg": 2.0,                         # Increased from 1.6 — stronger guidance, less artifacts
+                "steps": 25,                        # Increased from 15 — more steps = more stable face reconstruction
                 "output_format": "png",
                 "output_quality": 95,
-                "seed": 42,
+                "seed": page_seed,                  # Per-page deterministic seed (not fixed 42)
                 "base64": False                     # Get raw bytes
             }
 
@@ -461,11 +481,17 @@ class CartoonTwoStagePipeline:
             # ==========================================
             # STAGE 1: Generate cartoon scene
             # ==========================================
+            # Use deterministic seed if none passed: ensures same page always produces
+            # same Stage 1 output, making failures reproducible and fixable per-page.
+            stage1_seed = seed
+            if stage1_seed is None and preview_id:
+                stage1_seed = int(hashlib.md5(f"{preview_id}_{page_number}_stage1".encode()).hexdigest()[:8], 16) % 2147483647
+
             scene_result = await self._generate_scene(
                 prompt=scene_prompt,
                 face_url=face_url,
                 aspect_ratio=aspect_ratio,
-                seed=seed
+                seed=stage1_seed
             )
 
             if not scene_result.get("success"):
