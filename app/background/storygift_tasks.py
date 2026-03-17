@@ -4,14 +4,28 @@ StoryGift-style background tasks for image generation and PDF creation.
 Using:
 - Photorealistic pipeline with identity-preserving image reference
 - Static identity lock prompt (VLM disabled - see photorealistic_pipeline.py)
-- Configurable page generation (5 preview / 10 after payment)
-- StoryGift themes with cover + 10 story pages
+- 26-page book structure with filler pages and text overlays
+- StoryGift themes with cover + 10 AI-generated story pages + filler pages
 - Superior PDF generation
+
+Book Structure (26 pages):
+- Index 0: Cover (AI-generated)
+- Index 1: Dedication (filler + text overlay)
+- Indices 2-3: Intro pages (filler, no text)
+- Indices 4, 6, 8, 10, 12: AI-generated story pages (preview)
+- Indices 5, 7, 9, 11: Text pages with story text overlay (preview)
+- Indices 14, 16, 18, 20, 22: AI-generated story pages (locked)
+- Indices 13, 15, 17, 19, 21, 23: Text pages with story text overlay (locked)
+- Index 24: End page (filler)
+- Index 25: Back cover (filler)
+
+Preview shows pages 0-12 (13 pages)
+Locked pages are 13-25 (13 pages until payment)
 """
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Dict, List
 import structlog
 from uuid import UUID
 
@@ -21,10 +35,19 @@ from app.models.enums import PreviewStatus, OrderStatus, JobStatus
 from app.services.storage import StorageService
 from app.services.storygift_pdf_generator import StoryGiftPDFGeneratorService
 from app.services.email_service import get_email_service
+from app.services.filler_pages import get_filler_pages_service
 from app.stories.themes import get_theme
 from app.ai.factory import get_pipeline_for_style
 from app.core.exceptions import ImageGenerationError, StorageError
 from app.core.sanitization import sanitize_child_name, sanitize_for_prompt
+from app.config.book_structure import (
+    BOOK_STRUCTURE,
+    PageType,
+    PREVIEW_AI_INDICES,
+    LOCKED_AI_INDICES,
+    TOTAL_PAGE_COUNT,
+    PREVIEW_PAGE_COUNT,
+)
 
 # Import helper functions from utils (not tasks) to avoid circular import
 from app.background.utils import (
@@ -395,6 +418,84 @@ async def generate_storygift_preview(
                 continue
 
         # ============================================
+        # PHASE 2.5: Process Filler Pages (90% to 95%)
+        # ============================================
+        await update_job_progress(job_id, 90, "Adding magical decorations... ✨")
+
+        filler_pages_processed: Dict[int, str] = {}
+        book_structure: Dict[int, dict] = {}
+
+        try:
+            # Build story_texts dict from generated story pages
+            # Map page_num (1-5) to text_page_number (1-4 for preview)
+            # Story page 1 -> text page 1, Story page 2 -> text page 2, etc.
+            story_texts: Dict[int, str] = {}
+            for sp in story_pages:
+                page_num = sp.get("page")
+                text = sp.get("story_text") or sp.get("text", "")
+                if page_num and text:
+                    story_texts[page_num] = text
+
+            # Process filler pages for preview (indices 1, 2, 3, 5, 7, 9, 11)
+            filler_service = get_filler_pages_service()
+            filler_pages_processed = await filler_service.process_preview_filler_pages(
+                preview_id=preview_id,
+                theme=theme,
+                style=style,
+                child_name=safe_child_name,
+                story_texts=story_texts
+            )
+
+            logger.info(
+                "Filler pages processed for preview",
+                preview_id=preview_id,
+                filler_count=len(filler_pages_processed)
+            )
+
+            # Build complete book_structure for preview pages
+            # This maps page index to page data
+            for page_config in BOOK_STRUCTURE:
+                if not page_config.is_preview:
+                    # Mark locked pages
+                    book_structure[page_config.index] = {
+                        "type": page_config.page_type.value,
+                        "is_locked": True,
+                        "url": None
+                    }
+                    continue
+
+                page_data = {
+                    "type": page_config.page_type.value,
+                    "is_locked": False
+                }
+
+                if page_config.page_type == PageType.COVER:
+                    page_data["url"] = cover_url
+                elif page_config.page_type == PageType.GENERATED:
+                    # Map book index to story page number
+                    # Index 4 -> page 1, Index 6 -> page 2, etc.
+                    story_page_num = (page_config.index - 4) // 2 + 1 if page_config.index >= 4 else 0
+                    matching_page = next(
+                        (sp for sp in story_pages if sp.get("page") == story_page_num),
+                        None
+                    )
+                    if matching_page:
+                        page_data["url"] = matching_page.get("image_url")
+                else:
+                    # Filler page
+                    page_data["url"] = filler_pages_processed.get(page_config.index)
+
+                book_structure[page_config.index] = page_data
+
+        except Exception as filler_error:
+            logger.error(
+                "Filler page processing failed (non-fatal)",
+                preview_id=preview_id,
+                error=str(filler_error)
+            )
+            # Continue without filler pages - they can be regenerated
+
+        # ============================================
         # PHASE 3: Finalize Preview (95% to 100%)
         # ============================================
         await update_job_progress(job_id, 95, get_progress_message("finalizing"))
@@ -413,6 +514,8 @@ async def generate_storygift_preview(
             hires_images_count=len(hires_images),
             preview_images_count=len(preview_images),
             story_pages_count=len(story_pages),
+            filler_pages_count=len(filler_pages_processed),
+            book_structure_pages=len(book_structure),
             hires_images_sample=hires_images[0] if hires_images else None,
             preview_images_sample=preview_images[0] if preview_images else None,
             story_pages_sample=story_pages[0] if story_pages else None
@@ -436,6 +539,7 @@ async def generate_storygift_preview(
             return
 
         # Update preview in database - set generation_phase to 'preview' (not complete)
+        # Include 26-page book structure and filler pages data
         await update_preview_status(
             preview_id=preview_id,
             status=PreviewStatus.ACTIVE,
@@ -443,8 +547,11 @@ async def generate_storygift_preview(
             preview_images=preview_images,  # From incremental updates
             story_pages=story_pages,
             generation_phase='preview',  # Mark as preview only
-            preview_page_count=len(story_pages),
-            total_page_count=total_pages
+            preview_page_count=PREVIEW_PAGE_COUNT,  # 13 pages visible in preview
+            total_page_count=TOTAL_PAGE_COUNT,  # 26 total pages
+            book_structure=book_structure,  # Complete page structure JSONB
+            filler_pages_processed=filler_pages_processed,  # Processed filler URLs
+            child_photo_url=photo_url  # Store for post-payment generation
             # NOTE: pdf_url is NOT set - will be generated after payment
         )
 
@@ -696,22 +803,68 @@ async def generate_remaining_pages_and_pdf(
                         logger.error(f"Error generating page {page_num}", error=str(e))
                         raise
                 
-                # Update preview with all 10 pages and mark as pages_complete
+                # ============================================
+                # Process locked filler pages (indices 13-25)
+                # ============================================
+                locked_filler_pages: Dict[int, str] = {}
+                try:
+                    # Build story_texts dict from all story pages
+                    all_story_texts: Dict[int, str] = {}
+                    for sp in story_pages:
+                        page_num = sp.get("page")
+                        text = sp.get("story_text") or sp.get("text", "")
+                        if page_num and text:
+                            all_story_texts[page_num] = text
+
+                    # Process locked filler pages
+                    filler_service = get_filler_pages_service()
+                    locked_filler_pages = await filler_service.process_locked_filler_pages(
+                        preview_id=preview_id,
+                        theme=theme,
+                        style=style,
+                        child_name=safe_child_name,
+                        story_texts=all_story_texts
+                    )
+
+                    logger.info(
+                        "Locked filler pages processed",
+                        preview_id=preview_id,
+                        order_id=order_id,
+                        filler_count=len(locked_filler_pages)
+                    )
+                except Exception as filler_error:
+                    logger.error(
+                        "Locked filler page processing failed (non-fatal)",
+                        preview_id=preview_id,
+                        error=str(filler_error)
+                    )
+
+                # Update preview with all 10 AI pages, locked fillers, and mark as pages_complete
                 # This intermediate phase lets the frontend know all images are done,
                 # even if PDF creation fails later
+
+                # Get existing filler_pages_processed and merge with locked
+                existing_filler = preview_data.get("filler_pages_processed", {})
+                if isinstance(existing_filler, dict):
+                    all_filler_pages = {**existing_filler, **locked_filler_pages}
+                else:
+                    all_filler_pages = locked_filler_pages
+
                 db.table("previews").update({
                     "hires_images": hires_images,
                     "story_pages": story_pages,
                     "preview_page_count": len(story_pages),
-                    "generation_phase": "pages_complete"
+                    "generation_phase": "pages_complete",
+                    "filler_pages_processed": all_filler_pages
                 }).eq("preview_id", preview_id).execute()
 
                 logger.info(
-                    "All 10 pages generated — intermediate milestone reached",
+                    "All pages generated — intermediate milestone reached",
                     order_id=order_id,
                     preview_id=preview_id,
                     hires_count=len(hires_images),
                     story_pages_count=len(story_pages),
+                    filler_pages_count=len(all_filler_pages),
                 )
             
             # ============================================
