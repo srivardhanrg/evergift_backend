@@ -53,8 +53,8 @@ from app.background.utils import (
     update_job_progress,
     update_job_status,
     update_preview_status,
-    create_watermarked_preview,
-    update_preview_pages_incrementally
+    create_watermarked_preview
+    # update_preview_pages_incrementally removed - V1 columns don't exist
 )
 
 logger = structlog.get_logger()
@@ -207,6 +207,10 @@ async def generate_storygift_preview(
         }).eq("preview_id", preview_id).execute()
         logger.info("Stored identity lock prompt for future generation consistency")
 
+        # Initialize incremental book_structure dict for progressive updates
+        # This will grow as each page completes, enabling frontend to show pages one-by-one
+        book_structure_incremental = {}
+
         # ============================================
         # PHASE 1.5: Generate Cover Image (10% progress)
         # ============================================
@@ -279,6 +283,24 @@ async def generate_storygift_preview(
                     cover_url=cover_url,
                     db_update_success=bool(update_result.data)
                 )
+
+                # V2: Incremental book_structure update for cover
+                # Add cover to book_structure so frontend can show it immediately
+                book_structure_incremental["0"] = {
+                    "type": "cover",
+                    "url": cover_url,
+                    "is_locked": False,
+                    "is_generated": True
+                }
+
+                # Update database with cover in book_structure
+                db.table("previews").update({
+                    "book_structure": book_structure_incremental,
+                    "current_generating_page": 4,  # Next: first story page (index 4)
+                    "generation_progress": 15
+                }).eq("preview_id", preview_id).execute()
+
+                logger.info("Incremental update: cover added to book_structure", preview_id=preview_id)
             else:
                 logger.warning(
                     "Cover generation failed, will use first page as cover",
@@ -402,13 +424,45 @@ async def generate_storygift_preview(
                         if sp.get("preview_url")
                     ]
 
-                    # Update database incrementally so frontend can show this page
-                    await update_preview_pages_incrementally(
-                        preview_id=preview_id,
-                        hires_images=hires_images,
-                        preview_images=current_preview_images,
-                        story_pages=story_pages
-                    )
+                    # V2: Incremental book_structure update after each page
+                    # This enables frontend to show pages one-by-one as they complete
+                    try:
+                        # Map story page number (1-5) to book index (4, 6, 8, 10, 12)
+                        # page_num 1→4, 2→6, 3→8, 4→10, 5→12
+                        book_index = 4 + (page_num - 1) * 2
+
+                        # Add this page to incremental book_structure
+                        book_structure_incremental[str(book_index)] = {
+                            "type": "generated",
+                            "url": stored_url,
+                            "is_locked": False,
+                            "is_generated": True
+                        }
+
+                        # Calculate progress: cover=15%, pages 1-5 = 15% to 90%
+                        incremental_progress = 15 + int((page_num / len(pages_to_generate)) * 75)
+
+                        # Determine NEXT generating page for frontend to show loading state
+                        # Preview AI indices: [0, 4, 6, 8, 10, 12]
+                        preview_ai_indices = [4, 6, 8, 10, 12]
+                        current_idx_pos = preview_ai_indices.index(book_index) if book_index in preview_ai_indices else -1
+                        next_generating = preview_ai_indices[current_idx_pos + 1] if current_idx_pos >= 0 and current_idx_pos + 1 < len(preview_ai_indices) else None
+
+                        # Update database with incremental book_structure
+                        db.table("previews").update({
+                            "book_structure": book_structure_incremental,
+                            "current_generating_page": next_generating,
+                            "generation_progress": incremental_progress
+                        }).eq("preview_id", preview_id).execute()
+
+                        logger.info(
+                            f"Incremental update: page {page_num} (index {book_index}) added to book_structure",
+                            preview_id=preview_id,
+                            progress=incremental_progress,
+                            next_generating=next_generating
+                        )
+                    except Exception as incr_err:
+                        logger.error(f"Incremental book_structure update failed (non-fatal): {incr_err}")
                 else:
                     logger.error(f"Page {page_num} generation failed: {result.error_message}")
 
@@ -422,7 +476,9 @@ async def generate_storygift_preview(
         await update_job_progress(job_id, 90, "Adding magical decorations... ✨")
 
         filler_pages_processed: Dict[int, str] = {}
-        book_structure: Dict[int, dict] = {}
+        # Use the incrementally built book_structure (don't create a new one!)
+        # This preserves the cover and AI pages added during generation
+        book_structure = book_structure_incremental.copy()
 
         try:
             # Extract ALL story texts (1-10) from theme template using V2 extractor
@@ -462,28 +518,49 @@ async def generate_storygift_preview(
                 filler_count=len(filler_pages_processed)
             )
 
+            # DON'T normalize keys to integers - frontend expects string keys!
+            # Incremental updates use string keys ("0", "4", "6", etc.)
+            # Frontend bookStructureConverter.ts line 97: bookStructure[index.toString()]
+            # Keep string keys throughout for frontend compatibility
+
             # Build complete book_structure for preview pages
-            # This maps page index to page data
+            # Fill in missing pages (filler pages and locked pages)
+            # Skip pages that already exist (cover and AI pages from incremental updates)
+            # IMPORTANT: Use string keys for frontend compatibility
             for page_config in BOOK_STRUCTURE:
+                # Convert index to string for consistency with incremental updates
+                page_key = str(page_config.index)
+
+                # Skip if page already exists in book_structure (from incremental updates)
+                if page_key in book_structure:
+                    # Page already added incrementally (cover or AI page)
+                    # Just ensure it has the correct type field
+                    if "type" not in book_structure[page_key]:
+                        book_structure[page_key]["type"] = page_config.page_type.value
+                    continue
+
                 if not page_config.is_preview:
                     # Mark locked pages
-                    book_structure[page_config.index] = {
+                    book_structure[page_key] = {
                         "type": page_config.page_type.value,
                         "is_locked": True,
                         "url": None
                     }
                     continue
 
+                # Add missing preview pages (filler pages only, since AI pages were added incrementally)
                 page_data = {
                     "type": page_config.page_type.value,
                     "is_locked": False
                 }
 
                 if page_config.page_type == PageType.COVER:
+                    # Cover should already be in book_structure from incremental update
+                    # But add it here as fallback
                     page_data["url"] = cover_url
                 elif page_config.page_type == PageType.GENERATED:
-                    # Map book index to story page number
-                    # Index 4 -> page 1, Index 6 -> page 2, etc.
+                    # AI pages should already be in book_structure from incremental updates
+                    # But add them here as fallback
                     story_page_num = (page_config.index - 4) // 2 + 1 if page_config.index >= 4 else 0
                     matching_page = next(
                         (sp for sp in story_pages if sp.get("page") == story_page_num),
@@ -492,10 +569,10 @@ async def generate_storygift_preview(
                     if matching_page:
                         page_data["url"] = matching_page.get("image_url")
                 else:
-                    # Filler page
+                    # Filler page - these are newly processed
                     page_data["url"] = filler_pages_processed.get(page_config.index)
 
-                book_structure[page_config.index] = page_data
+                book_structure[page_key] = page_data
 
         except Exception as filler_error:
             logger.error(
@@ -518,17 +595,20 @@ async def generate_storygift_preview(
         ]
 
         # Debug logging before database update
+        # Count AI pages in book_structure (all indices 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
+        all_ai_indices = [0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+        ai_pages_present = [idx for idx in all_ai_indices if str(idx) in book_structure]
+        preview_ai_pages_present = [idx for idx in PREVIEW_AI_INDICES if str(idx) in book_structure]
+
         logger.info(
             "About to update database with generation results",
             preview_id=preview_id,
-            hires_images_count=len(hires_images),
-            preview_images_count=len(preview_images),
-            story_pages_count=len(story_pages),
             filler_pages_count=len(filler_pages_processed),
             book_structure_pages=len(book_structure),
-            hires_images_sample=hires_images[0] if hires_images else None,
-            preview_images_sample=preview_images[0] if preview_images else None,
-            story_pages_sample=story_pages[0] if story_pages else None
+            story_texts_count=len(story_texts),
+            total_ai_pages=len(ai_pages_present),
+            preview_ai_pages=len(preview_ai_pages_present),
+            preview_ai_indices_present=preview_ai_pages_present
         )
 
         # Check if generation was actually successful
@@ -553,9 +633,7 @@ async def generate_storygift_preview(
         await update_preview_status(
             preview_id=preview_id,
             status=PreviewStatus.ACTIVE,
-            hires_images=hires_images,
-            preview_images=preview_images,  # From incremental updates
-            story_pages=story_pages,
+            # V2 columns only - hires_images, preview_images, story_pages were removed in migration 028
             generation_phase='preview',  # Mark as preview only
             preview_page_count=PREVIEW_PAGE_COUNT,  # 13 pages visible in preview
             total_pages=TOTAL_PAGE_COUNT,  # 26 total pages (database column is 'total_pages')
@@ -572,18 +650,20 @@ async def generate_storygift_preview(
             status=JobStatus.COMPLETED,
             progress=100,
             result_data={
-                "preview_count": len(preview_images),
-                "hires_count": len(hires_images),
                 "generation_phase": "preview",
-                "pages_generated": len(story_pages)
+                "preview_pages_count": 13,
+                "total_pages_count": 26,
+                "book_structure_pages": len(book_structure),
+                "story_texts_count": len(story_texts),
+                "filler_pages_count": len(filler_pages_processed)
             }
         )
 
         logger.info(
-            "StoryGift PREVIEW generation completed (5 pages)",
+            "StoryGift PREVIEW generation completed (13 preview pages)",
             preview_id=preview_id,
-            hires_count=len(hires_images),
-            preview_count=len(preview_images),
+            book_structure_pages=len(book_structure),
+            story_texts_count=len(story_texts),
             generation_phase="preview"
         )
 
