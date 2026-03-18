@@ -33,7 +33,6 @@ from app.config import get_settings
 from app.models.database import get_db
 from app.models.enums import PreviewStatus, OrderStatus, JobStatus
 from app.services.storage import StorageService
-from app.services.storygift_pdf_generator import StoryGiftPDFGeneratorService
 from app.services.email_service import get_email_service
 from app.services.filler_pages import get_filler_pages_service
 from app.stories.themes import get_theme
@@ -426,15 +425,26 @@ async def generate_storygift_preview(
         book_structure: Dict[int, dict] = {}
 
         try:
-            # Build story_texts dict from generated story pages
-            # Map page_num (1-5) to text_page_number (1-4 for preview)
-            # Story page 1 -> text page 1, Story page 2 -> text page 2, etc.
-            story_texts: Dict[int, str] = {}
-            for sp in story_pages:
-                page_num = sp.get("page")
-                text = sp.get("story_text") or sp.get("text", "")
-                if page_num and text:
-                    story_texts[page_num] = text
+            # Extract ALL story texts (1-10) from theme template using V2 extractor
+            # This provides complete text for all 10 text pages (indices 5,7,9,11,13,15,17,19,21,23)
+            # Stored in database for post-payment locked page generation
+            from app.services.story_text_extractor import extract_story_texts
+            story_texts = extract_story_texts(theme, safe_child_name)
+
+            if not story_texts or len(story_texts) != 10:
+                logger.warning(
+                    "Story text extraction incomplete",
+                    theme=theme,
+                    expected=10,
+                    actual=len(story_texts)
+                )
+
+            logger.info(
+                "Story texts extracted from theme",
+                theme=theme,
+                story_texts_count=len(story_texts),
+                indices=sorted(story_texts.keys())
+            )
 
             # Process filler pages for preview (indices 1, 2, 3, 5, 7, 9, 11)
             filler_service = get_filler_pages_service()
@@ -548,10 +558,11 @@ async def generate_storygift_preview(
             story_pages=story_pages,
             generation_phase='preview',  # Mark as preview only
             preview_page_count=PREVIEW_PAGE_COUNT,  # 13 pages visible in preview
-            total_page_count=TOTAL_PAGE_COUNT,  # 26 total pages
+            total_pages=TOTAL_PAGE_COUNT,  # 26 total pages (database column is 'total_pages')
             book_structure=book_structure,  # Complete page structure JSONB
             filler_pages_processed=filler_pages_processed,  # Processed filler URLs
-            child_photo_url=photo_url  # Store for post-payment generation
+            child_photo_url=photo_url,  # Store for post-payment generation
+            story_texts=story_texts  # All 10 story texts for locked page generation
             # NOTE: pdf_url is NOT set - will be generated after payment
         )
 
@@ -642,39 +653,47 @@ async def generate_remaining_pages_and_pdf(
     order_type: str = "digital"
 ):
     """
-    Generate remaining 5 pages (6-10) after payment, then create full 10-page PDF.
-    
-    Called by webhook after successful payment. Uses stored analyzed_features
-    from preview generation for consistency across all pages.
-    
+    Generate remaining locked pages (13-25) after payment, then create full 26-page PDF.
+
+    V2 26-Page Structure Post-Payment Flow:
+    - Preview pages 0-12: Already generated (13 pages)
+    - Locked pages 13-25: Generated here (13 pages)
+        - Text pages: 13, 15, 17, 19, 21, 23 (with story text overlays)
+        - AI pages: 14, 16, 18, 20, 22 (AI-generated images)
+        - Filler pages: 24 (end_page), 25 (back_cover)
+
     Args:
         order_id: Shopify order ID
         preview_id: Preview to complete
         child_name: Child's name for story
         max_retries: Max retry attempts (default 3)
+        order_type: 'digital' or 'physical'
     """
+    from app.services.story_text_extractor import extract_story_texts
+    from app.services.storygift_pdf_generator_v2 import get_pdf_generator_v2
+    from app.config.book_structure import LOCKED_AI_INDICES
+
     retry_count = 0
     last_error = None
-    
+
     while retry_count < max_retries:
         try:
-            # Sanitize child name to prevent prompt injection
             safe_child_name = sanitize_child_name(child_name)
 
             logger.info(
-                "Starting remaining page generation",
+                "Starting V2 locked page generation (13-25)",
                 order_id=order_id,
                 preview_id=preview_id,
                 child_name=safe_child_name,
                 order_type=order_type,
-                attempt=retry_count + 1,
-                max_retries=max_retries
+                attempt=retry_count + 1
             )
 
-            # Track generation duration from this attempt onward
             generation_start = datetime.utcnow()
 
-            # Get preview data from database
+            # ===================================================================
+            # PHASE 1: Fetch preview data
+            # ===================================================================
             db = get_db()
             preview_result = db.table("previews").select("*").eq("preview_id", preview_id).execute()
 
@@ -684,262 +703,296 @@ async def generate_remaining_pages_and_pdf(
             preview_data = preview_result.data[0]
 
             # Get existing data from preview phase
-            existing_hires = preview_data.get("hires_images", [])
-            existing_story_pages = preview_data.get("story_pages", [])
+            book_structure = preview_data.get("book_structure") or {}
             analyzed_features = preview_data.get("analyzed_features", "a cute child")
-            if analyzed_features == "a cute child":
-                logger.warning(
-                    "analyzed_features not found in DB — using fallback. "
-                    "Face consistency across pages may be affected.",
-                    preview_id=preview_id,
-                    order_id=order_id,
-                )
-            photo_url = preview_data.get("photo_url")
+            child_photo_url = preview_data.get("child_photo_url") or preview_data.get("photo_url")
             theme = preview_data.get("theme", "storygift_enchanted_forest")
             style = preview_data.get("style", "photorealistic")
             child_age = preview_data.get("child_age", 5)
             child_gender = preview_data.get("child_gender", "male")
-            
-            if not existing_hires or not existing_story_pages:
-                raise StorageError(f"No preview pages found for: {preview_id}")
-            
-            if len(existing_story_pages) >= 10:
-                logger.info("Preview already has 10 pages, skipping generation", preview_id=preview_id)
-                # Just generate PDF
-                pass
-            else:
-                # Mark as generating
-                db.table("previews").update({
-                    "generation_phase": "generating_full"
-                }).eq("preview_id", preview_id).execute()
-                
-                db.table("orders").update({
-                    "status": OrderStatus.GENERATING_PDF.value
-                }).eq("order_id", order_id).execute()
-                
-                # Get theme template
-                template = get_theme(theme)
-                
-                # Initialize pipeline
-                pipeline = get_pipeline_for_style(style)
-                
-                # Get pages 6-10 from template
-                pages_to_generate = template.pages[5:10]  # Pages 6-10 (0-indexed: 5-9)
-                
+
+            if not child_photo_url:
+                raise StorageError(f"No child photo URL found for preview: {preview_id}")
+
+            if not book_structure:
+                raise StorageError(f"No book_structure found in preview: {preview_id}")
+
+            # Extract story texts from theme (for all 10 text pages)
+            story_texts_dict = extract_story_texts(theme, safe_child_name)
+
+            if not story_texts_dict:
+                raise StorageError(f"Failed to extract story texts for theme: {theme}")
+
+            logger.info(
+                "Preview data loaded",
+                preview_id=preview_id,
+                has_book_structure=bool(book_structure),
+                book_structure_pages=len(book_structure),
+                story_texts_count=len(story_texts_dict)
+            )
+
+            # Mark as generating locked pages
+            db.table("previews").update({
+                "generation_phase": "generating_locked",
+                "current_generating_page": 13,
+                "generation_progress": 50
+            }).eq("preview_id", preview_id).execute()
+
+            db.table("orders").update({
+                "status": OrderStatus.GENERATING_PDF.value
+            }).eq("order_id", order_id).execute()
+
+            # ===================================================================
+            # PHASE 2: Generate locked AI pages (14, 16, 18, 20, 22)
+            # ===================================================================
+            logger.info(
+                "Generating locked AI pages",
+                preview_id=preview_id,
+                ai_indices=LOCKED_AI_INDICES
+            )
+
+            template = get_theme(theme)
+            pipeline = get_pipeline_for_style(style)
+
+            # Map book indices to theme pages
+            # Book indices: 14, 16, 18, 20, 22 correspond to theme pages 6, 7, 8, 9, 10
+            ai_index_to_theme_page = {
+                14: 6,
+                16: 7,
+                18: 8,
+                20: 9,
+                22: 10,
+            }
+
+            for ai_index in LOCKED_AI_INDICES:
+                theme_page_num = ai_index_to_theme_page[ai_index]
+                page_template = template.pages[theme_page_num - 1]  # 0-indexed
+
                 logger.info(
-                    f"Generating remaining {len(pages_to_generate)} pages",
-                    preview_id=preview_id,
-                    start_page=6,
-                    end_page=10
+                    f"Generating locked AI page {ai_index} (theme page {theme_page_num})",
+                    preview_id=preview_id
                 )
-                
-                # Generate remaining pages
-                hires_images = list(existing_hires)
-                story_pages = list(existing_story_pages)
-                
-                for i, page_template in enumerate(pages_to_generate):
-                    page_num = 6 + i  # Pages 6, 7, 8, 9, 10
-                    
-                    try:
-                        prompt = page_template.realistic_prompt or page_template.artistic_prompt or ""
-                        
-                        if not prompt:
-                            logger.warning(f"No prompt found for page {page_num}, skipping")
-                            continue
-                        
-                        # Get scene_type and face_expression from page template
-                        scene_type = getattr(page_template, 'scene_type', None) or ""
-                        face_expression = getattr(page_template, 'face_expression', None) or ""
 
-                        logger.info(f"Generating page {page_num} (post-payment)", child_age=child_age, child_gender=child_gender, scene_type=scene_type, face_expression=face_expression or "fallback")
+                # Update progress (50% to 75% for AI pages)
+                progress = 50 + int((LOCKED_AI_INDICES.index(ai_index) / len(LOCKED_AI_INDICES)) * 25)
+                db.table("previews").update({
+                    "generation_progress": progress,
+                    "current_generating_page": ai_index
+                }).eq("preview_id", preview_id).execute()
 
-                        # Generate using stored analyzed_features for consistency
-                        result = await pipeline.generate_with_face_analysis(
-                            prompt=prompt,
-                            face_url=photo_url,
-                            child_name=safe_child_name,
-                            child_age=child_age,
-                            child_gender=child_gender,
-                            analyzed_features=analyzed_features,
-                            aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
-                            scene_type=scene_type,
-                            preview_id=preview_id,
-                            page_number=page_num,
-                            face_expression=face_expression
-                        )
+                prompt = page_template.realistic_prompt or page_template.artistic_prompt
+                scene_type = getattr(page_template, 'scene_type', None) or ""
+                face_expression = getattr(page_template, 'face_expression', None) or ""
 
-                        if result.success and result.image_url:
-                            # Check if image is already in R2 (cartoon pipeline uploads directly)
-                            settings = get_settings()
-                            if result.image_url.startswith(settings.r2_public_url):
-                                # Already in R2, use directly
-                                stored_url = result.image_url
-                            else:
-                                # Download from external URL and upload to R2 (photorealistic pipeline)
-                                storage_path = f"final/{preview_id}/page_{page_num:02d}.jpg"
-                                stored_url = await StorageService().download_and_upload(
-                                    result.image_url, storage_path
-                                )
+                # Generate image
+                result = await pipeline.generate_with_face_analysis(
+                    prompt=prompt,
+                    face_url=child_photo_url,
+                    child_name=safe_child_name,
+                    child_age=child_age,
+                    child_gender=child_gender,
+                    analyzed_features=analyzed_features,
+                    aspect_ratio="1:1",
+                    scene_type=scene_type,
+                    preview_id=preview_id,
+                    page_number=theme_page_num,
+                    face_expression=face_expression
+                )
 
-                            hires_images.append({"page": page_num, "url": stored_url})
-
-                            # Use sanitize_for_prompt to safely insert name
-                            story_text_value = sanitize_for_prompt(page_template.story_text, safe_child_name)
-                            story_pages.append({
-                                'page': page_num,
-                                'image_url': stored_url,
-                                'text': story_text_value,
-                                'story_text': story_text_value,
-                                'dialogue': [],
-                                'realistic_prompt': prompt
-                            })
-                            
-                            logger.info(f"Page {page_num} generated successfully")
-                        else:
-                            logger.error(f"Page {page_num} generation failed: {result.error_message}")
-                            raise ImageGenerationError(f"Failed to generate page {page_num}")
-                    
-                    except Exception as e:
-                        logger.error(f"Error generating page {page_num}", error=str(e))
-                        raise
-                
-                # ============================================
-                # Process locked filler pages (indices 13-25)
-                # ============================================
-                locked_filler_pages: Dict[int, str] = {}
-                try:
-                    # Build story_texts dict from all story pages
-                    all_story_texts: Dict[int, str] = {}
-                    for sp in story_pages:
-                        page_num = sp.get("page")
-                        text = sp.get("story_text") or sp.get("text", "")
-                        if page_num and text:
-                            all_story_texts[page_num] = text
-
-                    # Process locked filler pages
-                    filler_service = get_filler_pages_service()
-                    locked_filler_pages = await filler_service.process_locked_filler_pages(
-                        preview_id=preview_id,
-                        theme=theme,
-                        style=style,
-                        child_name=safe_child_name,
-                        story_texts=all_story_texts
+                if not result.success or not result.image_url:
+                    raise ImageGenerationError(
+                        f"Failed to generate AI page {ai_index}: {result.error}"
                     )
 
-                    logger.info(
-                        "Locked filler pages processed",
-                        preview_id=preview_id,
-                        order_id=order_id,
-                        filler_count=len(locked_filler_pages)
-                    )
-                except Exception as filler_error:
-                    logger.error(
-                        "Locked filler page processing failed (non-fatal)",
-                        preview_id=preview_id,
-                        error=str(filler_error)
-                    )
-
-                # Update preview with all 10 AI pages, locked fillers, and mark as pages_complete
-                # This intermediate phase lets the frontend know all images are done,
-                # even if PDF creation fails later
-
-                # Get existing filler_pages_processed and merge with locked
-                existing_filler = preview_data.get("filler_pages_processed", {})
-                if isinstance(existing_filler, dict):
-                    all_filler_pages = {**existing_filler, **locked_filler_pages}
+                # Upload to R2 if not already there
+                settings = get_settings()
+                if result.image_url.startswith(settings.r2_public_url):
+                    stored_url = result.image_url
                 else:
-                    all_filler_pages = locked_filler_pages
+                    storage_path = f"final/{preview_id}/page_{ai_index:02d}.jpg"
+                    stored_url = await StorageService().download_and_upload(
+                        result.image_url, storage_path
+                    )
 
-                db.table("previews").update({
-                    "hires_images": hires_images,
-                    "story_pages": story_pages,
-                    "preview_page_count": len(story_pages),
-                    "generation_phase": "pages_complete",
-                    "filler_pages_processed": all_filler_pages
-                }).eq("preview_id", preview_id).execute()
+                # Update book_structure
+                book_structure[str(ai_index)] = {
+                    "type": "generated",
+                    "url": stored_url,
+                    "is_locked": False,  # Unlocked after payment
+                    "is_generated": True,
+                    "is_preview": False
+                }
 
                 logger.info(
-                    "All pages generated — intermediate milestone reached",
-                    order_id=order_id,
-                    preview_id=preview_id,
-                    hires_count=len(hires_images),
-                    story_pages_count=len(story_pages),
-                    filler_pages_count=len(all_filler_pages),
+                    f"AI page {ai_index} generated successfully",
+                    url=stored_url[:80]
                 )
-            
-            # ============================================
-            # Now generate full 10-page PDF
-            # Wrapped in its own try/except so page generation
-            # isn't retried if only PDF creation fails
-            # ============================================
-            try:
-                logger.info("Generating full 10-page PDF", preview_id=preview_id)
-                
-                # Reload data to get all 10 pages
-                preview_result = db.table("previews").select("*").eq("preview_id", preview_id).execute()
-                if not preview_result.data:
-                    raise StorageError(f"Preview not found when generating PDF: {preview_id}")
-                preview_data = preview_result.data[0]
-                all_hires = preview_data.get("hires_images", [])
-                all_story_pages = preview_data.get("story_pages", [])
-                
-                pdf_generator = StoryGiftPDFGeneratorService()
 
-                # Get story title from theme (using sanitized name)
-                template = get_theme(theme)
+            # ===================================================================
+            # PHASE 3: Process locked filler pages (13-25)
+            # ===================================================================
+            logger.info(
+                "Processing locked filler pages",
+                preview_id=preview_id
+            )
+
+            # Update progress to 75%
+            db.table("previews").update({
+                "generation_progress": 75,
+                "current_generating_page": 13
+            }).eq("preview_id", preview_id).execute()
+
+            filler_service = get_filler_pages_service()
+
+            locked_filler_pages = await filler_service.process_locked_filler_pages(
+                preview_id=preview_id,
+                theme=theme,
+                style=style,
+                child_name=safe_child_name,
+                story_texts=story_texts_dict
+            )
+
+            logger.info(
+                "Locked filler pages processed",
+                preview_id=preview_id,
+                filler_count=len(locked_filler_pages)
+            )
+
+            # Update book_structure with filler pages
+            for page_index, filler_url in locked_filler_pages.items():
+                if str(page_index) in book_structure:
+                    # Update existing entry
+                    book_structure[str(page_index)]["url"] = filler_url
+                else:
+                    # Determine page type
+                    if page_index in [13, 15, 17, 19, 21, 23]:
+                        page_type = "text"
+                    elif page_index == 24:
+                        page_type = "end_page"
+                    elif page_index == 25:
+                        page_type = "back_cover"
+                    else:
+                        page_type = "filler"
+
+                    book_structure[str(page_index)] = {
+                        "type": page_type,
+                        "url": filler_url,
+                        "is_locked": False,
+                        "is_generated": True,
+                        "is_preview": False
+                    }
+
+            # Merge filler pages with existing filler_pages_processed
+            all_filler_pages_processed = preview_data.get("filler_pages_processed", {})
+            all_filler_pages_processed.update(locked_filler_pages)
+
+            # Update database with complete book structure
+            db.table("previews").update({
+                "book_structure": book_structure,
+                "filler_pages_processed": all_filler_pages_processed,
+                "generation_phase": "pages_complete",
+                "generation_progress": 90
+            }).eq("preview_id", preview_id).execute()
+
+            logger.info(
+                "All 26 pages generated successfully",
+                preview_id=preview_id,
+                order_id=order_id,
+                book_structure_size=len(book_structure)
+            )
+
+            # ===================================================================
+            # PHASE 4: Generate 26-page PDF using V2 generator
+            # ===================================================================
+            try:
+                logger.info("Generating 26-page PDF with V2 generator", preview_id=preview_id)
+
+                # Update progress to 90%
+                db.table("previews").update({
+                    "generation_progress": 90,
+                    "current_generating_page": None
+                }).eq("preview_id", preview_id).execute()
+
+                # Prepare page URLs dict (index → URL)
+                page_urls = {}
+                for idx_str, page_data in book_structure.items():
+                    idx = int(idx_str)
+                    if page_data.get("url"):
+                        page_urls[idx] = page_data["url"]
+
+                # Verify we have all 26 pages
+                missing_pages = [i for i in range(26) if i not in page_urls]
+                if missing_pages:
+                    raise StorageError(
+                        f"Missing pages in book structure: {missing_pages}"
+                    )
+
+                logger.info(
+                    "All pages present for PDF generation",
+                    preview_id=preview_id,
+                    total_pages=len(page_urls)
+                )
+
+                # Get story title
                 story_title = template.get_title(safe_child_name) if hasattr(template, 'get_title') else f"{safe_child_name}'s Adventure"
-                
-                # Use dedicated cover_url if available, otherwise fallback to first page
-                cover_url = preview_data.get("cover_url")
-                if not cover_url and all_hires and isinstance(all_hires[0], dict):
-                    cover_url = all_hires[0]["url"]
-                    logger.info("No dedicated cover found, using first page as cover")
-                
-                # Physical orders get a blank back page appended so the PDF has
-                # exactly 12 pages (cover + 10 story + 1 blank back), matching
-                # page_count: 12 declared in the Lulu print job payload.
-                # Digital orders keep 11 pages — the back page is Lulu-only.
-                pdf_url = await pdf_generator.generate_storygift_pdf(
+
+                # Use V2 PDF generator
+                pdf_generator_v2 = get_pdf_generator_v2()
+
+                pdf_url = await pdf_generator_v2.generate_pdf(
                     preview_id=preview_id,
                     child_name=safe_child_name,
-                    story_pages=all_story_pages,
+                    page_urls=page_urls,
                     story_title=story_title,
-                    cover_image_url=cover_url,
-                    add_blank_back_page=(order_type == "physical"),
+                    add_blank_back_page=(order_type == "physical")
                 )
-                
-                # Update preview with PDF URL
-                # For physical orders: set phase to "preparing_print" (Lulu submission pending)
-                # For digital orders: set phase to "complete" (ready for download)
+
+                logger.info(
+                    "PDF generated successfully",
+                    preview_id=preview_id,
+                    pdf_url=pdf_url[:80]
+                )
+
+                # Update database with PDF
                 if order_type == "physical":
-                    # Physical: PDF ready, now need to prepare and submit to Lulu
                     db.table("previews").update({
                         "pdf_url": pdf_url,
                         "status": PreviewStatus.PURCHASED.value,
-                        "generation_phase": "preparing_print"
+                        "generation_phase": "preparing_print",
+                        "generation_progress": 100,
+                        "current_generating_page": None
+                    }).eq("preview_id", preview_id).execute()
+                else:
+                    db.table("previews").update({
+                        "pdf_url": pdf_url,
+                        "status": PreviewStatus.PURCHASED.value,
+                        "generation_phase": "complete",
+                        "generation_progress": 100,
+                        "current_generating_page": None
                     }).eq("preview_id", preview_id).execute()
 
-                    # Order status stays as GENERATING_PDF until Lulu submission completes
-                    db.table("orders").update({
-                        "pdf_url": pdf_url,
-                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
-                    }).eq("order_id", order_id).execute()
+                db.table("orders").update({
+                    "pdf_url": pdf_url,
+                    "status": OrderStatus.COMPLETED.value,
+                    "completed_at": datetime.utcnow().isoformat(),
+                    "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                }).eq("order_id", order_id).execute()
 
-                    logger.info(
-                        "PDF generation complete for physical order, preparing for print",
-                        order_id=order_id,
-                        preview_id=preview_id,
-                        total_pages=len(all_story_pages),
-                        pdf_url=pdf_url,
-                        duration_sec=round((datetime.utcnow() - generation_start).total_seconds(), 1),
-                    )
+                duration = (datetime.utcnow() - generation_start).total_seconds()
 
-                    # ── Lulu submission for physical orders ──
-                    # Called AFTER PDF is ready — retry with exponential backoff.
-                    # NOTE: This block has its OWN try/except so Lulu failures can
-                    # never propagate to the outer PDF try/except handler.
+                logger.info(
+                    "V2 26-page PDF generation complete",
+                    order_id=order_id,
+                    preview_id=preview_id,
+                    pdf_url=pdf_url[:80],
+                    duration_sec=round(duration, 1),
+                    order_type=order_type
+                )
+
+                # Physical order Lulu submission
+                if order_type == "physical":
                     logger.info(
-                        "Physical order — submitting to Lulu now that PDF is ready",
+                        "Physical order - submitting to Lulu",
                         order_id=order_id,
                         preview_id=preview_id
                     )
@@ -947,9 +1000,7 @@ async def generate_remaining_pages_and_pdf(
                         from app.background.lulu_tasks import submit_lulu_print_job
 
                         lulu_submitted = False
-                        lulu_backoff_delays = [10, 30, 60]  # seconds between retries
-
-                        for lulu_attempt in range(1, 4):  # max 3 attempts
+                        for attempt in range(3):
                             try:
                                 await submit_lulu_print_job(
                                     order_id=order_id,
@@ -957,166 +1008,113 @@ async def generate_remaining_pages_and_pdf(
                                 )
                                 lulu_submitted = True
                                 logger.info(
-                                    "Lulu print job submitted successfully",
+                                    "Lulu submission successful",
                                     order_id=order_id,
-                                    preview_id=preview_id,
-                                    attempt=lulu_attempt
+                                    attempt=attempt + 1
                                 )
                                 break
-                            except Exception as lulu_err:
+                            except Exception as e:
                                 logger.warning(
-                                    f"Lulu submission attempt {lulu_attempt}/3 failed",
-                                    error=str(lulu_err),
-                                    order_id=order_id,
-                                    preview_id=preview_id,
+                                    f"Lulu submission attempt {attempt + 1} failed",
+                                    error=str(e)
                                 )
-                                if lulu_attempt < 3:
-                                    wait_sec = lulu_backoff_delays[lulu_attempt - 1]
-                                    logger.info(
-                                        f"Retrying Lulu submission in {wait_sec}s",
-                                        order_id=order_id,
-                                        next_attempt=lulu_attempt + 1
-                                    )
-                                    await asyncio.sleep(wait_sec)
+                                if attempt < 2:
+                                    await asyncio.sleep(2 ** attempt)
 
                         if not lulu_submitted:
                             logger.error(
-                                "CRITICAL: Lulu submission failed after 3 attempts — manual retry needed",
-                                order_id=order_id,
-                                preview_id=preview_id,
+                                "Lulu submission failed after retries",
+                                order_id=order_id
                             )
-                            db.table("previews").update({
-                                "generation_phase": "print_failed"
-                            }).eq("preview_id", preview_id).execute()
-                            # Also revert orders.status so frontend doesn't show
-                            # "Book ready" when the print submission failed
-                            db.table("orders").update({
-                                "status": OrderStatus.FAILED.value,
-                                "error_message": "Lulu print submission failed after 3 attempts"
-                            }).eq("order_id", order_id).execute()
-
-                    except Exception as _lulu_outer_err:
-                        # Catch any unexpected error from the retry machinery itself
-                        # (e.g., import errors, asyncio issues) so it never corrupts
-                        # the outer PDF try/except handler.
+                    except Exception as lulu_error:
                         logger.error(
-                            "Unexpected error in Lulu retry block — setting print_failed",
-                            error=str(_lulu_outer_err),
+                            "Lulu submission error (non-fatal)",
                             order_id=order_id,
-                            preview_id=preview_id,
-                            exc_info=True,
+                            error=str(lulu_error)
                         )
-                        db.table("previews").update({
-                            "generation_phase": "print_failed"
-                        }).eq("preview_id", preview_id).execute()
-                        db.table("orders").update({
-                            "status": OrderStatus.FAILED.value,
-                            "error_message": f"Lulu retry machinery error: {str(_lulu_outer_err)}"
-                        }).eq("order_id", order_id).execute()
-                else:
-                    # Digital: PDF ready, order complete
-                    db.table("previews").update({
-                        "pdf_url": pdf_url,
-                        "status": PreviewStatus.PURCHASED.value,
-                        "generation_phase": "complete"
-                    }).eq("preview_id", preview_id).execute()
 
-                    db.table("orders").update({
-                        "pdf_url": pdf_url,
-                        "status": OrderStatus.COMPLETED.value,
-                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
-                    }).eq("order_id", order_id).execute()
-
-                    logger.info(
-                        "Digital book generation completed successfully",
-                        order_id=order_id,
-                        preview_id=preview_id,
-                        total_pages=len(all_story_pages),
-                        pdf_url=pdf_url,
-                        duration_sec=round((datetime.utcnow() - generation_start).total_seconds(), 1),
-                    )
-            except Exception as pdf_error:
-                # PDF generation failed but pages are safe — mark as pdf_failed
-                # so the frontend can offer a regenerate button
-                logger.error(
-                    "PDF generation failed (pages are preserved)",
-                    preview_id=preview_id,
-                    error=str(pdf_error),
-                    exc_info=True,
-                )
-                db.table("previews").update({
-                    "generation_phase": "pdf_failed"
-                }).eq("preview_id", preview_id).execute()
-                # Don't re-raise — pages are saved, user can retry PDF via /regenerate-pdf
-            
-            # ============================================
-            # Send completion email
-            # ============================================
-            try:
-                # Get customer email from order
-                order_result = db.table("orders").select("customer_email").eq("order_id", order_id).execute()
-                if order_result.data and order_result.data[0].get("customer_email"):
-                    customer_email = order_result.data[0]["customer_email"]
-
+                # Send completion email
+                try:
                     email_service = get_email_service()
-                    await email_service.send_book_ready_email(
-                        to_email=customer_email,
-                        child_name=safe_child_name,
-                        story_title=story_title,
-                        download_url=pdf_url
+                    customer_email = preview_data.get("customer_email")
+
+                    if customer_email:
+                        await email_service.send_order_complete_email(
+                            to_email=customer_email,
+                            child_name=safe_child_name,
+                            preview_id=preview_id,
+                            pdf_url=pdf_url,
+                            order_type=order_type
+                        )
+                        logger.info(
+                            "Completion email sent",
+                            order_id=order_id,
+                            email=customer_email
+                        )
+                except Exception as email_error:
+                    logger.warning(
+                        "Failed to send completion email (non-fatal)",
+                        order_id=order_id,
+                        error=str(email_error)
                     )
-                    logger.info("Completion email sent", to=customer_email)
-                else:
-                    logger.warning("No customer email found, skipping email notification")
-            except Exception as email_error:
-                # Email failure should not fail the whole order
-                logger.error("Failed to send completion email (non-fatal)", error=str(email_error))
-            
-            return pdf_url
-            
+
+                return pdf_url
+
+            except Exception as pdf_error:
+                logger.error(
+                    "PDF generation failed",
+                    preview_id=preview_id,
+                    order_id=order_id,
+                    error=str(pdf_error)
+                )
+                raise
+
         except Exception as e:
             retry_count += 1
             last_error = e
-            
+
             logger.error(
-                f"Generation attempt {retry_count} failed",
+                "Post-payment generation failed",
                 order_id=order_id,
                 preview_id=preview_id,
+                attempt=retry_count,
+                max_retries=max_retries,
                 error=str(e),
-                retries_remaining=max_retries - retry_count,
-                exc_info=True,
+                error_type=type(e).__name__
             )
-            
-            if retry_count < max_retries:
-                # Wait before retry (exponential backoff)
-                # NOTE: asyncio is imported at module level — do NOT re-import here
-                # as a local import would shadow it and cause UnboundLocalError.
-                await asyncio.sleep(2 ** retry_count)
-                continue
-            else:
-                # All retries exhausted
-                logger.error(
-                    "All retry attempts exhausted",
-                    order_id=order_id,
-                    preview_id=preview_id,
-                    total_attempts=max_retries
-                )
-                
-                # Mark order as failed
+
+            if retry_count >= max_retries:
+                # Mark as failed
                 try:
                     db = get_db()
                     db.table("orders").update({
                         "status": OrderStatus.FAILED.value,
-                        "error_message": f"Generation failed after {max_retries} attempts: {str(last_error)}"
+                        "error_message": f"Generation failed after {max_retries} attempts: {str(e)}"
                     }).eq("order_id", order_id).execute()
-                    
+
                     db.table("previews").update({
-                        "generation_phase": "failed"
+                        "generation_phase": "failed",
+                        "status": PreviewStatus.FAILED.value
                     }).eq("preview_id", preview_id).execute()
+
+                    logger.error(
+                        "Order marked as failed after max retries",
+                        order_id=order_id,
+                        preview_id=preview_id
+                    )
                 except Exception as db_error:
                     logger.error("Failed to update failure status", error=str(db_error))
-                
-                raise last_error
+
+                raise
+
+            # Wait before retry (exponential backoff)
+            wait_seconds = 2 ** retry_count
+            logger.info(
+                f"Retrying in {wait_seconds} seconds...",
+                attempt=retry_count,
+                max_retries=max_retries
+            )
+            await asyncio.sleep(wait_seconds)
 
 
 # Legacy alias for backward compatibility
