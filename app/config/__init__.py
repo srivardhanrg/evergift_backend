@@ -2,9 +2,12 @@
 Book configuration package for MagicTales 26-page structure.
 
 This package contains:
+- settings: Application settings and environment configuration
 - book_structure: Page layout configuration (26 pages, filler mappings)
 - text_styling: Premium text overlay styling per theme
 """
+
+from app.config.settings import Settings, get_settings
 
 from app.config.book_structure import (
     PageType,
@@ -32,6 +35,9 @@ from app.config.text_styling import (
 )
 
 __all__ = [
+    # Settings
+    "Settings",
+    "get_settings",
     # Book structure
     "PageType",
     "PageConfig",
