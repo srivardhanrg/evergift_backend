@@ -194,6 +194,7 @@ async def create_preview(
         customer_email = shopify_customer_email or preview_request.customer_email
 
         # Create preview record with Shopify customer info
+        # V2: Uses book_structure JSONB instead of separate hires_images/preview_images arrays
         preview_data = {
             "preview_id": preview_id,
             "session_id": session_id,  # Use extracted session_id (from body or header)
@@ -205,11 +206,15 @@ async def create_preview(
             "theme": preview_request.theme.value,
             "style": preview_request.style.value,
             "photo_url": preview_request.photo_url,
+            "child_photo_url": preview_request.photo_url,  # Store for post-payment generation
             "photo_validated": True,
             "status": PreviewStatus.GENERATING.value,
-            "hires_images": [],
-            "preview_images": [],
-            "story_pages": [],
+            "generation_phase": "preview",  # V2 generation phase
+            "total_pages": 26,  # V2 default
+            "preview_page_count": 13,  # V2 default (pages 0-12)
+            "book_structure": {},  # V2 JSONB structure
+            "story_texts": {},  # V2 story texts
+            "filler_pages_processed": {},  # V2 filler tracking
             "created_at": datetime.utcnow().isoformat(),
             "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
         }
