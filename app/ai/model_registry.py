@@ -133,7 +133,7 @@ MODELS: Dict[str, ModelConfig] = {
         timeout_seconds=180,
         default_params={
             # StoryGift configuration from analysis
-            "aspect_ratio": "5:4",                    # StoryGift's optimized aspect ratio
+            "aspect_ratio": "1:1",                    # Square aspect ratio for all pages
             "negative_prompt": "black bars, letterbox, scope, cinema bars, blurry, low quality, distorted face",
         }
     ),

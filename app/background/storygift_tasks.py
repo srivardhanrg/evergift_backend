@@ -315,7 +315,7 @@ async def generate_storygift_preview(
                     child_age=child_age,
                     child_gender=child_gender,
                     analyzed_features=analyzed_features,
-                    aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
+                    aspect_ratio="1:1",  # Square aspect ratio for all pages
                     scene_type=scene_type,
                     preview_id=preview_id,
                     page_number=page_num,
@@ -654,7 +654,7 @@ async def generate_remaining_pages_and_pdf(
                             child_age=child_age,
                             child_gender=child_gender,
                             analyzed_features=analyzed_features,
-                            aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
+                            aspect_ratio="1:1",  # Square aspect ratio for all pages
                             scene_type=scene_type,
                             preview_id=preview_id,
                             page_number=page_num,

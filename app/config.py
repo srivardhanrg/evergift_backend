@@ -52,7 +52,7 @@ class Settings(BaseSettings):
 
     # Photorealistic Pipeline Settings
     vlm_model: str = "fal-ai/llava-next"      # Vision Language Model for face analysis
-    page_aspect_ratio: str = "5:4"            # Optimized aspect ratio for print
+    page_aspect_ratio: str = "1:1"            # Square aspect ratio for all pages
     jpeg_quality: float = 0.95                # JPEG quality for PDF generation
 
     # Parallel Generation Settings
