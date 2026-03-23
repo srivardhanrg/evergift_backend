@@ -211,7 +211,7 @@ async def create_preview(
             "status": PreviewStatus.GENERATING.value,
             "generation_phase": "preview",  # V2 generation phase
             "total_pages": 26,  # V2 default
-            "preview_page_count": 13,  # V2 default (pages 0-12)
+            "preview_page_count": 14,  # V2 default (pages 0-13)
             "book_structure": {},  # V2 JSONB structure
             "story_texts": {},  # V2 story texts
             "filler_pages_processed": {},  # V2 filler tracking
@@ -633,8 +633,8 @@ async def get_preview_v2(preview_id: str):
     for the new frontend book viewer components.
 
     Page states include:
-    - is_preview: True for pages 0-12 (visible in preview)
-    - is_locked: True for pages 13-25 (locked until purchase)
+    - is_preview: True for pages 0-13 (visible in preview)
+    - is_locked: True for pages 14-25 (locked until purchase)
     - is_generating: True if page is currently being AI-generated
     - is_generated: True if AI generation is complete
     - is_filler: True for non-AI pages (dedication, intros, text, end, back)
@@ -677,10 +677,11 @@ async def get_preview_v2(preview_id: str):
         cover_url = preview.get("cover_url")
 
         # Determine which AI pages are complete
-        # Map old page numbers (1-10) to new indices (4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
+        # Map old page numbers (1-10) to new indices (5, 7, 9, 11, 13, 15, 17, 19, 21, 23)
+        # NEW ORDER: Text on LEFT, AI on RIGHT
         ai_page_mapping = {
-            1: 4, 2: 6, 3: 8, 4: 10, 5: 12,
-            6: 14, 7: 16, 8: 18, 9: 20, 10: 22
+            1: 5, 2: 7, 3: 9, 4: 11, 5: 13,
+            6: 15, 7: 17, 8: 19, 9: 21, 10: 23
         }
         completed_ai_indices = set()
 
@@ -693,6 +694,18 @@ async def get_preview_v2(preview_id: str):
         for old_page_num, new_index in ai_page_mapping.items():
             if old_page_num in image_source:
                 completed_ai_indices.add(new_index)
+
+        # V2: Also check book_structure for completed pages (incremental updates)
+        # This is the primary source for incremental page-by-page loading
+        if book_structure_data:
+            for idx_str, page_data in book_structure_data.items():
+                try:
+                    idx = int(idx_str)
+                    if page_data.get("url") and page_data.get("is_generated"):
+                        completed_ai_indices.add(idx)
+                except (ValueError, TypeError):
+                    # Handle non-integer keys gracefully
+                    continue
 
         # Build page list for all 26 pages
         pages: List[BookPageInfo] = []
@@ -707,6 +720,11 @@ async def get_preview_v2(preview_id: str):
             if page_config.page_type == PageType.COVER:
                 # Cover page - use cover_url
                 image_url = cover_url
+                # V2 Fallback: check book_structure for URL (incremental updates)
+                if not image_url and book_structure_data:
+                    bs_cover = book_structure_data.get("0") or book_structure_data.get(0)
+                    if bs_cover and bs_cover.get("url"):
+                        image_url = bs_cover["url"]
             elif page_config.page_type == PageType.GENERATED:
                 # AI-generated story page - map to old page number
                 old_page_num = None
@@ -716,6 +734,13 @@ async def get_preview_v2(preview_id: str):
                         break
                 if old_page_num and old_page_num in image_source:
                     image_url = image_source[old_page_num]
+
+                # V2 Fallback: check book_structure for URL (incremental updates)
+                # This is the PRIMARY source during incremental generation
+                if not image_url and book_structure_data:
+                    bs_entry = book_structure_data.get(str(idx)) or book_structure_data.get(idx)
+                    if bs_entry and bs_entry.get("url"):
+                        image_url = bs_entry["url"]
             else:
                 # Filler page - check processed filler pages
                 if filler_pages_processed and str(idx) in filler_pages_processed:
@@ -767,9 +792,9 @@ async def get_preview_v2(preview_id: str):
         # Build book structure response
         book_structure = BookStructureResponse(
             total_pages=26,
-            preview_boundary=12,
-            preview_page_count=13,
-            locked_page_count=13,
+            preview_boundary=13,  # Fixed: Pages 0-13 are preview (14 pages)
+            preview_page_count=14,  # Fixed: 14 pages in preview (0-13)
+            locked_page_count=12,   # Fixed: 12 locked pages (14-25)
             pages=pages,
             generation_progress=generation_progress,
             current_generating_page=current_generating_page,
@@ -860,8 +885,8 @@ async def get_preview_v2(preview_id: str):
             preview_pages=legacy_preview_pages,
             locked_pages=legacy_locked_pages if legacy_locked_pages else None,
             total_pages=26,
-            preview_pages_count=13,
-            locked_pages_count=13,
+            preview_pages_count=14,  # Fixed: 14 preview pages (0-13)
+            locked_pages_count=12,   # Fixed: 12 locked pages (14-25)
             expires_at=expires_at,
             days_remaining=days_remaining,
             pdf_url=preview.get("pdf_url"),

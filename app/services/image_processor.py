@@ -519,6 +519,233 @@ class ImageProcessor:
             text_page_number=text_page_number
         )
 
+    async def process_cover_page(
+        self,
+        cover_image_url: str,
+        story_title: str,
+        child_name: str
+    ) -> bytes:
+        """
+        Process cover page with title and starring text overlay.
+
+        Adds:
+        - Top gradient (33% height): Theme title with gold gradient effect
+        - Bottom gradient (25% height): "STARRING" label + child name
+
+        Args:
+            cover_image_url: URL of AI-generated cover image
+            story_title: Theme title (e.g., "Enchanted Forest")
+            child_name: Child's name for "Starring" credit
+
+        Returns:
+            PNG image bytes with text overlays
+        """
+        logger.info(
+            "Processing cover page with text overlay",
+            story_title=story_title,
+            child_name=child_name,
+            cover_url=cover_image_url[:80] if cover_image_url else None
+        )
+
+        # Fetch cover image
+        try:
+            image_bytes = await self.storage.download_image(cover_image_url)
+            cover_image = Image.open(BytesIO(image_bytes)).convert("RGBA")
+        except Exception as e:
+            logger.error("Failed to fetch cover image", url=cover_image_url, error=str(e))
+            raise
+
+        width, height = cover_image.size
+
+        # Create overlay layer for gradients and text
+        overlay = Image.new("RGBA", cover_image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        # ============================================
+        # TOP GRADIENT (33% height) with title
+        # ============================================
+        top_gradient_height = int(height * 0.33)
+
+        # Create gradient from black (top) to transparent (bottom)
+        for y in range(top_gradient_height):
+            # Opacity decreases from top to bottom
+            alpha = int(180 * (1 - y / top_gradient_height))
+            draw.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
+
+        # Load premium title font (Cormorant Garamond Bold for luxury feel)
+        title_font = self._load_font("Cormorant Garamond Bold", 70)
+
+        # Calculate title position with letter-spacing
+        story_title_upper = story_title.upper()
+        letter_spacing = 8  # Premium letter-spacing in pixels
+
+        # Calculate total width with letter-spacing
+        total_title_width = 0
+        for char in story_title_upper:
+            char_bbox = draw.textbbox((0, 0), char, font=title_font)
+            char_width = char_bbox[2] - char_bbox[0]
+            total_title_width += char_width + letter_spacing
+        total_title_width -= letter_spacing  # Remove spacing after last character
+
+        # Center horizontally, position higher to prevent overflow
+        title_x = (width - total_title_width) // 2
+        title_y = int(height * 0.12)  # 12% from top (was 8%)
+
+        # Premium antique gold color (more sophisticated than bright yellow)
+        gold_color = (212, 175, 55, 255)  # #D4AF37 - antique gold
+
+        # Draw title with letter-spacing and stroke for premium depth
+        current_x = title_x
+        for char in story_title_upper:
+            char_bbox = draw.textbbox((0, 0), char, font=title_font)
+            char_width = char_bbox[2] - char_bbox[0]
+
+            # Draw text stroke (white outline for depth)
+            stroke_width = 2
+            for dx in range(-stroke_width, stroke_width + 1):
+                for dy in range(-stroke_width, stroke_width + 1):
+                    if dx*dx + dy*dy <= stroke_width*stroke_width:
+                        draw.text(
+                            (current_x + dx, title_y + dy),
+                            char,
+                            font=title_font,
+                            fill=(255, 255, 255, 80)  # Semi-transparent white stroke
+                        )
+
+            # Draw shadow
+            shadow_offset = 3
+            draw.text(
+                (current_x + shadow_offset, title_y + shadow_offset),
+                char,
+                font=title_font,
+                fill=(0, 0, 0, 180)
+            )
+
+            # Draw main character in antique gold
+            draw.text(
+                (current_x, title_y),
+                char,
+                font=title_font,
+                fill=gold_color
+            )
+
+            current_x += char_width + letter_spacing
+
+        # ============================================
+        # BOTTOM GRADIENT (25% height) with starring
+        # ============================================
+        bottom_gradient_height = int(height * 0.25)
+        bottom_start = height - bottom_gradient_height
+
+        # Create gradient from transparent (top) to black (bottom)
+        for y in range(bottom_gradient_height):
+            # Opacity increases from top to bottom
+            alpha = int(220 * (y / bottom_gradient_height))
+            actual_y = bottom_start + y
+            draw.line([(0, actual_y), (width, actual_y)], fill=(0, 0, 0, alpha))
+
+        # Load premium fonts for starring section
+        starring_label_font = self._load_font("Cormorant Garamond Bold", 40)
+        child_name_font = self._load_font("Cormorant Garamond Bold", 50)
+
+        # "STARRING" label with letter-spacing
+        starring_text = "STARRING"
+        starring_letter_spacing = 6
+
+        # Calculate total width with letter-spacing
+        total_starring_width = 0
+        for char in starring_text:
+            char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
+            char_width = char_bbox[2] - char_bbox[0]
+            total_starring_width += char_width + starring_letter_spacing
+        total_starring_width -= starring_letter_spacing
+
+        starring_x = (width - total_starring_width) // 2
+        starring_y = height - int(height * 0.18)  # 18% from bottom
+
+        # Draw starring label with letter-spacing
+        current_x = starring_x
+        for char in starring_text:
+            char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
+            char_width = char_bbox[2] - char_bbox[0]
+
+            draw.text(
+                (current_x, starring_y),
+                char,
+                font=starring_label_font,
+                fill=(255, 255, 255, 180)  # Semi-transparent white
+            )
+
+            current_x += char_width + starring_letter_spacing
+
+        # Child name (bold, uppercase) with premium letter-spacing
+        child_name_upper = child_name.upper()
+        name_letter_spacing = 8
+
+        # Calculate total width with letter-spacing
+        total_name_width = 0
+        for char in child_name_upper:
+            char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
+            char_width = char_bbox[2] - char_bbox[0]
+            total_name_width += char_width + name_letter_spacing
+        total_name_width -= name_letter_spacing
+
+        name_x = (width - total_name_width) // 2
+        name_y = height - int(height * 0.11)  # 11% from bottom
+
+        # Draw name with letter-spacing and stroke for depth
+        current_x = name_x
+        for char in child_name_upper:
+            char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
+            char_width = char_bbox[2] - char_bbox[0]
+
+            # Draw text stroke (subtle outline)
+            stroke_width = 2
+            for dx in range(-stroke_width, stroke_width + 1):
+                for dy in range(-stroke_width, stroke_width + 1):
+                    if dx*dx + dy*dy <= stroke_width*stroke_width:
+                        draw.text(
+                            (current_x + dx, name_y + dy),
+                            char,
+                            font=child_name_font,
+                            fill=(200, 200, 200, 60)  # Subtle gray stroke
+                        )
+
+            # Draw shadow
+            draw.text(
+                (current_x + 2, name_y + 2),
+                char,
+                font=child_name_font,
+                fill=(0, 0, 0, 200)
+            )
+
+            # Draw name in white
+            draw.text(
+                (current_x, name_y),
+                char,
+                font=child_name_font,
+                fill=(255, 255, 255, 255)
+            )
+
+            current_x += char_width + name_letter_spacing
+
+        # Composite overlay onto cover
+        result = Image.alpha_composite(cover_image, overlay)
+
+        # Convert to bytes
+        output = BytesIO()
+        result.convert("RGB").save(output, format="PNG", quality=95)
+        output.seek(0)
+
+        logger.info(
+            "Cover text overlay complete",
+            story_title=story_title,
+            child_name=child_name,
+            output_size=len(output.getvalue())
+        )
+
+        return output.getvalue()
+
 
 # Module-level singleton instance
 _image_processor: Optional[ImageProcessor] = None

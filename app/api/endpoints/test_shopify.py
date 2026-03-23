@@ -30,6 +30,7 @@ router = APIRouter(prefix="/test", tags=["test"])
 class TestCartAddRequest(BaseModel):
     preview_id: str
     variant_id: Optional[str] = "test-variant"
+    cover_type: Optional[str] = "hardcover"  # For physical book testing
 
 
 class TestCartAddResponse(BaseModel):
@@ -41,6 +42,8 @@ class TestCartAddResponse(BaseModel):
 class TestPaymentRequest(BaseModel):
     preview_id: str
     order_id: Optional[str] = None
+    cover_type: Optional[str] = "hardcover"  # For physical book testing
+    order_type: Optional[str] = "digital"  # "digital" or "physical"
 
 
 class TestPaymentResponse(BaseModel):
@@ -82,12 +85,18 @@ async def test_cart_add(request: TestCartAddRequest):
         # Generate test order ID
         order_id = f"test-order-{uuid.uuid4().hex[:8]}"
 
-        logger.info("Test cart item added", order_id=order_id, preview_id=request.preview_id)
+        logger.info(
+            "Test cart item added",
+            order_id=order_id,
+            preview_id=request.preview_id,
+            cover_type=request.cover_type,
+            variant_id=request.variant_id
+        )
 
         return TestCartAddResponse(
             success=True,
             order_id=order_id,
-            message=f"Item added to test cart. Preview: {preview['child_name']}'s story"
+            message=f"Item added to test cart. Preview: {preview['child_name']}'s story ({request.cover_type})"
         )
 
     except HTTPException:
@@ -165,54 +174,98 @@ async def test_simulate_payment(
             "customer_email": preview.get("customer_email") or "test@example.com",
             "customer_name": preview.get("child_name") or "Test Customer",
             "status": OrderStatus.PAID.value,
+            "order_type": request.order_type,
+            "cover_type": request.cover_type if request.order_type == "physical" else None,
             "created_at": datetime.utcnow().isoformat(),
             "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
         }
 
         db.table("orders").insert(order_data).execute()
-        logger.info("Test order created", order_id=order_id)
+        logger.info(
+            "Test order created",
+            order_id=order_id,
+            order_type=request.order_type,
+            cover_type=request.cover_type
+        )
+
+        # If physical book, create print order record (for testing print flow)
+        if request.order_type == "physical":
+            print_order_data = {
+                "print_order_id": str(uuid.uuid4()),
+                "order_id": order_id,
+                "preview_id": request.preview_id,
+                "cover_type": request.cover_type,
+                "status": "test_mode",  # Special status for test orders
+                "lulu_status": "UNPAID",
+                "created_at": datetime.utcnow().isoformat()
+            }
+            db.table("print_orders").insert(print_order_data).execute()
+            logger.info(
+                "Test print order created",
+                order_id=order_id,
+                cover_type=request.cover_type
+            )
 
         # Update preview status to PURCHASED
         db.table("previews").update({
-            "status": PreviewStatus.PURCHASED.value
+            "status": PreviewStatus.PURCHASED.value,
+            "payment_status": "paid"
         }).eq("preview_id", request.preview_id).execute()
 
-        # Create PDF generation job
-        job_id = str(uuid.uuid4())
-        job_data = {
-            "job_id": job_id,
-            "job_type": JobType.PDF_CREATION.value,
-            "reference_id": order_id,
-            "status": JobStatus.QUEUED.value,
-            "progress": 0,
-            "queued_at": datetime.utcnow().isoformat(),
-            "current_step": "Starting PDF generation..."
-        }
-        db.table("generation_jobs").insert(job_data).execute()
+        # Only generate PDF for digital orders (physical books use Lulu PDFs)
+        if request.order_type == "digital":
+            # Create PDF generation job
+            job_id = str(uuid.uuid4())
+            job_data = {
+                "job_id": job_id,
+                "job_type": JobType.PDF_CREATION.value,
+                "reference_id": order_id,
+                "status": JobStatus.QUEUED.value,
+                "progress": 0,
+                "queued_at": datetime.utcnow().isoformat(),
+                "current_step": "Starting PDF generation..."
+            }
+            db.table("generation_jobs").insert(job_data).execute()
 
-        # Trigger PDF generation in background
-        # Note: generate_pdf_from_order expects (order_id, preview_id, child_name)
-        background_tasks.add_task(
-            generate_pdf_from_order,
-            order_id=order_id,
-            preview_id=request.preview_id,
-            child_name=preview["child_name"]
-        )
+            # Trigger PDF generation in background
+            # Note: generate_pdf_from_order expects (order_id, preview_id, child_name)
+            background_tasks.add_task(
+                generate_pdf_from_order,
+                order_id=order_id,
+                preview_id=request.preview_id,
+                child_name=preview["child_name"]
+            )
 
-        logger.info(
-            "Test payment complete, PDF generation started",
-            order_id=order_id,
-            preview_id=request.preview_id,
-            job_id=job_id
-        )
+            logger.info(
+                "Test payment complete, PDF generation started",
+                order_id=order_id,
+                preview_id=request.preview_id,
+                job_id=job_id
+            )
 
-        return TestPaymentResponse(
-            success=True,
-            order_id=order_id,
-            preview_id=request.preview_id,
-            status="paid",
-            message="Payment simulated successfully. PDF generation started."
-        )
+            return TestPaymentResponse(
+                success=True,
+                order_id=order_id,
+                preview_id=request.preview_id,
+                status="paid",
+                message="Payment simulated successfully. PDF generation started."
+            )
+        else:
+            # Physical order - no PDF generation needed in test mode
+            logger.info(
+                "Test physical book order complete",
+                order_id=order_id,
+                preview_id=request.preview_id,
+                cover_type=request.cover_type
+            )
+
+            return TestPaymentResponse(
+                success=True,
+                order_id=order_id,
+                preview_id=request.preview_id,
+                status="paid",
+                message=f"Payment simulated successfully. Physical book order ({request.cover_type}) created."
+            )
 
     except HTTPException:
         raise

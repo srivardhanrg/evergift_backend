@@ -82,9 +82,8 @@ async def update_preview_status(preview_id: str, status: PreviewStatus, **kwargs
             preview_id=preview_id,
             status=status.value,
             update_keys=list(kwargs.keys()),
-            hires_images_count=len(kwargs.get('hires_images', [])) if isinstance(kwargs.get('hires_images'), list) else 'not_list',
-            preview_images_count=len(kwargs.get('preview_images', [])) if isinstance(kwargs.get('preview_images'), list) else 'not_list',
-            story_pages_count=len(kwargs.get('story_pages', [])) if isinstance(kwargs.get('story_pages'), list) else 'not_list'
+            book_structure_pages=len(kwargs.get('book_structure', {})) if isinstance(kwargs.get('book_structure'), dict) else 'not_dict',
+            story_texts_count=len(kwargs.get('story_texts', {})) if isinstance(kwargs.get('story_texts'), dict) else 'not_dict'
         )
 
         result = db.table("previews").update(update_data).eq("preview_id", preview_id).execute()

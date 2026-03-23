@@ -70,16 +70,9 @@ class TextConfig(TypedDict):
 # This template creates an emotional, personalized dedication page.
 # The {child_name} placeholder is replaced with the actual child's name.
 
-DEDICATION_TEXT_TEMPLATE = """For {child_name},
+DEDICATION_TEXT_TEMPLATE = """Dear {child_name},
 
-May this magical adventure remind you
-that courage lives in your heart,
-wonder sparkles in your eyes,
-and every dream you hold
-is waiting to come true.
-
-With all the magic in the world,
-Your Story Awaits"""
+This magical story was made just for you. May it fill your heart with wonder and joy."""
 
 
 # ============================================================================
@@ -149,7 +142,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#1B4D3E",  # Darker forest accent
                 "lines_to_span": 3
@@ -225,7 +218,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#6A1B9A",
                 "lines_to_span": 3
@@ -290,7 +283,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#283593",
                 "lines_to_span": 3
@@ -355,7 +348,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#0277BD",
                 "lines_to_span": 3
@@ -420,7 +413,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#6D4C41",
                 "lines_to_span": 3
@@ -481,7 +474,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#C62828",
                 "lines_to_span": 3
@@ -542,7 +535,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#C2185B",
                 "lines_to_span": 3
@@ -603,7 +596,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 96,
+                "font_size": 72,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#455A64",
                 "lines_to_span": 3

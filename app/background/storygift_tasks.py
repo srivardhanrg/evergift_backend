@@ -19,8 +19,8 @@ Book Structure (26 pages):
 - Index 24: End page (filler)
 - Index 25: Back cover (filler)
 
-Preview shows pages 0-12 (13 pages)
-Locked pages are 13-25 (13 pages until payment)
+Preview shows pages 0-13 (14 pages)
+Locked pages are 14-25 (12 pages until payment)
 """
 
 import asyncio
@@ -35,6 +35,7 @@ from app.models.enums import PreviewStatus, OrderStatus, JobStatus
 from app.services.storage import StorageService
 from app.services.email_service import get_email_service
 from app.services.filler_pages import get_filler_pages_service
+from app.services.image_processor import get_image_processor
 from app.stories.themes import get_theme
 from app.ai.factory import get_pipeline_for_style
 from app.core.exceptions import ImageGenerationError, StorageError
@@ -46,6 +47,7 @@ from app.config.book_structure import (
     LOCKED_AI_INDICES,
     TOTAL_PAGE_COUNT,
     PREVIEW_PAGE_COUNT,
+    get_page_config,
 )
 
 # Import helper functions from utils (not tasks) to avoid circular import
@@ -272,6 +274,48 @@ async def generate_storygift_preview(
 
                 logger.info("Cover uploaded to storage", cover_url=cover_url)
 
+                # ============================================
+                # Apply text overlay to cover (theme title + "Starring {name}")
+                # ============================================
+                try:
+                    # Get story title from theme template
+                    story_title = template.get_title(safe_child_name)
+                    # Extract just the theme name portion (before "'s")
+                    # e.g., "Emma's Enchanted Forest Adventure" -> "Enchanted Forest"
+                    theme_display_name = template.title_template.replace("{name}'s ", "").replace(" Adventure", "")
+
+                    logger.info(
+                        "Processing cover text overlay",
+                        story_title=story_title,
+                        theme_display_name=theme_display_name,
+                        child_name=safe_child_name
+                    )
+
+                    image_processor = get_image_processor()
+                    cover_with_text_bytes = await image_processor.process_cover_page(
+                        cover_image_url=cover_url,
+                        story_title=theme_display_name,
+                        child_name=safe_child_name
+                    )
+
+                    # Upload processed cover (with text) to R2
+                    cover_with_text_path = f"final/{preview_id}/cover_final.png"
+                    cover_url = await StorageService().upload_image(
+                        image_bytes=cover_with_text_bytes,
+                        path=cover_with_text_path,
+                        content_type="image/png"
+                    )
+
+                    logger.info("Cover with text overlay uploaded", cover_url=cover_url)
+
+                except Exception as cover_text_error:
+                    logger.error(
+                        "Cover text overlay failed, using original cover",
+                        error=str(cover_text_error),
+                        preview_id=preview_id
+                    )
+                    # Continue with original cover_url if text overlay fails
+
                 # Update database with cover URL
                 update_result = db.table("previews").update({
                     "cover_url": cover_url
@@ -301,6 +345,74 @@ async def generate_storygift_preview(
                 }).eq("preview_id", preview_id).execute()
 
                 logger.info("Incremental update: cover added to book_structure", preview_id=preview_id)
+
+                # ============================================
+                # PHASE 1.6-1.9: Process early filler pages (1, 2, 3, 4) sequentially
+                # ============================================
+                # Extract story texts now (needed for text pages)
+                from app.services.story_text_extractor import extract_story_texts
+                story_texts = extract_story_texts(theme, safe_child_name)
+                logger.info(
+                    "Story texts extracted for sequential processing",
+                    theme=theme,
+                    count=len(story_texts)
+                )
+
+                filler_service = get_filler_pages_service()
+                early_filler_indices = [1, 2, 3, 4]  # Dedication, Intro1, Intro2, Text1
+
+                for filler_idx in early_filler_indices:
+                    page_config = get_page_config(filler_idx)
+                    if not page_config:
+                        continue
+
+                    # Calculate progress: pages 1-3 get 12%, 14%, 16%
+                    progress = 10 + (filler_idx * 2)
+                    await update_job_progress(
+                        job_id,
+                        progress,
+                        f"Adding magical touches to page {filler_idx + 1}... ✨"
+                    )
+
+                    try:
+                        filler_url = await filler_service.process_single_page(
+                            preview_id=preview_id,
+                            page_config=page_config,
+                            theme=theme,
+                            style=style,
+                            child_name=safe_child_name,
+                            story_texts=story_texts
+                        )
+
+                        if filler_url:
+                            # Add to incremental book_structure
+                            book_structure_incremental[str(filler_idx)] = {
+                                "type": page_config.page_type.value,
+                                "url": filler_url,
+                                "is_locked": False,
+                                "is_generated": True
+                            }
+
+                            # Update database incrementally
+                            db.table("previews").update({
+                                "book_structure": book_structure_incremental,
+                                "current_generating_page": filler_idx,
+                                "generation_progress": progress
+                            }).eq("preview_id", preview_id).execute()
+
+                            logger.info(
+                                f"Sequential filler page {filler_idx} processed",
+                                preview_id=preview_id,
+                                url=filler_url[:80] if filler_url else None
+                            )
+                    except Exception as filler_err:
+                        logger.error(
+                            f"Failed to process filler page {filler_idx}",
+                            preview_id=preview_id,
+                            error=str(filler_err)
+                        )
+                        # Continue - don't block on filler errors
+
             else:
                 logger.warning(
                     "Cover generation failed, will use first page as cover",
@@ -308,6 +420,9 @@ async def generate_storygift_preview(
                     success=cover_result.success,
                     error=getattr(cover_result, 'error_message', 'Unknown error')
                 )
+                # Still need to extract story_texts for later use
+                from app.services.story_text_extractor import extract_story_texts
+                story_texts = extract_story_texts(theme, safe_child_name)
 
         except Exception as e:
             logger.error(
@@ -319,6 +434,9 @@ async def generate_storygift_preview(
             import traceback
             logger.error("Cover generation traceback", traceback=traceback.format_exc())
             # Continue without cover - will fall back to using first page
+            # Still need to extract story_texts for later use
+            from app.services.story_text_extractor import extract_story_texts
+            story_texts = extract_story_texts(theme, safe_child_name)
 
         # ============================================
         # PHASE 2: Generate story pages (15% to 90%)
@@ -427,9 +545,10 @@ async def generate_storygift_preview(
                     # V2: Incremental book_structure update after each page
                     # This enables frontend to show pages one-by-one as they complete
                     try:
-                        # Map story page number (1-5) to book index (4, 6, 8, 10, 12)
-                        # page_num 1→4, 2→6, 3→8, 4→10, 5→12
-                        book_index = 4 + (page_num - 1) * 2
+                        # Map story page number (1-5) to book index (5, 7, 9, 11, 13)
+                        # page_num 1→5, 2→7, 3→9, 4→11, 5→13
+                        # NEW ORDER: Text on LEFT, AI on RIGHT
+                        book_index = 5 + (page_num - 1) * 2
 
                         # Add this page to incremental book_structure
                         book_structure_incremental[str(book_index)] = {
@@ -443,8 +562,8 @@ async def generate_storygift_preview(
                         incremental_progress = 15 + int((page_num / len(pages_to_generate)) * 75)
 
                         # Determine NEXT generating page for frontend to show loading state
-                        # Preview AI indices: [0, 4, 6, 8, 10, 12]
-                        preview_ai_indices = [4, 6, 8, 10, 12]
+                        # Preview AI indices: [0, 5, 7, 9, 11, 13] (NEW ORDER)
+                        preview_ai_indices = [5, 7, 9, 11, 13]
                         current_idx_pos = preview_ai_indices.index(book_index) if book_index in preview_ai_indices else -1
                         next_generating = preview_ai_indices[current_idx_pos + 1] if current_idx_pos >= 0 and current_idx_pos + 1 < len(preview_ai_indices) else None
 
@@ -461,6 +580,67 @@ async def generate_storygift_preview(
                             progress=incremental_progress,
                             next_generating=next_generating
                         )
+
+                        # ============================================
+                        # SEQUENTIAL: Process text page after AI page
+                        # AI page 5 → Text page 6, 7→8, 9→10, 11→12, 13→(skip 14, locked)
+                        # ============================================
+                        text_page_index = book_index + 1  # e.g., 5→6, 7→8, etc.
+
+                        # Only process if text page is in preview range (6, 8, 10, 12)
+                        # Skip page 14 (first locked text page)
+                        if text_page_index <= 13:
+                            text_page_config = get_page_config(text_page_index)
+
+                            if text_page_config and text_page_config.filler_filename:
+                                try:
+                                    # Update progress for text page
+                                    text_progress = incremental_progress + 3  # Slightly ahead
+                                    await update_job_progress(
+                                        job_id,
+                                        text_progress,
+                                        f"Adding story text for page {text_page_index + 1}... ✨"
+                                    )
+
+                                    filler_service = get_filler_pages_service()
+                                    text_url = await filler_service.process_single_page(
+                                        preview_id=preview_id,
+                                        page_config=text_page_config,
+                                        theme=theme,
+                                        style=style,
+                                        child_name=safe_child_name,
+                                        story_texts=story_texts
+                                    )
+
+                                    if text_url:
+                                        # Add text page to incremental book_structure
+                                        book_structure_incremental[str(text_page_index)] = {
+                                            "type": text_page_config.page_type.value,
+                                            "url": text_url,
+                                            "is_locked": False,
+                                            "is_generated": True
+                                        }
+
+                                        # Update database with text page
+                                        db.table("previews").update({
+                                            "book_structure": book_structure_incremental,
+                                            "current_generating_page": text_page_index,
+                                            "generation_progress": text_progress
+                                        }).eq("preview_id", preview_id).execute()
+
+                                        logger.info(
+                                            f"Sequential text page {text_page_index} processed",
+                                            preview_id=preview_id,
+                                            url=text_url[:80] if text_url else None
+                                        )
+                                except Exception as text_err:
+                                    logger.error(
+                                        f"Failed to process text page {text_page_index}",
+                                        preview_id=preview_id,
+                                        error=str(text_err)
+                                    )
+                                    # Continue - don't block on text page errors
+
                     except Exception as incr_err:
                         logger.error(f"Incremental book_structure update failed (non-fatal): {incr_err}")
                 else:
@@ -471,116 +651,73 @@ async def generate_storygift_preview(
                 continue
 
         # ============================================
-        # PHASE 2.5: Process Filler Pages (90% to 95%)
+        # PHASE 2.5: Finalize Book Structure (90% to 95%)
+        # NOTE: Filler pages already processed sequentially above
         # ============================================
-        await update_job_progress(job_id, 90, "Adding magical decorations... ✨")
+        await update_job_progress(job_id, 90, "Finalizing your magical story... ✨")
 
+        # Collect filler_pages_processed from incrementally built book_structure
+        # These were processed inline: 1,2,3 after cover; 5,7,9,11 after AI pages
         filler_pages_processed: Dict[int, str] = {}
-        # Use the incrementally built book_structure (don't create a new one!)
-        # This preserves the cover and AI pages added during generation
+        preview_filler_indices = [1, 2, 3, 5, 7, 9, 11]
+
+        for idx in preview_filler_indices:
+            page_data = book_structure_incremental.get(str(idx))
+            if page_data and page_data.get("url"):
+                filler_pages_processed[idx] = page_data["url"]
+
+        logger.info(
+            "Filler pages collected from sequential processing",
+            preview_id=preview_id,
+            filler_count=len(filler_pages_processed),
+            filler_indices=list(filler_pages_processed.keys())
+        )
+
+        # Use the incrementally built book_structure
         book_structure = book_structure_incremental.copy()
 
-        try:
-            # Extract ALL story texts (1-10) from theme template using V2 extractor
-            # This provides complete text for all 10 text pages (indices 5,7,9,11,13,15,17,19,21,23)
-            # Stored in database for post-payment locked page generation
-            from app.services.story_text_extractor import extract_story_texts
-            story_texts = extract_story_texts(theme, safe_child_name)
+        # Build complete book_structure - add locked page markers
+        # IMPORTANT: Use string keys for frontend compatibility
+        for page_config in BOOK_STRUCTURE:
+            page_key = str(page_config.index)
 
-            if not story_texts or len(story_texts) != 10:
-                logger.warning(
-                    "Story text extraction incomplete",
-                    theme=theme,
-                    expected=10,
-                    actual=len(story_texts)
-                )
+            # Skip if page already exists in book_structure (from incremental updates)
+            if page_key in book_structure:
+                # Ensure it has the correct type field
+                if "type" not in book_structure[page_key]:
+                    book_structure[page_key]["type"] = page_config.page_type.value
+                continue
 
-            logger.info(
-                "Story texts extracted from theme",
-                theme=theme,
-                story_texts_count=len(story_texts),
-                indices=sorted(story_texts.keys())
-            )
-
-            # Process filler pages for preview (indices 1, 2, 3, 5, 7, 9, 11)
-            filler_service = get_filler_pages_service()
-            filler_pages_processed = await filler_service.process_preview_filler_pages(
-                preview_id=preview_id,
-                theme=theme,
-                style=style,
-                child_name=safe_child_name,
-                story_texts=story_texts
-            )
-
-            logger.info(
-                "Filler pages processed for preview",
-                preview_id=preview_id,
-                filler_count=len(filler_pages_processed)
-            )
-
-            # DON'T normalize keys to integers - frontend expects string keys!
-            # Incremental updates use string keys ("0", "4", "6", etc.)
-            # Frontend bookStructureConverter.ts line 97: bookStructure[index.toString()]
-            # Keep string keys throughout for frontend compatibility
-
-            # Build complete book_structure for preview pages
-            # Fill in missing pages (filler pages and locked pages)
-            # Skip pages that already exist (cover and AI pages from incremental updates)
-            # IMPORTANT: Use string keys for frontend compatibility
-            for page_config in BOOK_STRUCTURE:
-                # Convert index to string for consistency with incremental updates
-                page_key = str(page_config.index)
-
-                # Skip if page already exists in book_structure (from incremental updates)
-                if page_key in book_structure:
-                    # Page already added incrementally (cover or AI page)
-                    # Just ensure it has the correct type field
-                    if "type" not in book_structure[page_key]:
-                        book_structure[page_key]["type"] = page_config.page_type.value
-                    continue
-
-                if not page_config.is_preview:
-                    # Mark locked pages
-                    book_structure[page_key] = {
-                        "type": page_config.page_type.value,
-                        "is_locked": True,
-                        "url": None
-                    }
-                    continue
-
-                # Add missing preview pages (filler pages only, since AI pages were added incrementally)
-                page_data = {
+            if not page_config.is_preview:
+                # Mark locked pages
+                book_structure[page_key] = {
                     "type": page_config.page_type.value,
-                    "is_locked": False
+                    "is_locked": True,
+                    "url": None
                 }
+                continue
 
-                if page_config.page_type == PageType.COVER:
-                    # Cover should already be in book_structure from incremental update
-                    # But add it here as fallback
-                    page_data["url"] = cover_url
-                elif page_config.page_type == PageType.GENERATED:
-                    # AI pages should already be in book_structure from incremental updates
-                    # But add them here as fallback
-                    story_page_num = (page_config.index - 4) // 2 + 1 if page_config.index >= 4 else 0
-                    matching_page = next(
-                        (sp for sp in story_pages if sp.get("page") == story_page_num),
-                        None
-                    )
-                    if matching_page:
-                        page_data["url"] = matching_page.get("image_url")
-                else:
-                    # Filler page - these are newly processed
-                    page_data["url"] = filler_pages_processed.get(page_config.index)
+            # Add missing preview pages as fallback
+            page_data = {
+                "type": page_config.page_type.value,
+                "is_locked": False
+            }
 
-                book_structure[page_key] = page_data
+            if page_config.page_type == PageType.COVER:
+                page_data["url"] = cover_url
+            elif page_config.page_type == PageType.GENERATED:
+                story_page_num = (page_config.index - 4) // 2 + 1 if page_config.index >= 4 else 0
+                matching_page = next(
+                    (sp for sp in story_pages if sp.get("page") == story_page_num),
+                    None
+                )
+                if matching_page:
+                    page_data["url"] = matching_page.get("image_url")
+            else:
+                # Filler page fallback
+                page_data["url"] = filler_pages_processed.get(page_config.index)
 
-        except Exception as filler_error:
-            logger.error(
-                "Filler page processing failed (non-fatal)",
-                preview_id=preview_id,
-                error=str(filler_error)
-            )
-            # Continue without filler pages - they can be regenerated
+            book_structure[page_key] = page_data
 
         # ============================================
         # PHASE 3: Finalize Preview (95% to 100%)
@@ -736,9 +873,9 @@ async def generate_remaining_pages_and_pdf(
     Generate remaining locked pages (13-25) after payment, then create full 26-page PDF.
 
     V2 26-Page Structure Post-Payment Flow:
-    - Preview pages 0-12: Already generated (13 pages)
-    - Locked pages 13-25: Generated here (13 pages)
-        - Text pages: 13, 15, 17, 19, 21, 23 (with story text overlays)
+    - Preview pages 0-13: Already generated (14 pages)
+    - Locked pages 14-25: Generated here (12 pages)
+        - Text pages: 15, 17, 19, 21, 23 (with story text overlays)
         - AI pages: 14, 16, 18, 20, 22 (AI-generated images)
         - Filler pages: 24 (end_page), 25 (back_cover)
 
@@ -823,7 +960,7 @@ async def generate_remaining_pages_and_pdf(
             }).eq("order_id", order_id).execute()
 
             # ===================================================================
-            # PHASE 2: Generate locked AI pages (14, 16, 18, 20, 22)
+            # PHASE 2: Generate locked AI pages (15, 17, 19, 21, 23) - NEW ORDER
             # ===================================================================
             logger.info(
                 "Generating locked AI pages",
@@ -834,14 +971,14 @@ async def generate_remaining_pages_and_pdf(
             template = get_theme(theme)
             pipeline = get_pipeline_for_style(style)
 
-            # Map book indices to theme pages
-            # Book indices: 14, 16, 18, 20, 22 correspond to theme pages 6, 7, 8, 9, 10
+            # Map book indices to theme pages (NEW ORDER: Text on LEFT, AI on RIGHT)
+            # Book indices: 15, 17, 19, 21, 23 correspond to theme pages 6, 7, 8, 9, 10
             ai_index_to_theme_page = {
-                14: 6,
-                16: 7,
-                18: 8,
-                20: 9,
-                22: 10,
+                15: 6,
+                17: 7,
+                19: 8,
+                21: 9,
+                23: 10,
             }
 
             for ai_index in LOCKED_AI_INDICES:
@@ -909,7 +1046,7 @@ async def generate_remaining_pages_and_pdf(
                 )
 
             # ===================================================================
-            # PHASE 3: Process locked filler pages (13-25)
+            # PHASE 3: Process locked filler pages (14-25) - NEW ORDER
             # ===================================================================
             logger.info(
                 "Processing locked filler pages",
@@ -919,7 +1056,7 @@ async def generate_remaining_pages_and_pdf(
             # Update progress to 75%
             db.table("previews").update({
                 "generation_progress": 75,
-                "current_generating_page": 13
+                "current_generating_page": 14
             }).eq("preview_id", preview_id).execute()
 
             filler_service = get_filler_pages_service()
@@ -944,8 +1081,8 @@ async def generate_remaining_pages_and_pdf(
                     # Update existing entry
                     book_structure[str(page_index)]["url"] = filler_url
                 else:
-                    # Determine page type
-                    if page_index in [13, 15, 17, 19, 21, 23]:
+                    # Determine page type (NEW ORDER: Text on LEFT at even indices)
+                    if page_index in [14, 16, 18, 20, 22]:
                         page_type = "text"
                     elif page_index == 24:
                         page_type = "end_page"

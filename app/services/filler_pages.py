@@ -10,7 +10,7 @@ This service orchestrates the processing of filler pages:
 Filler Page Types:
 - Dedication (index 1): Personalized with child's name
 - Intro pages (indices 2-3): No text overlay
-- Text pages (indices 5, 7, 9, 11, 13, 15, 17, 19, 21, 23): Story text overlay
+- Text pages (indices 5, 7, 9, 11, 13 (preview), 15, 17, 19, 21, 23): Story text overlay
 - End page (index 24): No text overlay (or optional closing text)
 - Back cover (index 25): No text overlay
 """
@@ -127,12 +127,15 @@ class FillerPagesService:
                     )
                     return base_url
 
-                story_text = story_texts.get(text_page_num, "")
+                # story_texts dict uses book indices as keys (5, 7, 9, 11, etc.)
+                # NOT text_page_number (1, 2, 3, 4, etc.)
+                story_text = story_texts.get(page_config.index, "")
                 if not story_text:
                     logger.warning(
                         "No story text found for page",
                         page_index=page_config.index,
-                        text_page_number=text_page_num
+                        text_page_number=text_page_num,
+                        available_keys=list(story_texts.keys()) if story_texts else []
                     )
                     return base_url
 
@@ -188,7 +191,7 @@ class FillerPagesService:
         story_texts: Dict[int, str]
     ) -> Dict[int, str]:
         """
-        Process all filler pages for the preview (pages 0-12).
+        Process all filler pages for the preview (pages 0-13).
 
         Args:
             preview_id: Preview identifier
@@ -240,7 +243,7 @@ class FillerPagesService:
         story_texts: Dict[int, str]
     ) -> Dict[int, str]:
         """
-        Process all locked filler pages (pages 13-25) for post-payment.
+        Process all locked filler pages (pages 14-25) for post-payment.
 
         Args:
             preview_id: Preview identifier

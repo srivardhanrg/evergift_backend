@@ -39,17 +39,17 @@ async def test_post_payment_generation(
     background_tasks: BackgroundTasks
 ):
     """
-    Test endpoint to trigger post-payment generation (pages 13-25 + PDF).
+    Test endpoint to trigger post-payment generation (pages 14-25 + PDF).
 
     This bypasses Shopify order creation and directly tests:
     - Locked AI page generation (indices 14, 16, 18, 20, 22)
-    - Locked filler page processing (indices 13-25)
+    - Locked filler page processing (indices 14-25)
     - V2 26-page PDF generation
     - Email delivery (if configured)
 
     Prerequisites:
     - Preview must exist and have status "active"
-    - Preview must have completed preview generation (pages 0-12)
+    - Preview must have completed preview generation (pages 0-13)
     - Preview must have story_texts populated
     - Preview must have book_structure with at least preview pages
 

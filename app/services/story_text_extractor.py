@@ -1,30 +1,32 @@
 """
 Story Text Extractor - Extracts story text from theme templates for V2 26-page structure.
 
-Maps theme pages (1-10) to book structure text page indices (5,7,9,11,13,15,17,19,21,23).
+Maps theme pages (1-10) to book structure text page indices (4,6,8,10,12,14,16,18,20,22).
+NEW ORDER: Text on LEFT, AI on RIGHT.
 Handles child name substitution and returns formatted text ready for overlay rendering.
 """
 
 import structlog
 from typing import Dict, Optional
 from app.stories.themes import get_theme
-from app.core.sanitization import sanitize_for_prompt
+from app.core.sanitization import sanitize_child_name
 
 logger = structlog.get_logger()
 
-# Mapping: theme page number → book structure text page index
+# Mapping: theme page number → book structure text page index (NEW ORDER)
 # Theme has 10 pages with story_text, which map to 10 text pages in the book
+# NEW ORDER: Text pages are on LEFT (even indices), AI pages on RIGHT (odd indices)
 THEME_PAGE_TO_TEXT_INDEX = {
-    1: 5,   # Theme page 1 → Book index 5 (first text page after AI page 4)
-    2: 7,   # Theme page 2 → Book index 7 (text page after AI page 6)
-    3: 9,   # Theme page 3 → Book index 9 (text page after AI page 8)
-    4: 11,  # Theme page 4 → Book index 11 (text page after AI page 10)
-    5: 13,  # Theme page 5 → Book index 13 (first locked text page after AI page 12)
-    6: 15,  # Theme page 6 → Book index 15 (text page after AI page 14)
-    7: 17,  # Theme page 7 → Book index 17 (text page after AI page 16)
-    8: 19,  # Theme page 8 → Book index 19 (text page after AI page 18)
-    9: 21,  # Theme page 9 → Book index 21 (text page after AI page 20)
-    10: 23, # Theme page 10 → Book index 23 (last text page after AI page 22)
+    1: 4,   # Theme page 1 → Book index 4 (first text page, before AI page 5)
+    2: 6,   # Theme page 2 → Book index 6 (text page before AI page 7)
+    3: 8,   # Theme page 3 → Book index 8 (text page before AI page 9)
+    4: 10,  # Theme page 4 → Book index 10 (text page before AI page 11)
+    5: 12,  # Theme page 5 → Book index 12 (last preview text page, before AI page 13)
+    6: 14,  # Theme page 6 → Book index 14 (first locked text page, before AI page 15)
+    7: 16,  # Theme page 7 → Book index 16 (text page before AI page 17)
+    8: 18,  # Theme page 8 → Book index 18 (text page before AI page 19)
+    9: 20,  # Theme page 9 → Book index 20 (text page before AI page 21)
+    10: 22, # Theme page 10 → Book index 22 (last text page, before AI page 23)
 }
 
 
@@ -44,15 +46,15 @@ def extract_story_texts(theme: str, child_name: str) -> Dict[int, str]:
         child_name: Child's name to substitute in story text
 
     Returns:
-        Dict mapping book index (5,7,9,11,13,15,17,19,21,23) to story text string
+        Dict mapping book index (4,6,8,10,12,14,16,18,20,22) to story text string
 
     Example:
         >>> extract_story_texts('storygift_enchanted_forest', 'Alice')
         {
-            5: "The morning sunshine danced through the bedroom window as Alice discovered...",
-            7: "The map was unlike anything Alice had ever seen before...",
+            4: "The morning sunshine danced through the bedroom window as Alice discovered...",
+            6: "The map was unlike anything Alice had ever seen before...",
             ...
-            23: "As the golden sun painted the sky in magical colors, Alice knew..."
+            22: "As the golden sun painted the sky in magical colors, Alice knew..."
         }
     """
     try:
@@ -83,8 +85,8 @@ def extract_story_texts(theme: str, child_name: str) -> Dict[int, str]:
                 continue
 
             # Substitute {name} with actual child name
-            # Use sanitize_for_prompt to prevent any potential issues
-            safe_name = sanitize_for_prompt(child_name)
+            # Use sanitize_child_name to prevent any potential issues
+            safe_name = sanitize_child_name(child_name)
             story_text = story_text.replace("{name}", safe_name)
 
             # Map to book structure index
@@ -138,14 +140,14 @@ def get_story_text_for_index(
 
     Args:
         story_texts: Dict from extract_story_texts()
-        index: Book structure index (5,7,9,11,13,15,17,19,21,23)
+        index: Book structure index (4,6,8,10,12,14,16,18,20,22)
 
     Returns:
         Story text string or None if not found
 
     Example:
         >>> texts = extract_story_texts('storygift_enchanted_forest', 'Bob')
-        >>> get_story_text_for_index(texts, 5)
+        >>> get_story_text_for_index(texts, 4)
         "The morning sunshine danced through the bedroom window as Bob discovered..."
     """
     text = story_texts.get(index)
@@ -167,15 +169,15 @@ def get_text_page_number_from_index(index: int) -> Optional[int]:
     Reverse mapping from THEME_PAGE_TO_TEXT_INDEX.
 
     Args:
-        index: Book structure index (5,7,9,11,13,15,17,19,21,23)
+        index: Book structure index (4,6,8,10,12,14,16,18,20,22)
 
     Returns:
         Text page number (1-10) or None if invalid
 
     Example:
-        >>> get_text_page_number_from_index(5)
+        >>> get_text_page_number_from_index(4)
         1
-        >>> get_text_page_number_from_index(23)
+        >>> get_text_page_number_from_index(22)
         10
     """
     # Reverse lookup

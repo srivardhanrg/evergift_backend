@@ -81,9 +81,18 @@ async def calculate_print_cost(
     quantity: int = 1,
     shipping_option: str = "MAIL",
     country_code: str = "IN",
+    cover_type: str = "hardcover",
 ) -> dict:
     """
     Calculate the cost of a Lulu print job before ordering.
+
+    Args:
+        interior_url: URL to interior PDF (24 pages)
+        cover_url: URL to cover wrap PDF
+        quantity: Number of copies (default 1)
+        shipping_option: Lulu shipping level (default MAIL)
+        country_code: Destination country (default IN)
+        cover_type: Cover type - "softcover" (saddle stitch) or "hardcover" (perfect bound)
 
     Returns a dict with:
         total_cost_incl_tax, print_cost, shipping_cost, currency
@@ -94,11 +103,24 @@ async def calculate_print_cost(
     settings = get_settings()
     headers = await _lulu_headers()
 
+    # Select pod_package_id based on cover type
+    if cover_type == "softcover":
+        pod_package_id = settings.lulu_pod_package_id_softcover
+    elif cover_type == "hardcover":
+        pod_package_id = settings.lulu_pod_package_id_hardcover
+    else:
+        # Fallback to hardcover for invalid values
+        logger.warning(
+            "Invalid cover_type provided, falling back to hardcover",
+            cover_type=cover_type
+        )
+        pod_package_id = settings.lulu_pod_package_id_hardcover
+
     payload = {
         "line_items": [
             {
-                "page_count": 12,           # 10 story pages + cover + back = padded to 12
-                "pod_package_id": settings.lulu_pod_package_id,
+                "page_count": 24,           # 24 interior pages (indices 1-24)
+                "pod_package_id": pod_package_id,
                 "quantity": quantity,
                 "title": "MagicTales Storybook",
                 "cover": {"source_url": cover_url},
@@ -117,6 +139,8 @@ async def calculate_print_cost(
         country_code=country_code,
         shipping_level=shipping_option,
         quantity=quantity,
+        cover_type=cover_type,
+        pod_package_id=pod_package_id,
     )
 
     async with httpx.AsyncClient(timeout=30) as client:
@@ -160,12 +184,20 @@ async def create_print_job(
     child_name: str,
     quantity: int = 1,
     shipping_option: str = "MAIL",
+    cover_type: str = "hardcover",
 ) -> dict:
     """
     Create a Lulu print job.
 
-    shipping_address must contain:
-        name, street1, city, state_code, country_code, postcode, phone_number
+    Args:
+        interior_url: URL to interior PDF (24 pages)
+        cover_url: URL to cover wrap PDF
+        shipping_address: Dict with name, street1, city, state_code, country_code, postcode, phone_number
+        order_id: Shopify order ID (used as external_id)
+        child_name: Child's name for book title
+        quantity: Number of copies (default 1)
+        shipping_option: Lulu shipping level (default MAIL)
+        cover_type: Cover type - "softcover" (saddle stitch) or "hardcover" (perfect bound)
 
     Returns the full Lulu API response (contains id, status, etc.)
     """
@@ -174,6 +206,19 @@ async def create_print_job(
 
     settings = get_settings()
     headers = await _lulu_headers()
+
+    # Select pod_package_id based on cover type
+    if cover_type == "softcover":
+        pod_package_id = settings.lulu_pod_package_id_softcover
+    elif cover_type == "hardcover":
+        pod_package_id = settings.lulu_pod_package_id_hardcover
+    else:
+        # Fallback to hardcover for invalid values
+        logger.warning(
+            "Invalid cover_type provided, falling back to hardcover",
+            cover_type=cover_type
+        )
+        pod_package_id = settings.lulu_pod_package_id_hardcover
 
     payload = {
         # contact_email is for Lulu to contact about print issues, NOT customer email
@@ -185,7 +230,7 @@ async def create_print_job(
                 # Lulu API requires cover/interior/pod_package_id nested inside
                 # printable_normalization (the shorthand flat structure causes 500 errors)
                 "printable_normalization": {
-                    "pod_package_id": settings.lulu_pod_package_id,
+                    "pod_package_id": pod_package_id,
                     "cover": {
                         "source_url": cover_url,
                     },
@@ -223,7 +268,8 @@ async def create_print_job(
         "Lulu API request - creating print job",
         endpoint=f"{settings.lulu_api_base}/print-jobs/",
         order_id=order_id,
-        pod_package_id=settings.lulu_pod_package_id,
+        pod_package_id=pod_package_id,
+        cover_type=cover_type,
         quantity=quantity,
         shipping_level=shipping_option,
         shipping_country=shipping_address.get("country_code", "IN"),
@@ -324,18 +370,30 @@ async def get_print_job(lulu_job_id: str) -> dict:
 async def get_shipping_options(
     country_code: str,
     state_code: Optional[str] = None,
+    cover_type: str = "hardcover",
 ) -> list:
     """
     Get available shipping options and their costs for a destination.
+
+    Args:
+        country_code: Destination country code
+        state_code: Optional state code (required for some countries like US)
+        cover_type: Cover type - "softcover" (saddle stitch) or "hardcover" (perfect bound)
     """
     settings = get_settings()
     headers = await _lulu_headers()
 
+    # Select pod_package_id based on cover type
+    if cover_type == "softcover":
+        pod_package_id = settings.lulu_pod_package_id_softcover
+    else:
+        pod_package_id = settings.lulu_pod_package_id_hardcover
+
     payload = {
         "line_items": [
             {
-                "page_count": 12,
-                "pod_package_id": settings.lulu_pod_package_id,
+                "page_count": 24,
+                "pod_package_id": pod_package_id,
                 "quantity": 1,
             }
         ],
