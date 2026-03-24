@@ -45,6 +45,7 @@ from app.config.book_structure import (
     PageType,
     PREVIEW_AI_INDICES,
     LOCKED_AI_INDICES,
+    AI_GENERATED_INDICES,
     TOTAL_PAGE_COUNT,
     PREVIEW_PAGE_COUNT,
     get_page_config,
@@ -280,9 +281,16 @@ async def generate_storygift_preview(
                 try:
                     # Get story title from theme template
                     story_title = template.get_title(safe_child_name)
-                    # Extract just the theme name portion (before "'s")
+                    # Extract just the theme name portion
                     # e.g., "Emma's Enchanted Forest Adventure" -> "Enchanted Forest"
-                    theme_display_name = template.title_template.replace("{name}'s ", "").replace(" Adventure", "")
+                    # e.g., "Emma and the Enchanted Forest" -> "The Enchanted Forest"
+                    theme_display_name = (
+                        template.title_template
+                        .replace("{name}'s ", "")
+                        .replace("{name} and the ", "The ")
+                        .replace("{name} and The ", "The ")
+                        .replace(" Adventure", "")
+                    )
 
                     logger.info(
                         "Processing cover text overlay",

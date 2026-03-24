@@ -29,9 +29,9 @@ from app.services.storage import StorageService
 
 logger = structlog.get_logger()
 
-# Default page dimensions (matching 10x10 inch at 300 DPI)
-DEFAULT_PAGE_WIDTH = 3000
-DEFAULT_PAGE_HEIGHT = 3000
+# Default page dimensions (8.5x8.5 inch at 300 DPI for Lulu print)
+DEFAULT_PAGE_WIDTH = 2550
+DEFAULT_PAGE_HEIGHT = 2550
 
 
 class ImageProcessor:
@@ -118,9 +118,17 @@ class ImageProcessor:
             pass
 
         # Ultimate fallback - PIL default
-        font = ImageFont.load_default()
-        self._fonts_cache[cache_key] = font
-        return font
+        # CRITICAL: Do NOT use default font - it renders poorly
+        logger.error(
+            "Failed to load any font, refusing to use PIL default",
+            requested_font=font_family,
+            requested_size=font_size
+        )
+        raise OSError(
+            f"Failed to load font '{font_family}' at size {font_size}. "
+            f"Font files must be present at /app/fonts/ in production. "
+            f"Refusing to fall back to PIL default font."
+        )
 
     def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
         """Convert hex color to RGB tuple."""
@@ -294,6 +302,25 @@ class ImageProcessor:
             raise
 
         width, height = background.size
+
+        # Normalize image dimensions for consistent text rendering
+        # This fixes the inconsistent text issue caused by varying filler image sizes
+        if width != DEFAULT_PAGE_WIDTH or height != DEFAULT_PAGE_HEIGHT:
+            logger.info(
+                "Normalizing filler image dimensions for consistent text rendering",
+                original_size=f"{width}×{height}",
+                normalized_size=f"{DEFAULT_PAGE_WIDTH}×{DEFAULT_PAGE_HEIGHT}",
+                background_url=background_url[:100],
+                page_type=page_type,
+                text_page_number=text_page_number
+            )
+
+            # Resize to standard dimensions using high-quality Lanczos resampling
+            background = background.resize(
+                (DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT),
+                Image.Resampling.LANCZOS
+            )
+            width, height = DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT
 
         # Get text styling configuration
         text_config = get_text_config(theme, page_type)
@@ -556,6 +583,21 @@ class ImageProcessor:
             raise
 
         width, height = cover_image.size
+
+        # Normalize cover image dimensions for consistency
+        if width != DEFAULT_PAGE_WIDTH or height != DEFAULT_PAGE_HEIGHT:
+            logger.info(
+                "Normalizing cover image dimensions",
+                original_size=f"{width}×{height}",
+                normalized_size=f"{DEFAULT_PAGE_WIDTH}×{DEFAULT_PAGE_HEIGHT}",
+                cover_url=cover_image_url[:100]
+            )
+
+            cover_image = cover_image.resize(
+                (DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT),
+                Image.Resampling.LANCZOS
+            )
+            width, height = DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT
 
         # Create overlay layer for gradients and text
         overlay = Image.new("RGBA", cover_image.size, (0, 0, 0, 0))
