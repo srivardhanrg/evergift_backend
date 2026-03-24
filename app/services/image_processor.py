@@ -117,18 +117,46 @@ class ImageProcessor:
         except OSError:
             pass
 
-        # Ultimate fallback - PIL default
-        # CRITICAL: Do NOT use default font - it renders poorly
+        # Ultimate fallback - try to use a basic TrueType font
         logger.error(
-            "Failed to load any font, refusing to use PIL default",
+            "CRITICAL: Failed to load custom fonts - using system fallback",
+            requested_font=font_family,
+            requested_size=font_size,
+            warning="Text may not render as expected. Check font files at /app/fonts/"
+        )
+
+        # Try common system fonts as last resort
+        system_fallbacks = [
+            "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+            "/System/Library/Fonts/Times.ttc",
+            "C:/Windows/Fonts/times.ttf",
+            "C:/Windows/Fonts/georgia.ttf",
+        ]
+
+        for fallback_path in system_fallbacks:
+            if os.path.exists(fallback_path):
+                try:
+                    font = ImageFont.truetype(fallback_path, font_size)
+                    self._fonts_cache[cache_key] = font
+                    logger.warning(
+                        "Using system fallback font",
+                        fallback_path=fallback_path,
+                        requested_font=font_family
+                    )
+                    return font
+                except OSError:
+                    continue
+
+        # Absolute last resort - PIL default (but log critical error)
+        logger.critical(
+            "NO FONTS AVAILABLE - using PIL default (will look bad)",
             requested_font=font_family,
             requested_size=font_size
         )
-        raise OSError(
-            f"Failed to load font '{font_family}' at size {font_size}. "
-            f"Font files must be present at /app/fonts/ in production. "
-            f"Refusing to fall back to PIL default font."
-        )
+        font = ImageFont.load_default()
+        self._fonts_cache[cache_key] = font
+        return font
 
     def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
         """Convert hex color to RGB tuple."""
