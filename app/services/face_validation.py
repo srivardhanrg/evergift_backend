@@ -232,11 +232,36 @@ class FaceValidationService:
                     error_message="Please ensure your child is facing the camera directly."
                 )
 
+            # Compute blur score for quality calculation
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+            # Quality score: weighted combination of confidence, face area, and sharpness
+            # - confidence (40%): how clearly MediaPipe detects the face
+            # - face_area (30%): larger face = better reference for AI
+            # - sharpness (30%): sharper image = better detail preservation
+            sharpness_normalized = min(blur_score / 500.0, 1.0)  # Cap at 500 variance
+            face_area_normalized = min(face_area / 0.25, 1.0)    # Cap at 25% of image
+            quality_score = (
+                0.4 * confidence_score +
+                0.3 * face_area_normalized +
+                0.3 * sharpness_normalized
+            )
+            quality_score = round(min(max(quality_score, 0.0), 1.0), 3)
+
             # All checks passed
-            logger.info("Face validation successful", face_area=f"{face_area:.2%}", confidence=confidence_score)
+            logger.info("Face validation successful",
+                       face_area=f"{face_area:.2%}",
+                       confidence=confidence_score,
+                       blur_score=f"{blur_score:.1f}",
+                       quality_score=quality_score)
             return FaceValidationResult(
                 is_valid=True,
                 face_count=1,
+                quality_score=quality_score,
+                confidence_score=round(confidence_score, 3),
+                face_area=round(face_area, 4),
+                blur_score=round(blur_score, 2),
                 error_code=None,
                 error_message=None
             )

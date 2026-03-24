@@ -121,7 +121,7 @@ class PhotorealisticPipeline:
     async def generate_with_face_analysis(
         self,
         prompt: str,
-        face_url: str,
+        face_url: List[str],  # Changed to support multiple reference images
         child_name: str,
         child_age: int,
         child_gender: str,
@@ -178,7 +178,7 @@ class PhotorealisticPipeline:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 payload = {
                     "prompt": enhanced_prompt,
-                    "image_urls": [face_url],
+                    "image_urls": face_url,  # face_url is now a list of URLs
                     "aspect_ratio": aspect_ratio,
                     "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
                 }

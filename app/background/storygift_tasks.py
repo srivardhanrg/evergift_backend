@@ -127,7 +127,7 @@ def get_progress_message(phase: str, page_num: int = None) -> str:
 async def generate_storygift_preview(
     job_id: str,
     preview_id: str,
-    photo_url: str,
+    photo_urls: List[str],  # Changed from single photo_url to multiple photo_urls
     child_name: str,
     child_age: int,
     child_gender: str,
@@ -238,7 +238,7 @@ async def generate_storygift_preview(
             # Cover uses 1:1 aspect ratio to perfectly fit PDF page (10x10 inches)
             cover_result = await pipeline.generate_with_face_analysis(
                 prompt=cover_prompt,
-                face_url=photo_url,
+                face_url=photo_urls,  # Pass all photo URLs
                 child_name=safe_child_name,
                 child_age=child_age,
                 child_gender=child_gender,
@@ -480,7 +480,7 @@ async def generate_storygift_preview(
 
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,
-                    face_url=photo_url,
+                    face_url=photo_urls,  # Pass all photo URLs
                     child_name=safe_child_name,
                     child_age=child_age,
                     child_gender=child_gender,
@@ -784,7 +784,7 @@ async def generate_storygift_preview(
             total_pages=TOTAL_PAGE_COUNT,  # 26 total pages (database column is 'total_pages')
             book_structure=book_structure,  # Complete page structure JSONB
             filler_pages_processed=filler_pages_processed,  # Processed filler URLs
-            child_photo_url=photo_url,  # Store for post-payment generation
+            child_photo_url=photo_urls[0],  # Primary photo for post-payment generation
             story_texts=story_texts  # All 10 story texts for locked page generation
             # NOTE: pdf_url is NOT set - will be generated after payment
         )
@@ -939,6 +939,14 @@ async def generate_remaining_pages_and_pdf(
             if not child_photo_url:
                 raise StorageError(f"No child photo URL found for preview: {preview_id}")
 
+            # Build photo_urls list for multi-face pipeline
+            # Prefer stored photo_urls array (JSONB), fallback to single child_photo_url
+            stored_photo_urls = preview_data.get("photo_urls")
+            if stored_photo_urls and isinstance(stored_photo_urls, list) and len(stored_photo_urls) > 0:
+                photo_urls = stored_photo_urls
+            else:
+                photo_urls = [child_photo_url]
+
             if not book_structure:
                 raise StorageError(f"No book_structure found in preview: {preview_id}")
 
@@ -1012,7 +1020,7 @@ async def generate_remaining_pages_and_pdf(
                 # Generate image
                 result = await pipeline.generate_with_face_analysis(
                     prompt=prompt,
-                    face_url=child_photo_url,
+                    face_url=photo_urls,  # Pass all photo URLs
                     child_name=safe_child_name,
                     child_age=child_age,
                     child_gender=child_gender,

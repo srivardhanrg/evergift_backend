@@ -4,6 +4,7 @@ Uses NanoBanana pipeline for all generation.
 """
 
 import structlog
+from typing import List
 
 # Import StoryGift task functions (uses NanoBanana pipeline)
 from app.background.storygift_tasks import (
@@ -38,7 +39,7 @@ logger = structlog.get_logger()
 async def generate_full_preview(
     job_id: str,
     preview_id: str,
-    photo_url: str,
+    photo_urls: List[str],  # Changed from single photo_url to multiple photo_urls
     child_name: str,
     child_age: int,
     child_gender: str,
@@ -59,7 +60,7 @@ async def generate_full_preview(
     await generate_storygift_preview(
         job_id=job_id,
         preview_id=preview_id,
-        photo_url=photo_url,
+        photo_urls=photo_urls,  # Pass multiple URLs
         child_name=child_name,
         child_age=child_age,
         child_gender=child_gender,

@@ -21,7 +21,7 @@ class PhotoUploadRequest(BaseModel):
 
 class PreviewCreateRequest(BaseModel):
     """Request to create a new preview."""
-    photo_url: str = Field(..., description="URL of uploaded photo")
+    photo_urls: List[str] = Field(..., min_items=1, max_items=3, description="URLs of uploaded photos (1-3 images)")
     child_name: str = Field(..., min_length=2, max_length=50)
     child_age: int = Field(..., ge=2, le=12)
     child_gender: str = Field(..., pattern="^(male|female)$")
@@ -46,16 +46,32 @@ class FaceValidationResult(BaseModel):
     """Result of face validation."""
     is_valid: bool
     face_count: int
+    quality_score: float = Field(0.0, ge=0.0, le=1.0, description="Overall quality score (0-1)")
+    confidence_score: float = Field(0.0, ge=0.0, le=1.0, description="Face detection confidence")
+    face_area: float = Field(0.0, ge=0.0, le=1.0, description="Face size relative to image")
+    blur_score: float = Field(0.0, ge=0.0, description="Blur score (higher = less blurry)")
     error_code: Optional[str] = None
     error_message: Optional[str] = None
 
 
-class PhotoUploadResponse(BaseModel):
-    """Response after successful photo upload."""
+class PhotoData(BaseModel):
+    """Data for a single uploaded photo."""
     photo_id: str
     photo_url: str
+    upload_order: int
     face_valid: bool
     face_count: int
+    quality_score: float = 0.0
+
+
+class PhotoUploadResponse(BaseModel):
+    """Response for multi-photo upload (1-3 images)."""
+    photos: List[PhotoData]
+    valid_photo_urls: List[str]
+    total_uploaded: int
+    valid_count: int
+    has_valid_photos: bool
+    message: str
 
 
 class JobStartResponse(BaseModel):

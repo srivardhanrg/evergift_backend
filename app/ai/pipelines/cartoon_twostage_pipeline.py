@@ -209,7 +209,7 @@ class CartoonTwoStagePipeline:
     async def _generate_scene(
         self,
         prompt: str,
-        face_url: str,
+        face_url: List[str],  # Changed to support multiple reference images
         aspect_ratio: str = "5:4",
         seed: Optional[int] = None
     ) -> Dict[str, Any]:
@@ -241,7 +241,7 @@ class CartoonTwoStagePipeline:
                 "prompt": full_prompt,
                 "negative_prompt": PREMIUM_CARTOON_NEGATIVE.strip(),
                 "aspect_ratio": aspect_ratio,
-                "image_urls": [face_url],  # Required by NanoBanana /edit - rough face placement
+                "image_urls": face_url,  # face_url is now a list - pass all references
             }
 
             if seed:
@@ -300,7 +300,7 @@ class CartoonTwoStagePipeline:
     async def _face_swap_segmind(
         self,
         scene_image_url: str,
-        child_photo_url: str,
+        child_photo_urls: List[str],  # Changed to support multiple photos
         expression_prompt: str = "",
         preview_id: str = "",
         page_number: int = 0
@@ -313,7 +313,7 @@ class CartoonTwoStagePipeline:
 
         Args:
             scene_image_url: Cartoon scene from Stage 1
-            child_photo_url: Child's real photo
+            child_photo_urls: List of child's real photos (will select best for swap)
             expression_prompt: Optional expression guidance (e.g., "happy, smiling")
             preview_id: For R2 storage path
             page_number: For R2 storage path
@@ -324,6 +324,14 @@ class CartoonTwoStagePipeline:
         start_time = time.time()
 
         try:
+            # Select best photo for face swap
+            # Photos arrive pre-sorted by quality score (best first from upload endpoint)
+            best_photo_url = child_photo_urls[0] if child_photo_urls else None
+            if not best_photo_url:
+                return {"success": False, "error": "No photo URLs provided for face swap"}
+
+            logger.info(f"Using best photo (1/{len(child_photo_urls)}) for face swap",
+                       selected_url=best_photo_url[:60] if best_photo_url else None)
             logger.info(
                 "Stage 2: Segmind face swap starting",
                 expression=expression_prompt[:50] if expression_prompt else "natural",
@@ -336,7 +344,7 @@ class CartoonTwoStagePipeline:
             page_seed = int(hashlib.md5(f"{preview_id}_{page_number}_stage2".encode()).hexdigest()[:8], 16) % 2147483647
 
             payload = {
-                "source_image": child_photo_url,    # Child's real face
+                "source_image": best_photo_url,     # Selected child's real face
                 "target_image": scene_image_url,    # Cartoon scene
                 "face_strength": 0.85,              # High identity preservation
                 "style_strength": 0.75,             # Adapt to cartoon style
@@ -435,7 +443,7 @@ class CartoonTwoStagePipeline:
     async def generate_with_face_analysis(
         self,
         prompt: str,
-        face_url: str,
+        face_url: List[str],  # Changed to support multiple reference images
         child_name: str,
         child_age: int,
         child_gender: str,
@@ -528,7 +536,7 @@ class CartoonTwoStagePipeline:
             # ==========================================
             swap_result = await self._face_swap_segmind(
                 scene_image_url=scene_url,
-                child_photo_url=face_url,
+                child_photo_urls=face_url,  # Pass all photos
                 expression_prompt=expression_prompt,
                 preview_id=preview_id,
                 page_number=page_number
@@ -593,7 +601,7 @@ class CartoonTwoStagePipeline:
     async def generate_all_pages(
         self,
         story_pages: List[Dict[str, Any]],
-        face_url: str,
+        face_url: List[str],  # Changed to support multiple reference images
         child_name: str,
         child_age: int,
         child_gender: str,
@@ -605,7 +613,7 @@ class CartoonTwoStagePipeline:
 
         Args:
             story_pages: List of page data with prompts and scene_type
-            face_url: Child's reference photo URL
+            face_url: List of child's reference photo URLs (1-3 images)
             child_name: Child's name
             child_age: Child's age
             child_gender: 'male' or 'female'

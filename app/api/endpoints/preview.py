@@ -102,11 +102,13 @@ async def create_preview(
         db_check = get_db()
         cutoff_time = datetime.utcnow() - timedelta(seconds=30)
 
-        # Check for recent preview with same photo and session
+        # Check for recent preview with same primary photo and session
+        # Use first photo URL as primary identifier for duplicate detection
+        primary_photo_url = preview_request.photo_urls[0]
         # Note: Using simple .eq() queries only for Supabase compatibility
         duplicate_check = db_check.table("previews").select(
             "preview_id, created_at"
-        ).eq("photo_url", preview_request.photo_url).eq(
+        ).eq("photo_url", primary_photo_url).eq(
             "session_id", session_id
         ).order("created_at", desc=True).limit(1).execute()
 
@@ -205,8 +207,8 @@ async def create_preview(
             "child_gender": preview_request.child_gender,
             "theme": preview_request.theme.value,
             "style": preview_request.style.value,
-            "photo_url": preview_request.photo_url,
-            "child_photo_url": preview_request.photo_url,  # Store for post-payment generation
+            "photo_url": preview_request.photo_urls[0],  # Primary photo for duplicate detection
+            "photo_urls": preview_request.photo_urls,     # All photos (JSONB) for multi-face generation
             "photo_validated": True,
             "status": PreviewStatus.GENERATING.value,
             "generation_phase": "preview",  # V2 generation phase
@@ -247,7 +249,7 @@ async def create_preview(
             generate_full_preview,
             job_id=job_id,
             preview_id=preview_id,
-            photo_url=preview_request.photo_url,
+            photo_urls=preview_request.photo_urls,
             child_name=preview_request.child_name,
             child_age=preview_request.child_age,
             child_gender=preview_request.child_gender,
@@ -414,7 +416,7 @@ async def retry_preview_generation(
             generate_full_preview,
             job_id=new_job_id,
             preview_id=preview_id,
-            photo_url=preview["photo_url"],
+            photo_urls=preview.get("photo_urls") or [preview["photo_url"]],
             child_name=preview["child_name"],
             child_age=preview["child_age"],
             child_gender=preview["child_gender"],

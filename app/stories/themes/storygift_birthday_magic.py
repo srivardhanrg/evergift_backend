@@ -27,6 +27,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
             scene_description="Magical birthday morning",
             scene_type="discovery",
             realistic_prompt="""Magical morning awakening, medium close-up portrait. The child named {name} sitting up in bed with big excited smile, face prominently filling the frame, sharp focus on facial features. Sunlight streaming through window creating god rays filled with dancing dust particles that look like tiny sparkles, warm light illuminating face. Room decorated with birthday decorations including banner saying 'Happy Birthday!' and balloons tied to bedpost, presents on a table slightly out of focus in background. Child wearing birthday pajamas, stretching arms up in joy. Through window, the world outside looks especially beautiful with bluebird on windowsill. Calendar on wall has today's date circled with hearts. Magical warm lighting, sense of excitement and specialness. Child's face is the absolute focal point, three-quarter view, clearly visible and detailed with sharp skin texture, showing pure birthday joy. A small playful comic-style speech bubble near the child saying "It's my birthday!", subtle and not covering the face.""",
+            story_text="Today was the most special day of the year—{name}'s birthday! The sun seemed to shine a little brighter, the birds sang a little sweeter, and even the morning air felt like it was full of magic, just for {name}.",
             costume="wearing birthday pajamas"
         ),
 
