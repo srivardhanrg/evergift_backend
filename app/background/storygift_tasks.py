@@ -657,9 +657,9 @@ async def generate_storygift_preview(
         await update_job_progress(job_id, 90, "Finalizing your magical story... ✨")
 
         # Collect filler_pages_processed from incrementally built book_structure
-        # These were processed inline: 1,2,3 after cover; 5,7,9,11 after AI pages
+        # These were processed inline: 1,2,3,4 after cover; 6,8,10,12 after AI pages
         filler_pages_processed: Dict[int, str] = {}
-        preview_filler_indices = [1, 2, 3, 5, 7, 9, 11]
+        preview_filler_indices = [1, 2, 3, 4, 6, 8, 10, 12]  # Dedication, Intro1, Intro2, Text1-5
 
         for idx in preview_filler_indices:
             page_data = book_structure_incremental.get(str(idx))
@@ -732,8 +732,8 @@ async def generate_storygift_preview(
         ]
 
         # Debug logging before database update
-        # Count AI pages in book_structure (all indices 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
-        all_ai_indices = [0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+        # Count AI pages in book_structure - use constant from config
+        all_ai_indices = AI_GENERATED_INDICES  # [0, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23]
         ai_pages_present = [idx for idx in all_ai_indices if str(idx) in book_structure]
         preview_ai_pages_present = [idx for idx in PREVIEW_AI_INDICES if str(idx) in book_structure]
 
