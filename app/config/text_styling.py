@@ -108,18 +108,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_enchanted_forest": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#2D5016",  # Deep forest green
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.12,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -127,22 +127,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#2D5016",  # Default forest green
             "shadow": {
                 "color": "#1A3009",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#1B4D3E",  # Darker forest accent
                 "lines_to_span": 3
@@ -184,18 +184,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_magic_castle": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#4A148C",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.12,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -203,22 +203,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#4A148C",
             "shadow": {
                 "color": "#311B92",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#6A1B9A",
                 "lines_to_span": 3
@@ -249,18 +249,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_cosmic_dreamer": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#1A237E",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.15,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 5
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 10
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -268,22 +268,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#1A237E",
             "shadow": {
                 "color": "#0D1642",
                 "opacity": 0.18,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#283593",
                 "lines_to_span": 3
@@ -314,18 +314,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_ocean_explorer": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#01579B",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.12,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -333,22 +333,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#01579B",
             "shadow": {
                 "color": "#002F6C",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#0277BD",
                 "lines_to_span": 3
@@ -379,18 +379,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_safari_adventure": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#5D4037",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.12,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -398,22 +398,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#5D4037",
             "shadow": {
                 "color": "#3E2723",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#6D4C41",
                 "lines_to_span": 3
@@ -440,18 +440,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_mighty_guardian": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#B71C1C",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.15,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -459,22 +459,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#B71C1C",
             "shadow": {
                 "color": "#7F0000",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#C62828",
                 "lines_to_span": 3
@@ -501,18 +501,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_birthday_magic": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#AD1457",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.12,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -520,22 +520,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#AD1457",
             "shadow": {
                 "color": "#880E4F",
                 "opacity": 0.15,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#C2185B",
                 "lines_to_span": 3
@@ -562,18 +562,18 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     "storygift_secret_agent": {
         "dedication": {
             "font_family": "Dancing Script",
-            "font_size": 48,
+            "font_size": 110,
             "line_height": 1.7,
             "color": "#37474F",
             "shadow": {
                 "color": "#000000",
                 "opacity": 0.15,
-                "offset_x": 2,
-                "offset_y": 2,
-                "blur": 4
+                "offset_x": 4,
+                "offset_y": 5,
+                "blur": 8
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 70,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
@@ -581,22 +581,22 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
         },
         "story": {
             "font_family": "Playfair Display",
-            "font_size": 32,
+            "font_size": 80,
             "line_height": 1.9,
             "color": "#37474F",
             "shadow": {
                 "color": "#263238",
                 "opacity": 0.18,
-                "offset_x": 1,
-                "offset_y": 2,
-                "blur": 3
+                "offset_x": 3,
+                "offset_y": 5,
+                "blur": 6
             },
             "alignment": TextAlignment.CENTER,
-            "max_width_percent": 75,
+            "max_width_percent": 65,
             "vertical_position": "center",
             "drop_cap": {
                 "enabled": True,
-                "font_size": 72,
+                "font_size": 240,
                 "font_family": "Cormorant Garamond Bold",
                 "color": "#455A64",
                 "lines_to_span": 3

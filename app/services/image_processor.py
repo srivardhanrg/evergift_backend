@@ -590,6 +590,37 @@ class ImageProcessor:
             text_page_number=text_page_number
         )
 
+    def _get_adaptive_cover_font(
+        self,
+        text: str,
+        base_font_size: int,
+        font_family: str,
+        letter_spacing: int,
+        max_allowed_width: int,
+        draw: ImageDraw.Draw
+    ) -> Tuple[ImageFont.FreeTypeFont, int]:
+        """Dynamically scale down font if it exceeds max width to prevent overflow."""
+        font_size = base_font_size
+        while font_size > 20:
+            font = self._load_font(font_family, font_size)
+            total_width = 0
+            for char in text:
+                char_bbox = draw.textbbox((0, 0), char, font=font)
+                char_width = int(char_bbox[2] - char_bbox[0])
+                total_width += char_width + letter_spacing
+            if text:
+                total_width -= letter_spacing
+            
+            if total_width <= max_allowed_width:
+                return font, total_width
+            
+            # Reduce size to fit
+            font_size -= 5
+            
+        # Fallback
+        font = self._load_font(font_family, font_size)
+        return font, max_allowed_width
+
     async def process_cover_page(
         self,
         cover_image_url: str,
@@ -660,24 +691,25 @@ class ImageProcessor:
             alpha = int(180 * (1 - y / top_gradient_height))
             draw.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
 
-        # Load premium title font (Cormorant Garamond Bold for luxury feel)
-        title_font = self._load_font("Cormorant Garamond Bold", 70)
+        # Maximum width constraint (90% of page) to guarantee NO overflow
+        max_cover_text_width = int(width * 0.90)
 
-        # Calculate title position with letter-spacing
+        # Load adaptive premium title font (Cormorant Garamond Bold for luxury feel)
         story_title_upper = story_title.upper()
-        letter_spacing = int(8)  # Premium letter-spacing in pixels
+        title_letter_spacing = int(16)  # Premium letter-spacing in pixels appropriate for 300DPI
+        
+        title_font, total_title_width = self._get_adaptive_cover_font(
+            text=story_title_upper,
+            base_font_size=240,
+            font_family="Cormorant Garamond Bold",
+            letter_spacing=title_letter_spacing,
+            max_allowed_width=max_cover_text_width,
+            draw=draw
+        )
 
-        # Calculate total width with letter-spacing
-        total_title_width = 0
-        for char in story_title_upper:
-            char_bbox = draw.textbbox((0, 0), char, font=title_font)
-            char_width = int(char_bbox[2] - char_bbox[0])
-            total_title_width += char_width + letter_spacing
-        total_title_width -= letter_spacing  # Remove spacing after last character
-
-        # Center horizontally, position higher to prevent overflow
+        # Center horizontally, position higher to prevent overflow (10% from top)
         title_x = (width - total_title_width) // 2
-        title_y = int(height * 0.12)  # 12% from top (was 8%)
+        title_y = int(height * 0.10)
 
         # Premium antique gold color (more sophisticated than bright yellow)
         gold_color = (212, 175, 55, 255)  # #D4AF37 - antique gold
@@ -688,8 +720,8 @@ class ImageProcessor:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Draw text stroke (white outline for depth)
-            stroke_width = int(2)
+            # Draw text stroke (white outline for depth, adjusted for huge sizes)
+            stroke_width = int(4)
             for dx in range(-stroke_width, stroke_width + 1):
                 for dy in range(-stroke_width, stroke_width + 1):
                     if dx*dx + dy*dy <= stroke_width*stroke_width:
@@ -700,8 +732,8 @@ class ImageProcessor:
                             fill=(255, 255, 255, 80)  # Semi-transparent white stroke
                         )
 
-            # Draw shadow
-            shadow_offset = int(3)
+            # Draw bold drop shadow
+            shadow_offset = int(8)
             draw.text(
                 (current_x + shadow_offset, title_y + shadow_offset),
                 char,
@@ -717,7 +749,7 @@ class ImageProcessor:
                 fill=gold_color
             )
 
-            current_x += char_width + letter_spacing
+            current_x += char_width + title_letter_spacing
 
         # ============================================
         # BOTTOM GRADIENT (25% height) with starring
@@ -732,26 +764,22 @@ class ImageProcessor:
             actual_y = bottom_start + y
             draw.line([(0, actual_y), (width, actual_y)], fill=(0, 0, 0, alpha))
 
-        # Load premium fonts for starring section
-        starring_label_font = self._load_font("Cormorant Garamond Bold", 40)
-        child_name_font = self._load_font("Cormorant Garamond Bold", 50)
-
-        # "STARRING" label with letter-spacing
+        # "STARRING" label with letter-spacing and adaptive scaling
         starring_text = "STARRING"
-        starring_letter_spacing = int(6)
-
-        # Calculate total width with letter-spacing
-        total_starring_width = 0
-        for char in starring_text:
-            char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
-            char_width = int(char_bbox[2] - char_bbox[0])
-            total_starring_width += char_width + starring_letter_spacing
-        total_starring_width -= starring_letter_spacing
+        starring_letter_spacing = int(12)
+        starring_label_font, total_starring_width = self._get_adaptive_cover_font(
+            text=starring_text,
+            base_font_size=80,
+            font_family="Cormorant Garamond Bold",
+            letter_spacing=starring_letter_spacing,
+            max_allowed_width=max_cover_text_width,
+            draw=draw
+        )
 
         starring_x = (width - total_starring_width) // 2
-        starring_y = height - int(height * 0.18)  # 18% from bottom
+        starring_y = height - int(height * 0.16)  # 16% from bottom
 
-        # Draw starring label with letter-spacing
+        # Draw starring label
         current_x = starring_x
         for char in starring_text:
             char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
@@ -766,20 +794,21 @@ class ImageProcessor:
 
             current_x += char_width + starring_letter_spacing
 
-        # Child name (bold, uppercase) with premium letter-spacing
+        # Child name (bold, uppercase) with luxury letter spacing & adaptive scaling
         child_name_upper = child_name.upper()
-        name_letter_spacing = int(8)
-
-        # Calculate total width with letter-spacing
-        total_name_width = 0
-        for char in child_name_upper:
-            char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
-            char_width = int(char_bbox[2] - char_bbox[0])
-            total_name_width += char_width + name_letter_spacing
-        total_name_width -= name_letter_spacing
+        name_letter_spacing = int(16)
+        
+        child_name_font, total_name_width = self._get_adaptive_cover_font(
+            text=child_name_upper,
+            base_font_size=140,
+            font_family="Cormorant Garamond Bold",
+            letter_spacing=name_letter_spacing,
+            max_allowed_width=max_cover_text_width,
+            draw=draw
+        )
 
         name_x = (width - total_name_width) // 2
-        name_y = height - int(height * 0.11)  # 11% from bottom
+        name_y = height - int(height * 0.09)  # 9% from bottom
 
         # Draw name with letter-spacing and stroke for depth
         current_x = name_x
@@ -787,8 +816,8 @@ class ImageProcessor:
             char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Draw text stroke (subtle outline)
-            stroke_width = int(2)
+            # Draw bold text stroke (subtle outline)
+            stroke_width = int(4)
             for dx in range(-stroke_width, stroke_width + 1):
                 for dy in range(-stroke_width, stroke_width + 1):
                     if dx*dx + dy*dy <= stroke_width*stroke_width:
@@ -799,20 +828,20 @@ class ImageProcessor:
                             fill=(200, 200, 200, 60)  # Subtle gray stroke
                         )
 
-            # Draw shadow
+            # Draw bold shadow
             draw.text(
-                (current_x + 2, name_y + 2),
+                (current_x + 4, name_y + 4),
                 char,
                 font=child_name_font,
                 fill=(0, 0, 0, 200)
             )
 
-            # Draw name in white
+            # Draw main text in bright white
             draw.text(
                 (current_x, name_y),
                 char,
                 font=child_name_font,
-                fill=(255, 255, 255, 255)
+                fill=(255, 255, 255, 255)  # Brilliant white
             )
 
             current_x += char_width + name_letter_spacing
