@@ -80,16 +80,29 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         # '_order_type' can be 'digital' or 'physical' — set by frontend at cart add
         preview_id = None
         order_type = "digital"  # Default to digital
+        cover_type = "hardcover"  # Default to hardcover for physical orders
         line_items = webhook_data.get("line_items", [])
-        physical_variant_id = str(settings.shopify_physical_variant_id or "")
+
+        # Variant IDs for detecting order type and cover type
+        physical_variant_id = str(settings.shopify_physical_variant_id or "")  # DEPRECATED
+        softcover_variant_id = str(settings.shopify_softcover_variant_id or "")
+        hardcover_variant_id = str(settings.shopify_hardcover_variant_id or "")
 
         for item in line_items:
             properties = item.get("properties", [])
             variant_id = str(item.get("variant_id", ""))
 
-            # Detect physical book order by variant ID
-            if physical_variant_id and variant_id == physical_variant_id:
+            # Detect physical book order and cover type by variant ID
+            if softcover_variant_id and variant_id == softcover_variant_id:
                 order_type = "physical"
+                cover_type = "softcover"
+            elif hardcover_variant_id and variant_id == hardcover_variant_id:
+                order_type = "physical"
+                cover_type = "hardcover"
+            elif physical_variant_id and variant_id == physical_variant_id:
+                # Legacy variant ID - default to hardcover
+                order_type = "physical"
+                cover_type = "hardcover"
 
             for prop in properties:
                 prop_name = prop.get("name", "")
@@ -104,7 +117,12 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
             if preview_id:
                 break
 
-        logger.info("Order type detected", order_type=order_type, order_id=order_id)
+        logger.info(
+            "Order type and cover type detected",
+            order_type=order_type,
+            cover_type=cover_type,
+            order_id=order_id
+        )
 
         if not preview_id:
             logger.error(
@@ -168,6 +186,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
                 order_data = {
                     "order_id": order_id,
                     "order_type": order_type,  # preserve the detected type even for expired orders
+                    "cover_type": cover_type if order_type == "physical" else None,
                     "order_number": str(order_number) if order_number else None,
                     "preview_id": preview_id,
                     "customer_email": customer_email,
@@ -209,6 +228,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         order_data = {
             "order_id": order_id,
             "order_type": order_type,  # 'digital' or 'physical' — stored for audit + frontend
+            "cover_type": cover_type if order_type == "physical" else None,  # 'softcover' or 'hardcover' for physical orders
             "order_number": str(order_number) if order_number else None,
             "preview_id": preview_id,
             "customer_email": customer_email,

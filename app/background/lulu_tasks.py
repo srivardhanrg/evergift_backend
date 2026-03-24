@@ -4,8 +4,8 @@ Lulu Print Background Tasks
 Called after StoryGift PDF generation completes (i.e. after order is paid).
 
 Flow:
-1. Generate Lulu-spec interior PDF (8.75x8.75" with bleed, 12 pages)
-2. Generate Lulu-spec cover wrap PDF
+1. Generate Lulu-spec interior PDF (8.75x8.75" with bleed, 24 pages)
+2. Generate Lulu-spec cover wrap PDF (front + spine + back)
 3. Create print_orders record (status: pending)
 4. Submit print job to Lulu API
 5. Update print_orders with Lulu job ID + status
@@ -96,11 +96,146 @@ def _build_shipping_address(order: dict, preview: dict) -> dict:
     }
 
 
+def _collect_pages_v2(preview: dict) -> list:
+    """
+    Collect all interior pages from a V2 preview record for Lulu print.
+
+    V2 format uses book_structure.pages (26-page structure):
+    - Index 0: Cover (excluded - goes to cover wrap PDF)
+    - Indices 1-24: Interior pages (ALL must be included for 24-page book)
+    - Index 25: Back cover (excluded - TODO: not yet in cover wrap)
+
+    For Lulu interior PDF, we collect all pages with indices 1-24.
+
+    Returns:
+        List of dicts with keys: page_number, image_url, story_text
+        page_number is the Lulu page number (1-24)
+
+    Raises:
+        RuntimeError: If any of the 24 interior pages are missing or have no image
+    """
+    preview_id = preview.get("preview_id", "unknown")
+
+    # Get book structure
+    book_structure = preview.get("book_structure") or {}
+    if isinstance(book_structure, str):
+        try:
+            book_structure = json.loads(book_structure)
+        except Exception:
+            book_structure = {}
+
+    book_pages = book_structure.get("pages") or []
+
+    # Get story texts for text pages
+    story_texts = preview.get("story_texts") or {}
+    if isinstance(story_texts, str):
+        try:
+            story_texts = json.loads(story_texts)
+        except Exception:
+            story_texts = {}
+
+    # Build index → page mapping for fast lookup
+    pages_by_index = {p.get("index"): p for p in book_pages}
+
+    # Collect all interior pages (indices 1-24)
+    pages = []
+    missing_pages = []
+    missing_images = []
+
+    for page_index in range(1, 25):  # Indices 1 through 24 inclusive
+        page = pages_by_index.get(page_index)
+
+        if not page:
+            missing_pages.append(page_index)
+            logger.error(
+                "Interior page missing from book_structure",
+                preview_id=preview_id,
+                page_index=page_index
+            )
+            continue
+
+        # Validate that page has an image
+        image_url = page.get("imageUrl")
+        if not image_url:
+            missing_images.append(page_index)
+            logger.error(
+                "Interior page missing imageUrl",
+                preview_id=preview_id,
+                page_index=page_index,
+                page_type=page.get("pageType")
+            )
+            continue
+
+        # Get story text for text pages
+        story_text = ""
+        if page.get("pageType") == "text":
+            # story_texts uses string keys (book indices)
+            story_text = story_texts.get(str(page_index), "")
+
+        # Lulu page number = sequential 1-24
+        pages.append({
+            "page_number": page_index,  # Use index directly as page_number
+            "image_url": image_url,
+            "story_text": story_text,
+        })
+
+    # Fail fast if any pages are missing or incomplete
+    if missing_pages or missing_images:
+        error_msg = f"Cannot generate Lulu PDF: "
+        if missing_pages:
+            error_msg += f"{len(missing_pages)} pages missing (indices: {missing_pages})"
+        if missing_images:
+            if missing_pages:
+                error_msg += ", "
+            error_msg += f"{len(missing_images)} pages missing images (indices: {missing_images})"
+
+        logger.error(
+            "Lulu PDF generation blocked - incomplete book structure",
+            preview_id=preview_id,
+            missing_pages=missing_pages,
+            missing_images=missing_images,
+            total_collected=len(pages)
+        )
+        raise RuntimeError(error_msg)
+
+    # Validate we have exactly 24 pages
+    if len(pages) != 24:
+        error_msg = f"Expected 24 interior pages, but collected {len(pages)}"
+        logger.error(
+            "Invalid page count for Lulu PDF",
+            preview_id=preview_id,
+            expected=24,
+            actual=len(pages)
+        )
+        raise RuntimeError(error_msg)
+
+    logger.info(
+        "Collected V2 pages for Lulu print - 24-page interior PDF",
+        preview_id=preview_id,
+        pages_count=len(pages),
+        page_indices=list(range(1, 25))
+    )
+
+    return sorted(pages, key=lambda p: p["page_number"])
+
+
 def _collect_pages(preview: dict) -> list:
     """
     Collect all story pages from a preview record.
-    Combines cover (page 0) + hires_images (pages 1-10) + story_pages (text).
+    Supports both V1 (legacy) and V2 (book_structure) formats.
+
+    V1: Reads from hires_images, preview_images, story_pages columns
+    V2: Reads from book_structure.pages, story_texts columns
     """
+    # Check if this is a V2 preview (has book_structure)
+    book_structure = preview.get("book_structure")
+    if book_structure:
+        logger.debug("Using V2 page collection", preview_id=preview.get("preview_id"))
+        return _collect_pages_v2(preview)
+
+    # Otherwise use legacy V1 logic
+    logger.debug("Using V1 (legacy) page collection", preview_id=preview.get("preview_id"))
+
     pages = []
 
     # hires_images: [{page: int, url: string}, ...]
@@ -189,6 +324,17 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             logger.error("Order not found for Lulu job", order_id=order_id)
             return
         order = order_resp.data[0]
+
+        # Read cover_type early — needed for PDF generation (spine, safety zone)
+        cover_type = order.get("cover_type", "hardcover")
+        if not cover_type or cover_type not in ("softcover", "hardcover"):
+            logger.warning(
+                "Invalid or missing cover_type in order, defaulting to hardcover",
+                order_id=order_id,
+                cover_type=cover_type,
+            )
+            cover_type = "hardcover"
+        logger.info("Cover type for this order", order_id=order_id, cover_type=cover_type)
 
         child_name = preview.get("child_name", "Child")
         # Derive story title from the actual theme — each theme has its own title template
@@ -305,12 +451,13 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         )
 
         cover_start_time = _time.monotonic()
-        logger.info("Generating Lulu cover PDF", preview_id=preview_id)
+        logger.info("Generating Lulu cover PDF", preview_id=preview_id, cover_type=cover_type)
         cover_url = await generate_cover_pdf(
             cover_image_url=cover_image_url,
             child_name=child_name,
             story_title=story_title,
             preview_id=preview_id,
+            cover_type=cover_type,
         )
         cover_duration_ms = round((_time.monotonic() - cover_start_time) * 1000)
         logger.info(
@@ -337,12 +484,19 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             has_email=bool(shipping_address.get("email")),
             street1_present=bool(shipping_address.get("street1")),
         )
+        # Select pod_package_id based on cover_type (now guaranteed to be set)
+        if cover_type == "softcover":
+            pod_package_id = settings.lulu_pod_package_id_softcover
+        else:
+            pod_package_id = settings.lulu_pod_package_id_hardcover
+
         print_order_data = {
             "order_id": order_id,
             "preview_id": preview_id,
             "interior_pdf_url": interior_url,
             "cover_pdf_url": cover_url,
-            "pod_package_id": settings.lulu_pod_package_id,
+            "pod_package_id": pod_package_id,
+            "cover_type": cover_type,
             "lulu_status": "pending",
             "shipping_address": shipping_address,
             "shipping_option": "MAIL",
@@ -359,9 +513,9 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             print_order_id = insert_resp.data[0].get("print_order_id") if insert_resp.data else None
 
         # ----------------------------------------------------------------
-        # 6. Update phase to submitting_print and submit to Lulu
+        # 7. Update phase to submitting_print and submit to Lulu
         # ----------------------------------------------------------------
-        logger.info("Submitting print job to Lulu", order_id=order_id)
+        logger.info("Submitting print job to Lulu", order_id=order_id, cover_type=cover_type)
 
         # Update preview phase to indicate Lulu submission in progress
         db.table("previews").update({
@@ -376,6 +530,7 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             child_name=child_name,
             quantity=1,
             shipping_option="MAIL",
+            cover_type=cover_type,
         )
 
         lulu_job_id = str(lulu_response.get("id", ""))

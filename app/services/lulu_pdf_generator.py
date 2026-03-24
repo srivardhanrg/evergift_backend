@@ -5,13 +5,14 @@ Generates two PDFs required by Lulu for print production:
 
 1. INTERIOR PDF
    - Page size: 8.5 x 8.5 inches + 0.125" bleed = 8.75 x 8.75 inches per page
-   - 12 pages total (10 story pages padded to next multiple of 4 for saddle stitch)
+   - 24 pages total (indices 1-24 from V2 book structure, divisible by 4 for saddle stitch)
    - Layout: ~80% image / ~20% story text, matching StoryGift screen preview
    - No crop marks required by Lulu (bleed only)
+   - TODO: Back cover (index 25) not yet included in cover wrap
 
 2. COVER WRAP PDF
    - Single landscape spread: back + spine + front, all in one PDF page
-   - Spine width calculated by Lulu's cover-dimensions API (or ~0.06" for 12 pages / 80# coated)
+   - Spine width calculated by Lulu's cover-dimensions API (or ~0.12" for 24 pages / 80# coated)
    - Safety zone: 0.125" bleed on all outer edges, 0.0625" inside spine
    - We generate a simple full-bleed colour cover with child name + title
 
@@ -54,15 +55,31 @@ FONT_BOLD    = "Vera-Bold"
 logger = structlog.get_logger()
 
 # ---------------------------------------------------------------------------
-# Lulu 8.5 x 8.5" saddle stitch print spec
+# Lulu 8.5 x 8.5" print spec
 # ---------------------------------------------------------------------------
 BLEED = 0.125 * inch                        # 0.125 inch bleed on all sides
-SAFETY_MARGIN = 0.50 * inch                 # Lulu requires 0.50" from trim edge for all content
+SAFETY_MARGIN = 0.50 * inch                 # Interior: 0.50" from trim edge (Lulu spec)
 PAGE_W = (8.5 + 2 * 0.125) * inch          # 8.75" trimmed + bleed (both sides)
 PAGE_H = (8.5 + 2 * 0.125) * inch          # 8.75"
 
-# Spine width for 12 pages of 80# coated paper ≈ 0.06 inches
-SPINE_W = 0.06 * inch
+# ---------------------------------------------------------------------------
+# Spine widths per cover type (Lulu official spec)
+# Hardcover casewrap (24-84 pages): 0.25"
+# Saddle stitch / softcover:        no spine (0.0")
+# ---------------------------------------------------------------------------
+HARDCOVER_SPINE_W = 0.25 * inch            # Lulu spec: hardcover 24+ pages = 0.25"
+SOFTCOVER_SPINE_W = 0.0  * inch            # Saddle stitch has NO spine
+
+# ---------------------------------------------------------------------------
+# Cover safety zones per cover type (Lulu official spec)
+# Hardcover casewrap:  0.75" from trim edge
+# Softcover / saddle:  0.50" from trim edge
+# ---------------------------------------------------------------------------
+HARDCOVER_COVER_SAFETY = 0.75 * inch
+SOFTCOVER_COVER_SAFETY = 0.50 * inch
+
+# Legacy alias kept for interior pages (unchanged — interior is always 0.50")
+SPINE_W = HARDCOVER_SPINE_W                # kept for backward compat
 
 # Image / text split (matching StoryGift preview: 80 / 20)
 IMAGE_AREA_H = 0.80 * PAGE_H
@@ -78,7 +95,10 @@ COVER_TEXT_COLOR = white
 TEXT_BG_COLOR = HexColor("#FFF0F5")         # Soft pink
 TEXT_COLOR = HexColor("#2D2D2D")
 
-TOTAL_PAGES = 12                            # Must be multiple of 4 for saddle stitch
+TOTAL_PAGES = 24                            # Must be multiple of 4 for binding
+
+# Gutter margin: minimum 0.20" from the inner (binding) edge — using 0.25" for safety
+GUTTER = 0.25 * inch
 
 
 # ---------------------------------------------------------------------------
@@ -131,8 +151,19 @@ def _draw_story_page(
 
     # ---- Story text ----
     if story_text:
-        text_padding = BLEED + SAFETY_MARGIN   # 0.50" from trim edge (Lulu requirement)
-        text_width = PAGE_W - 2 * text_padding
+        # Gutter: Lulu requires min 0.20" from binding edge. We use 0.25" for safety.
+        # Odd pages (1,3,5...) are on the RIGHT side of the spread → gutter is on the LEFT.
+        # Even pages (2,4,6...) are on the LEFT side of the spread → gutter is on the RIGHT.
+        is_right_page = (page_number % 2 != 0)  # odd → right side
+        outer_pad = BLEED + SAFETY_MARGIN                   # outer edge (always 0.50" from trim)
+        inner_pad = BLEED + SAFETY_MARGIN + GUTTER           # binding edge (0.75" from trim)
+
+        left_pad  = inner_pad if not is_right_page else outer_pad
+        right_pad = inner_pad if is_right_page     else outer_pad
+
+        text_width = PAGE_W - left_pad - right_pad
+        text_center_x = left_pad + text_width / 2            # shift center toward outer edge
+
         c.setFillColor(TEXT_COLOR)
         c.setFont(FONT_REGULAR, BODY_FONT_SIZE)
 
@@ -156,14 +187,20 @@ def _draw_story_page(
         y_start = TEXT_AREA_H / 2 + total_text_h / 2 - line_height / 2
 
         for line in lines[:4]:   # max 4 lines to stay in zone
-            c.drawCentredString(PAGE_W / 2, y_start, line)
+            c.drawCentredString(text_center_x, y_start, line)
             y_start -= line_height
 
-    # ---- Page number (subtle, bottom right, inside trim) ----
+    # ---- Page number (subtle, inside trim on outer edge) ----
     if not is_cover and page_number > 0:
+        is_right_page = (page_number % 2 != 0)
         c.setFont(FONT_REGULAR, 8)
         c.setFillColor(HexColor("#AAAAAA"))
-        c.drawRightString(PAGE_W - BLEED - SAFETY_MARGIN, BLEED + 0.25 * inch, str(page_number))
+        if is_right_page:
+            # Right page: page number at bottom-right (outer edge)
+            c.drawRightString(PAGE_W - BLEED - SAFETY_MARGIN, BLEED + 0.25 * inch, str(page_number))
+        else:
+            # Left page: page number at bottom-left (outer edge)
+            c.drawString(BLEED + SAFETY_MARGIN, BLEED + 0.25 * inch, str(page_number))
 
 
 def _draw_blank_page(c: canvas.Canvas) -> None:
@@ -178,7 +215,7 @@ async def generate_interior_pdf(
     child_name: str,
 ) -> str:
     """
-    Generate a Lulu-spec interior PDF for a 10-page story.
+    Generate a Lulu-spec interior PDF for a 24-page story (indices 1-24).
 
     Args:
         pages: list of dicts with keys: page_number, image_url, story_text
@@ -276,7 +313,8 @@ async def generate_cover_pdf(
     child_name: str,
     story_title: str,
     preview_id: str,
-    spine_width_inches: float = 0.06,
+    cover_type: str = "hardcover",
+    spine_width_inches: Optional[float] = None,  # If None, derived from cover_type
 ) -> str:
     """
     Generate a Lulu-spec cover wrap PDF.
@@ -290,7 +328,7 @@ async def generate_cover_pdf(
         child_name: printed on cover
         story_title: printed on cover
         preview_id: for naming the R2 file
-        spine_width_inches: calculated spine width (default 0.06" for 12 pages 80# coated)
+        spine_width_inches: calculated spine width (default 0.12" for 24 pages 80# coated)
 
     Returns:
         R2 public URL of the uploaded cover PDF
@@ -300,19 +338,33 @@ async def generate_cover_pdf(
 
     storage = StorageService()
 
+    # Derive spine width and safety zone from cover_type (Lulu spec)
+    if spine_width_inches is None:
+        if cover_type == "softcover":
+            _spine_inches = 0.0   # Saddle stitch: no spine
+        else:
+            _spine_inches = 0.25  # Hardcover casewrap: 0.25" for 24 pages
+    else:
+        _spine_inches = spine_width_inches
+
+    # Safety margin on cover: hardcover needs 0.75", softcover 0.50"
+    _cover_safety = HARDCOVER_COVER_SAFETY if cover_type == "hardcover" else SOFTCOVER_COVER_SAFETY
+
     logger.info(
         "Generating Lulu cover PDF - starting",
         preview_id=preview_id,
         child_name=child_name,
         story_title=story_title[:30] + "..." if len(story_title) > 30 else story_title,
         has_cover_image=bool(cover_image_url),
-        spine_width_inches=spine_width_inches,
+        cover_type=cover_type,
+        spine_width_inches=_spine_inches,
+        cover_safety_inches=_spine_inches,
     )
 
     trim_w = 8.5 * inch
     trim_h = 8.5 * inch
     bleed = BLEED
-    spine = spine_width_inches * inch
+    spine = _spine_inches * inch
 
     # Total wrap dimensions
     wrap_w = 2 * (trim_w + bleed) + spine
@@ -352,15 +404,22 @@ async def generate_cover_pdf(
             logger.warning("Could not draw cover image", error=str(e))
 
     # ---- Front cover: title overlay ----
+    # Title must be inside safety zone: bleed + cover_safety from top edge
+    # e.g. hardcover: bleed (0.125") + safety (0.75") = 0.875" from page top
     c.setFillColor(COVER_BG_COLOR)
-    overlay_h = 1.6 * inch
+    overlay_h = _cover_safety + bleed + 0.5 * inch   # Safety zone + some visual breathing room
     c.rect(front_x, wrap_h - overlay_h, front_w, overlay_h, fill=1, stroke=0)
+
+    # Title y position: inside safety zone from the TOP trim
+    # Top of text should be at least (bleed + _cover_safety) from top page edge
+    title_y = wrap_h - bleed - _cover_safety - 0.05 * inch
+    subtitle_y = title_y - 0.45 * inch
 
     c.setFillColor(white)
     c.setFont(FONT_BOLD, 20)
-    c.drawCentredString(front_x + front_w / 2, wrap_h - 0.7 * inch, story_title[:40])
+    c.drawCentredString(front_x + front_w / 2, title_y, story_title[:40])
     c.setFont(FONT_REGULAR, 14)
-    c.drawCentredString(front_x + front_w / 2, wrap_h - 1.1 * inch, f"Starring {child_name}")
+    c.drawCentredString(front_x + front_w / 2, subtitle_y, f"Starring {child_name}")
 
     # ---- Back cover (left half) ----
     c.setFillColor(COVER_BG_COLOR)
@@ -370,7 +429,7 @@ async def generate_cover_pdf(
     c.setFont(FONT_REGULAR, 10)
     c.drawCentredString(
         (bleed + trim_w) / 2,
-        bleed + SAFETY_MARGIN,  # 0.50" from trim edge (was 0.275" - too close)
+        bleed + _cover_safety,  # Safety zone from bottom trim (hardcover: 0.75", softcover: 0.50")
         "A personalised storybook by StoryGift · storygift.in",
     )
 
@@ -380,7 +439,7 @@ async def generate_cover_pdf(
     c.rect(spine_x, 0, spine, wrap_h, fill=1, stroke=0)
 
     # Spine text (rotated) — only if spine is wide enough
-    if spine_width_inches >= 0.18:
+    if _spine_inches >= 0.18:
         c.saveState()
         c.translate(spine_x + spine / 2, wrap_h / 2)
         c.rotate(90)

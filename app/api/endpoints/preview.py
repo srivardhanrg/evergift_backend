@@ -17,11 +17,21 @@ from app.models.schemas import (
     PreviewCreateRequest,
     JobStartResponse,
     PreviewResponse,
+    PreviewResponseV2,
+    BookStructureResponse,
+    BookPageInfo,
     PageData,
     ErrorResponse
 )
 from app.models.database import get_db
 from app.models.enums import PreviewStatus, JobStatus, JobType, BookStyle
+from app.config.book_structure import (
+    BOOK_STRUCTURE,
+    PageType,
+    PageConfig,
+    PREVIEW_AI_INDICES,
+    AI_GENERATED_INDICES,
+)
 from app.background.tasks import generate_full_preview
 from app.config import get_settings
 from app.core.rate_limiter import limiter
@@ -184,6 +194,7 @@ async def create_preview(
         customer_email = shopify_customer_email or preview_request.customer_email
 
         # Create preview record with Shopify customer info
+        # V2: Uses book_structure JSONB instead of separate hires_images/preview_images arrays
         preview_data = {
             "preview_id": preview_id,
             "session_id": session_id,  # Use extracted session_id (from body or header)
@@ -195,11 +206,15 @@ async def create_preview(
             "theme": preview_request.theme.value,
             "style": preview_request.style.value,
             "photo_url": preview_request.photo_url,
+            "child_photo_url": preview_request.photo_url,  # Store for post-payment generation
             "photo_validated": True,
             "status": PreviewStatus.GENERATING.value,
-            "hires_images": [],
-            "preview_images": [],
-            "story_pages": [],
+            "generation_phase": "preview",  # V2 generation phase
+            "total_pages": 26,  # V2 default
+            "preview_page_count": 14,  # V2 default (pages 0-13)
+            "book_structure": {},  # V2 JSONB structure
+            "story_texts": {},  # V2 story texts
+            "filler_pages_processed": {},  # V2 filler tracking
             "created_at": datetime.utcnow().isoformat(),
             "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
         }
@@ -600,6 +615,296 @@ async def get_preview(preview_id: str):
 
     except Exception as e:
         logger.error("Failed to get preview", preview_id=preview_id, error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve preview. Please try again."
+        )
+
+
+# ============================================
+# V2 Preview Endpoint - 26-Page Book Structure
+# ============================================
+@router.get("/preview/{preview_id}/v2", response_model=PreviewResponseV2)
+async def get_preview_v2(preview_id: str):
+    """
+    Get preview data with full 26-page book structure.
+
+    Returns the complete book structure with page-level state tracking
+    for the new frontend book viewer components.
+
+    Page states include:
+    - is_preview: True for pages 0-13 (visible in preview)
+    - is_locked: True for pages 14-25 (locked until purchase)
+    - is_generating: True if page is currently being AI-generated
+    - is_generated: True if AI generation is complete
+    - is_filler: True for non-AI pages (dedication, intros, text, end, back)
+    """
+    try:
+        logger.debug("Getting preview V2", preview_id=preview_id)
+
+        db = get_db()
+
+        # Get preview record
+        preview_response = db.table("previews").select("*").eq("preview_id", preview_id).execute()
+
+        if not preview_response.data:
+            raise HTTPException(status_code=404, detail="Preview not found")
+
+        preview = preview_response.data[0]
+
+        # Check if preview has expired
+        expires_at = datetime.fromisoformat(preview["expires_at"].replace('Z', '+00:00'))
+        if expires_at < datetime.utcnow().replace(tzinfo=expires_at.tzinfo):
+            raise HTTPException(status_code=410, detail="Preview has expired")
+
+        # Check if preview failed
+        if preview["status"] == PreviewStatus.FAILED.value:
+            raise HTTPException(status_code=500, detail="Preview generation failed")
+
+        # Get generation state
+        is_purchased = preview["status"] == PreviewStatus.PURCHASED.value
+        generation_phase = preview.get("generation_phase", "preview")
+        current_generating_page = preview.get("current_generating_page")
+
+        # Get stored book structure data
+        book_structure_data = preview.get("book_structure", {})
+        filler_pages_processed = preview.get("filler_pages_processed", {})
+        story_texts = preview.get("story_texts", {})
+
+        # Get AI-generated page URLs
+        hires_images = {img["page"]: img["url"] for img in preview.get("hires_images", [])}
+        preview_images = {img["page"]: img["url"] for img in preview.get("preview_images", [])}
+        cover_url = preview.get("cover_url")
+
+        # Determine which AI pages are complete
+        # Map old page numbers (1-10) to new indices (5, 7, 9, 11, 13, 15, 17, 19, 21, 23)
+        # NEW ORDER: Text on LEFT, AI on RIGHT
+        ai_page_mapping = {
+            1: 5, 2: 7, 3: 9, 4: 11, 5: 13,
+            6: 15, 7: 17, 8: 19, 9: 21, 10: 23
+        }
+        completed_ai_indices = set()
+
+        # Cover (index 0) is complete if cover_url exists
+        if cover_url:
+            completed_ai_indices.add(0)
+
+        # Check hires_images for purchased users, preview_images for unpaid
+        image_source = hires_images if is_purchased else preview_images
+        for old_page_num, new_index in ai_page_mapping.items():
+            if old_page_num in image_source:
+                completed_ai_indices.add(new_index)
+
+        # V2: Also check book_structure for completed pages (incremental updates)
+        # This is the primary source for incremental page-by-page loading
+        if book_structure_data:
+            for idx_str, page_data in book_structure_data.items():
+                try:
+                    idx = int(idx_str)
+                    if page_data.get("url") and page_data.get("is_generated"):
+                        completed_ai_indices.add(idx)
+                except (ValueError, TypeError):
+                    # Handle non-integer keys gracefully
+                    continue
+
+        # Build page list for all 26 pages
+        pages: List[BookPageInfo] = []
+
+        for page_config in BOOK_STRUCTURE:
+            idx = page_config.index
+            page_type = page_config.page_type.value
+
+            # Determine image URL
+            image_url = None
+
+            if page_config.page_type == PageType.COVER:
+                # Cover page - use cover_url
+                image_url = cover_url
+                # V2 Fallback: check book_structure for URL (incremental updates)
+                if not image_url and book_structure_data:
+                    bs_cover = book_structure_data.get("0") or book_structure_data.get(0)
+                    if bs_cover and bs_cover.get("url"):
+                        image_url = bs_cover["url"]
+            elif page_config.page_type == PageType.GENERATED:
+                # AI-generated story page - map to old page number
+                old_page_num = None
+                for old_num, new_idx in ai_page_mapping.items():
+                    if new_idx == idx:
+                        old_page_num = old_num
+                        break
+                if old_page_num and old_page_num in image_source:
+                    image_url = image_source[old_page_num]
+
+                # V2 Fallback: check book_structure for URL (incremental updates)
+                # This is the PRIMARY source during incremental generation
+                if not image_url and book_structure_data:
+                    bs_entry = book_structure_data.get(str(idx)) or book_structure_data.get(idx)
+                    if bs_entry and bs_entry.get("url"):
+                        image_url = bs_entry["url"]
+            else:
+                # Filler page - check processed filler pages
+                if filler_pages_processed and str(idx) in filler_pages_processed:
+                    image_url = filler_pages_processed[str(idx)]
+                elif filler_pages_processed and idx in filler_pages_processed:
+                    image_url = filler_pages_processed[idx]
+
+            # Get story text for text pages
+            story_text = None
+            if page_config.text_page_number:
+                text_num = page_config.text_page_number
+                if story_texts:
+                    story_text = story_texts.get(str(text_num)) or story_texts.get(text_num)
+
+            # Determine page states
+            is_preview_page = page_config.is_preview
+            is_locked = not page_config.is_preview and not is_purchased
+            is_filler = page_config.filler_filename is not None
+            is_generating = (
+                page_config.page_type in (PageType.COVER, PageType.GENERATED)
+                and current_generating_page == idx
+            )
+            is_generated = idx in completed_ai_indices
+
+            pages.append(BookPageInfo(
+                index=idx,
+                page_type=page_type,
+                image_url=image_url,
+                story_text=story_text,
+                is_preview=is_preview_page,
+                is_locked=is_locked,
+                is_filler=is_filler,
+                is_generating=is_generating,
+                is_generated=is_generated,
+                requires_text_overlay=page_config.requires_text_overlay,
+                text_page_number=page_config.text_page_number
+            ))
+
+        # Calculate progress
+        total_ai_pages = len(AI_GENERATED_INDICES)
+        pages_generated = len(completed_ai_indices)
+        generation_progress = preview.get("generation_progress", 0)
+
+        # Check if all filler pages are ready
+        preview_filler_count = sum(1 for p in BOOK_STRUCTURE if p.filler_filename and p.is_preview)
+        processed_filler_count = len(filler_pages_processed) if filler_pages_processed else 0
+        filler_pages_ready = processed_filler_count >= preview_filler_count
+
+        # Build book structure response
+        book_structure = BookStructureResponse(
+            total_pages=26,
+            preview_boundary=13,  # Fixed: Pages 0-13 are preview (14 pages)
+            preview_page_count=14,  # Fixed: 14 pages in preview (0-13)
+            locked_page_count=12,   # Fixed: 12 locked pages (14-25)
+            pages=pages,
+            generation_progress=generation_progress,
+            current_generating_page=current_generating_page,
+            pages_generated=pages_generated,
+            total_ai_pages=total_ai_pages,
+            filler_pages_ready=filler_pages_ready
+        )
+
+        # Build legacy preview_pages for backward compatibility
+        legacy_preview_pages = []
+        legacy_locked_pages = []
+
+        # Add cover as page 0
+        if cover_url:
+            legacy_preview_pages.append(PageData(
+                page_number=0,
+                image_url=cover_url,
+                story_text="",
+                is_watermarked=not is_purchased,
+                is_locked=False,
+                is_cover=True
+            ))
+
+        # Add story pages
+        for old_page_num in range(1, 11):
+            new_idx = ai_page_mapping[old_page_num]
+            is_preview_ai = new_idx in PREVIEW_AI_INDICES
+
+            if is_preview_ai or is_purchased:
+                # Show in preview_pages
+                url = image_source.get(old_page_num, "")
+                story_page = next(
+                    (sp for sp in preview.get("story_pages", []) if sp.get("page") == old_page_num),
+                    None
+                )
+                if url or is_purchased:
+                    legacy_preview_pages.append(PageData(
+                        page_number=old_page_num,
+                        image_url=url,
+                        story_text=story_page["text"] if story_page else "",
+                        is_watermarked=not is_purchased,
+                        is_locked=False,
+                        is_cover=False
+                    ))
+            else:
+                # Show in locked_pages
+                from app.stories.themes import get_theme
+                theme_template = get_theme(preview["theme"])
+                page_idx = old_page_num - 1
+                if page_idx < len(theme_template.pages):
+                    teaser_text = theme_template.pages[page_idx].story_text
+                    teaser_text = teaser_text.replace('{name}', preview["child_name"])
+                    teaser_preview = teaser_text[:80] + "..." if len(teaser_text) > 80 else teaser_text
+                else:
+                    teaser_preview = "More adventure awaits..."
+
+                legacy_locked_pages.append(PageData(
+                    page_number=old_page_num,
+                    image_url="",
+                    story_text=teaser_preview,
+                    is_watermarked=False,
+                    is_locked=True,
+                    is_cover=False
+                ))
+
+        # Calculate days remaining
+        days_remaining = max(0, (expires_at - datetime.utcnow().replace(tzinfo=expires_at.tzinfo)).days)
+
+        # Get theme title
+        from app.stories.themes import get_theme
+        theme_template = get_theme(preview["theme"])
+        story_title = theme_template.get_title(preview["child_name"])
+
+        # Build checkout URL
+        settings = get_settings()
+        checkout_url = f"https://{settings.shopify_shop_domain}/cart/add?id=PRODUCT_VARIANT_ID&properties[preview_id]={preview_id}"
+
+        return PreviewResponseV2(
+            preview_id=preview_id,
+            status=PreviewStatus(preview["status"]),
+            generation_phase=generation_phase,
+            story_title=story_title,
+            child_name=preview["child_name"],
+            theme=preview["theme"],
+            style=preview.get("style", "photorealistic"),
+            book_structure=book_structure,
+            cover_url=cover_url,
+            preview_pages=legacy_preview_pages,
+            locked_pages=legacy_locked_pages if legacy_locked_pages else None,
+            total_pages=26,
+            preview_pages_count=14,  # Fixed: 14 preview pages (0-13)
+            locked_pages_count=12,   # Fixed: 12 locked pages (14-25)
+            expires_at=expires_at,
+            days_remaining=days_remaining,
+            pdf_url=preview.get("pdf_url"),
+            purchase={
+                "price": 599,
+                "currency": "INR",
+                "price_formatted": "₹599",
+                "checkout_url": checkout_url
+            },
+            testing_mode=preview.get("testing_mode"),
+            analyzed_features=preview.get("analyzed_features"),
+            generation_model=preview.get("generation_model")
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get preview V2", preview_id=preview_id, error=str(e))
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve preview. Please try again."
