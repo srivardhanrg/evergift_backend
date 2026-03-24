@@ -80,7 +80,7 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         # '_order_type' can be 'digital' or 'physical' — set by frontend at cart add
         preview_id = None
         order_type = "digital"  # Default to digital
-        cover_type = "hardcover"  # Default to hardcover for physical orders
+        cover_type = None  # Explicitly require cover type determination for physical orders
         line_items = webhook_data.get("line_items", [])
 
         # Variant IDs for detecting order type and cover type
@@ -113,6 +113,10 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
                                preview_id=preview_id)
                 if prop_name == "_order_type":
                     order_type = prop.get("value", "digital")
+                if prop_name == "_cover_type":
+                    prop_val = prop.get("value")
+                    if prop_val in ("softcover", "hardcover"):
+                        cover_type = prop_val
 
             if preview_id:
                 break

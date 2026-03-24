@@ -3,6 +3,7 @@ Cloudflare R2 Storage Service
 Handles image and PDF uploads, downloads, and signed URL generation.
 """
 
+import asyncio
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
@@ -184,30 +185,72 @@ class StorageService:
             logger.error("Failed to generate signed URL", path=path, error=str(e))
             raise StorageError(f"Failed to generate signed URL: {str(e)}")
 
-    async def download_image(self, url: str) -> bytes:
+    async def download_image(self, url: str, max_retries: int = 3) -> bytes:
         """
-        Download image from URL.
+        Download image from URL with retry logic.
 
         Args:
             url: Image URL (can be from R2 or external like Fal.ai)
+            max_retries: Maximum number of retry attempts (default: 3)
 
         Returns:
             Image bytes
+
+        Raises:
+            StorageError: If download fails after all retries
         """
-        try:
-            logger.info("Downloading image", url=url[:100] if url else None)
+        for attempt in range(max_retries):
+            try:
+                logger.info(
+                    "Downloading image",
+                    url=url[:100] if url else None,
+                    attempt=attempt + 1,
+                    max_retries=max_retries
+                )
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(url)
-                response.raise_for_status()
+                # Increase timeout to 60s for large images (up from 30s)
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
 
-                image_bytes = response.content
-                logger.info("Image downloaded", url=url[:100] if url else None, size_bytes=len(image_bytes))
-                return image_bytes
+                    image_bytes = response.content
+                    logger.info(
+                        "Image downloaded successfully",
+                        url=url[:100] if url else None,
+                        size_bytes=len(image_bytes),
+                        attempt=attempt + 1
+                    )
+                    return image_bytes
 
-        except httpx.HTTPError as e:
-            logger.error("Failed to download image", url=url[:100] if url else None, error=str(e))
-            raise StorageError(f"Failed to download image: {str(e)}")
+            except httpx.HTTPError as e:
+                error_type = type(e).__name__
+                error_msg = str(e)
+
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 2s, 4s, 8s
+                    wait_time = 2 ** attempt
+                    logger.warning(
+                        f"Download failed, retrying in {wait_time}s",
+                        url=url[:100] if url else None,
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                        error=error_msg,
+                        error_type=error_type,
+                        wait_seconds=wait_time
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    # Last attempt failed - raise error
+                    logger.error(
+                        "Download failed after all retries",
+                        url=url[:100] if url else None,
+                        attempts=max_retries,
+                        error=error_msg,
+                        error_type=error_type
+                    )
+                    raise StorageError(
+                        f"Failed to download image after {max_retries} attempts: {error_type}: {error_msg}"
+                    )
 
     async def download_and_upload(
         self,

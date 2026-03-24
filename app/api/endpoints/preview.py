@@ -790,6 +790,13 @@ async def get_preview_v2(preview_id: str):
                 elif filler_pages_processed and idx in filler_pages_processed:
                     image_url = filler_pages_processed[idx]
 
+                # V2 Fallback: check book_structure for URL (incremental updates)
+                # This is CRITICAL for showing filler pages progressively!
+                if not image_url and book_structure_data:
+                    bs_entry = book_structure_data.get(str(idx)) or book_structure_data.get(idx)
+                    if bs_entry and bs_entry.get("url"):
+                        image_url = bs_entry["url"]
+
             # Get story text for text pages
             story_text = None
             if page_config.text_page_number:

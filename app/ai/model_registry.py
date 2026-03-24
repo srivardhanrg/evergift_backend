@@ -50,7 +50,7 @@ MODELS: Dict[str, ModelConfig] = {
         default_params={
             "numInferenceSteps": 50,
             "guidanceScale": 7.5,
-            "imageSize": {"width": 1024, "height": 1365},  # 4:3 storybook ratio
+            "imageSize": {"width": 1024, "height": 1024},  # Square format for consistency
             "enableSafetyChecker": True,
             "syncMode": True,
             "numImages": 1
@@ -132,8 +132,8 @@ MODELS: Dict[str, ModelConfig] = {
         supports_seed=True,
         timeout_seconds=180,
         default_params={
-            # StoryGift configuration from analysis
-            "aspect_ratio": "1:1",                    # Square aspect ratio for all pages
+            # Square format configuration
+            "aspect_ratio": "1:1",                    # Square format for flipbook viewer
             "negative_prompt": "black bars, letterbox, scope, cinema bars, blurry, low quality, distorted face",
         }
     ),

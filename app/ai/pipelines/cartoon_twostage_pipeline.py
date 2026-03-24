@@ -210,7 +210,7 @@ class CartoonTwoStagePipeline:
         self,
         prompt: str,
         face_url: List[str],  # Changed to support multiple reference images
-        aspect_ratio: str = "5:4",
+        aspect_ratio: str = "1:1",
         seed: Optional[int] = None
     ) -> Dict[str, Any]:
         """
@@ -222,7 +222,7 @@ class CartoonTwoStagePipeline:
         Args:
             prompt: Full scene description with style
             face_url: Child's reference photo URL (required by NanoBanana /edit)
-            aspect_ratio: Image aspect ratio ("5:4" for pages, "1:1" for cover)
+            aspect_ratio: Image aspect ratio (default "1:1" for all pages)
             seed: Optional seed for reproducibility
 
         Returns:
@@ -448,7 +448,7 @@ class CartoonTwoStagePipeline:
         child_age: int,
         child_gender: str,
         analyzed_features: Optional[str] = None,
-        aspect_ratio: str = "5:4",
+        aspect_ratio: str = "1:1",
         seed: Optional[int] = None,
         scene_type: str = "",
         preview_id: str = "",
@@ -469,7 +469,7 @@ class CartoonTwoStagePipeline:
             child_age: Child's age
             child_gender: 'male' or 'female'
             analyzed_features: Not used in two-stage (face comes from photo directly)
-            aspect_ratio: Image aspect ratio
+            aspect_ratio: Image aspect ratio (default "1:1" square)
             seed: Optional seed for reproducibility
             scene_type: Scene type for expression mapping
             preview_id: Preview ID for storage
