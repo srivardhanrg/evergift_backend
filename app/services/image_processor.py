@@ -344,10 +344,12 @@ class ImageProcessor:
             )
 
             # Resize to standard dimensions using high-quality Lanczos resampling
-            background = background.resize(
+            resized_background = background.resize(
                 (DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT),
                 Image.Resampling.LANCZOS
             )
+            background.close()
+            background = resized_background
             width, height = DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT
 
         # Get text styling configuration
@@ -360,8 +362,11 @@ class ImageProcessor:
         if not text or not text.strip():
             logger.warning("No text to overlay, returning original image")
             output = BytesIO()
-            background.convert("RGB").save(output, format="PNG", quality=95)
+            rgb_bg = background.convert("RGB")
+            rgb_bg.save(output, format="PNG", quality=95)
+            rgb_bg.close()
             output.seek(0)
+            background.close()
             return output.getvalue()
 
         # Get colors (page-specific for story pages)
@@ -510,8 +515,19 @@ class ImageProcessor:
 
         # Convert to bytes
         output = BytesIO()
-        result.convert("RGB").save(output, format="PNG", quality=95)
+        rgb_result = result.convert("RGB")
+        rgb_result.save(output, format="PNG", quality=95)
+        rgb_result.close()
+        
         output.seek(0)
+        
+        # Free memory explicitly
+        background.close()
+        text_layer.close()
+        result.close()
+        
+        import gc
+        gc.collect()
 
         logger.info(
             "Text overlay complete",
@@ -621,10 +637,12 @@ class ImageProcessor:
                 cover_url=cover_image_url[:100]
             )
 
-            cover_image = cover_image.resize(
+            resized_cover = cover_image.resize(
                 (DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT),
                 Image.Resampling.LANCZOS
             )
+            cover_image.close()
+            cover_image = resized_cover
             width, height = DEFAULT_PAGE_WIDTH, DEFAULT_PAGE_HEIGHT
 
         # Create overlay layer for gradients and text
@@ -804,8 +822,19 @@ class ImageProcessor:
 
         # Convert to bytes
         output = BytesIO()
-        result.convert("RGB").save(output, format="PNG", quality=95)
+        rgb_result = result.convert("RGB")
+        rgb_result.save(output, format="PNG", quality=95)
+        rgb_result.close()
+        
         output.seek(0)
+
+        # Free memory explicitly
+        cover_image.close()
+        overlay.close()
+        result.close()
+        
+        import gc
+        gc.collect()
 
         logger.info(
             "Cover text overlay complete",

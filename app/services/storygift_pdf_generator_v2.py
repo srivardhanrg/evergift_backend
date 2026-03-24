@@ -131,6 +131,10 @@ class StoryGiftPDFGeneratorV2:
                 with open(tmp_path, 'rb') as f:
                     pdf_bytes = f.read()
 
+                # Force GC to free image buffers
+                import gc
+                gc.collect()
+
                 # Upload to storage
                 storage_path = f"final/{preview_id}/storybook_v2.pdf"
                 pdf_url = await self.storage.upload_pdf(pdf_bytes, storage_path)
@@ -171,12 +175,14 @@ class StoryGiftPDFGeneratorV2:
         """Draw a page with its pre-rendered image."""
         try:
             img = Image.open(BytesIO(image_bytes))
+            converted_img = None
 
             # Ensure correct orientation and mode
             if img.mode not in ('RGB', 'RGBA'):
-                img = img.convert('RGB')
-
-            img_reader = ImageReader(img)
+                converted_img = img.convert('RGB')
+                img_reader = ImageReader(converted_img)
+            else:
+                img_reader = ImageReader(img)
 
             # Draw image to fill entire page (images are 1:1 ratio)
             c.drawImage(
@@ -187,6 +193,10 @@ class StoryGiftPDFGeneratorV2:
                 preserveAspectRatio=True,
                 anchor='c'
             )
+
+            img.close()
+            if converted_img is not None:
+                converted_img.close()
 
             logger.debug(
                 f"Drew page {page_index} ({page_type.value})",
