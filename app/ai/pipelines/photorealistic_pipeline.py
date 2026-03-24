@@ -126,7 +126,7 @@ class PhotorealisticPipeline:
         child_age: int,
         child_gender: str,
         analyzed_features: Optional[str] = None,
-        aspect_ratio: str = "5:4",
+        aspect_ratio: str = "1:1",
         seed: Optional[int] = None,
         face_expression: str = "",
         **kwargs  # Accept extra params (scene_type, preview_id, etc.) from shared caller
@@ -141,7 +141,7 @@ class PhotorealisticPipeline:
             child_age: Child's age for age-appropriate features
             child_gender: Child's gender ('male' or 'female')
             analyzed_features: Pre-analyzed facial features (optional)
-            aspect_ratio: Image aspect ratio (default 5:4 for pages, 1:1 for covers)
+            aspect_ratio: Image aspect ratio (default 1:1 for all pages)
             seed: Random seed for generation
 
         Returns:

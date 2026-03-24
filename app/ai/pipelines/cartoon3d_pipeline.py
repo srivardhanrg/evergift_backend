@@ -217,7 +217,7 @@ class Cartoon3DPipeline:
         child_age: int,
         child_gender: str,
         analyzed_features: Optional[str] = None,
-        aspect_ratio: str = "5:4",  # Default for story pages, use "1:1" for covers
+        aspect_ratio: str = "1:1",  # Square format for all pages
         seed: Optional[int] = None,
         **kwargs  # Accept extra params (scene_type, preview_id, etc.) from shared caller
     ) -> GenerationResult:
@@ -268,7 +268,7 @@ class Cartoon3DPipeline:
                 payload = {
                     "prompt": enhanced_prompt,
                     "image_urls": [face_url],
-                    "aspect_ratio": aspect_ratio,  # 5:4 for pages, 1:1 for cover
+                    "aspect_ratio": aspect_ratio,  # 1:1 square for all pages
                     "negative_prompt": CINEMATIC_NEGATIVE_PROMPT.strip(),
                 }
 

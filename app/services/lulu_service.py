@@ -109,12 +109,8 @@ async def calculate_print_cost(
     elif cover_type == "hardcover":
         pod_package_id = settings.lulu_pod_package_id_hardcover
     else:
-        # Fallback to hardcover for invalid values
-        logger.warning(
-            "Invalid cover_type provided, falling back to hardcover",
-            cover_type=cover_type
-        )
-        pod_package_id = settings.lulu_pod_package_id_hardcover
+        logger.error(f"Invalid cover_type provided for Lulu cost calculation: {cover_type}")
+        raise ValueError(f"Invalid cover_type: '{cover_type}'. Must be 'softcover' or 'hardcover'")
 
     payload = {
         "line_items": [
@@ -213,12 +209,8 @@ async def create_print_job(
     elif cover_type == "hardcover":
         pod_package_id = settings.lulu_pod_package_id_hardcover
     else:
-        # Fallback to hardcover for invalid values
-        logger.warning(
-            "Invalid cover_type provided, falling back to hardcover",
-            cover_type=cover_type
-        )
-        pod_package_id = settings.lulu_pod_package_id_hardcover
+        logger.error(f"Invalid cover_type provided for Lulu print job: {cover_type}")
+        raise ValueError(f"Invalid cover_type: '{cover_type}'. Must be 'softcover' or 'hardcover'")
 
     payload = {
         # contact_email is for Lulu to contact about print issues, NOT customer email

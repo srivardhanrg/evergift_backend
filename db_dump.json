@@ -1,0 +1,262 @@
+{
+  "preview": [
+    {
+      "id": 258,
+      "preview_id": "0c123ca9-b5bf-40f1-9dc5-37397121350a",
+      "session_id": "session-1768761070668-bsuv698uh",
+      "customer_id": "9753398771988",
+      "customer_email": "vishnuvardhan1701@gmail.com",
+      "child_name": "vishnu vardhan",
+      "child_age": 5,
+      "child_gender": "male",
+      "theme": "storygift_enchanted_forest",
+      "style": "photorealistic",
+      "photo_url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/uploads/a96ca159-82c1-43c7-97a2-90c3c4353e86/photo.jpg",
+      "photo_validated": true,
+      "status": "purchased",
+      "pages": [],
+      "created_at": "2026-03-24T15:41:36.886734+00:00",
+      "updated_at": "2026-03-24T15:53:35.012996+00:00",
+      "expires_at": "2026-03-31T15:41:36.886771+00:00",
+      "generation_metadata": {},
+      "generation_approach": null,
+      "generation_cost_inr": null,
+      "step1_cost_inr": null,
+      "step2_cost_inr": null,
+      "generation_latency_ms": null,
+      "success_rate_percent": null,
+      "failed_pages": 0,
+      "step1_model_used": null,
+      "step2_model_used": null,
+      "pdf_url": null,
+      "generation_phase": "pages_complete",
+      "analyzed_features": "the child exactly as shown in the reference photo, preserving all facial features, skin tone, hair texture, and ethnic characteristics with perfect accuracy",
+      "preview_page_count": 14,
+      "total_page_count": 10,
+      "cover_url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/cover_final.png",
+      "notify_on_complete": false,
+      "total_pages": 26,
+      "book_structure": {
+        "0": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/cover_final.png",
+          "type": "cover",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "1": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_01.png",
+          "type": "dedication",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "2": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/intro1.png",
+          "type": "intro",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "3": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/intro2.png",
+          "type": "intro",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "4": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_04.png",
+          "type": "text",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "5": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_01.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "6": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_06.png",
+          "type": "text",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "7": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_02.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "8": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_08.png",
+          "type": "text",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "9": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_03.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "10": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_10.png",
+          "type": "text",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "11": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_04.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "12": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_12.png",
+          "type": "text",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "13": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_05.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_generated": true
+        },
+        "14": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_14.png",
+          "type": "text",
+          "is_locked": true
+        },
+        "15": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_15.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_preview": false,
+          "is_generated": true
+        },
+        "16": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_16.png",
+          "type": "text",
+          "is_locked": true
+        },
+        "17": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_17.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_preview": false,
+          "is_generated": true
+        },
+        "18": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_18.png",
+          "type": "text",
+          "is_locked": true
+        },
+        "19": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_19.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_preview": false,
+          "is_generated": true
+        },
+        "20": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_20.png",
+          "type": "text",
+          "is_locked": true
+        },
+        "21": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_21.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_preview": false,
+          "is_generated": true
+        },
+        "22": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_22.png",
+          "type": "text",
+          "is_locked": true
+        },
+        "23": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/final/0c123ca9-b5bf-40f1-9dc5-37397121350a/page_23.jpg",
+          "type": "generated",
+          "is_locked": false,
+          "is_preview": false,
+          "is_generated": true
+        },
+        "24": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/endpage.png",
+          "type": "end_page",
+          "is_locked": true
+        },
+        "25": {
+          "url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/backcover.png",
+          "type": "back_cover",
+          "is_locked": true
+        }
+      },
+      "filler_pages_processed": {
+        "1": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_01.png",
+        "2": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/intro1.png",
+        "3": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/intro2.png",
+        "4": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_04.png",
+        "6": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_06.png",
+        "8": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_08.png",
+        "10": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_10.png",
+        "12": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_12.png",
+        "14": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_14.png",
+        "16": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_16.png",
+        "18": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_18.png",
+        "20": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_20.png",
+        "22": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/previews/0c123ca9-b5bf-40f1-9dc5-37397121350a/pages/page_22.png",
+        "24": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/endpage.png",
+        "25": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/filler_images/enchanted_forest/photorealistic/backcover.png"
+      },
+      "story_texts": {
+        "4": "The morning sunshine danced through the bedroom window as vishnu vardhan discovered something amazing hidden under a fuzzy rug. 'Look!' vishnu vardhan shouted with excitement, 'An adventure is waiting!'",
+        "6": "The map was unlike anything vishnu vardhan had ever seen before. It showed a winding path through an enchanted forest, a purple singing stream, and mountains that looked like soft pillows. There was even an 'X' marking the treasure spot!",
+        "8": "Stepping into the enchanted forest felt like entering a dream. Giant trees with heart-shaped leaves sparkled in the sunlight, and a shimmering silver trail of magical dust wound through the emerald grass. 'So shiny!' vishnu vardhan whispered in wonder.",
+        "10": "Suddenly, a friendly brown squirrel hopped down from a nearby tree. 'Hello there!' squeaked Pip, waving a tiny paw. 'I'm Pip! Follow the silver trail, vishnu vardhan, and I'll show you the way to the most magical places in the forest!'",
+        "12": "The silver trail led to the most amazing discovery yet - the Singing Stream! The crystal-clear water bubbled and gurgled in perfect harmony, and purple stepping stones created a path across. 'Hop! Hop!' laughed vishnu vardhan, dancing from stone to stone.",
+        "14": "Each time vishnu vardhan stepped on a stone, the water sang a different note! The ripples formed magical musical symbols that danced across the surface, creating the most beautiful melody the forest had ever heard.",
+        "16": "Beyond the stream rose the most incredible sight - the Whispering Mountains! But these weren't ordinary mountains made of rock and stone. They were enormous, fluffy pillows of purple and pink velvet that reached toward the smiling sun. 'Giant pillows!' gasped vishnu vardhan.",
+        "18": "Climbing the pillow mountains was like bouncing on the world's softest, most magical bed. With each step, feathers danced through the air like gentle snowflakes, and the whole mountainside whispered secrets of ancient adventures.",
+        "20": "At the summit, the view was breathtaking. The entire enchanted world spread out below like a living fairytale - the sparkling forest, the musical stream, and valleys filled with wonder. 'Best adventure ever,' whispered vishnu vardhan, sitting beside faithful Pip.",
+        "22": "As the golden sun painted the sky in magical colors, vishnu vardhan knew this was just the beginning of many adventures to come. With a gentle hug, Pip whispered, 'See you next time, brave explorer!' And vishnu vardhan smiled, knowing the enchanted forest would always be there, waiting for the next magical journey."
+      },
+      "child_photo_url": "https://pub-eab76058d817412b9c6c9726ff8ae49e.r2.dev/uploads/a96ca159-82c1-43c7-97a2-90c3c4353e86/photo.jpg",
+      "generation_progress": 90,
+      "current_generating_page": null
+    }
+  ],
+  "order": [
+    {
+      "id": 95,
+      "order_id": "6923410702612",
+      "order_number": "1062",
+      "customer_id": null,
+      "customer_email": "vishnuvardhan1701@gmail.com",
+      "customer_name": "vishnu vardhan",
+      "preview_id": "0c123ca9-b5bf-40f1-9dc5-37397121350a",
+      "status": "generating_pdf",
+      "hq_images": [],
+      "pdf_url": null,
+      "pdf_generated_at": null,
+      "shipping_address": null,
+      "tracking_number": null,
+      "generation_attempts": 0,
+      "last_error": null,
+      "error_message": null,
+      "retry_count": 0,
+      "total_amount": null,
+      "currency": null,
+      "payment_method": null,
+      "is_development_order": false,
+      "created_at": "2026-03-24T15:51:38.781104+00:00",
+      "updated_at": "2026-03-24T15:51:39.569778+00:00",
+      "completed_at": null,
+      "expires_at": "2026-04-23T15:51:38.78111+00:00",
+      "order_type": "physical",
+      "book_format": "split_page",
+      "cover_type": "hardcover"
+    }
+  ],
+  "print_order": []
+}

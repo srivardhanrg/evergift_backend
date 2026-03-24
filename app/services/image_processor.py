@@ -13,7 +13,7 @@ Designed for $40 premium storybook quality.
 import structlog
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from io import BytesIO
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 import os
 
 from app.config.text_styling import (
@@ -49,7 +49,7 @@ class ImageProcessor:
 
     def __init__(self):
         self.storage = StorageService()
-        self._fonts_cache: dict[str, ImageFont.FreeTypeFont] = {}
+        self._fonts_cache: Dict[str, ImageFont.FreeTypeFont] = {}
         self._fonts_loaded = False
 
     def _load_font(self, font_family: str, font_size: int) -> ImageFont.FreeTypeFont:
@@ -647,13 +647,13 @@ class ImageProcessor:
 
         # Calculate title position with letter-spacing
         story_title_upper = story_title.upper()
-        letter_spacing = 8  # Premium letter-spacing in pixels
+        letter_spacing = int(8)  # Premium letter-spacing in pixels
 
         # Calculate total width with letter-spacing
         total_title_width = 0
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
             total_title_width += char_width + letter_spacing
         total_title_width -= letter_spacing  # Remove spacing after last character
 
@@ -668,10 +668,10 @@ class ImageProcessor:
         current_x = title_x
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
 
             # Draw text stroke (white outline for depth)
-            stroke_width = 2
+            stroke_width = int(2)
             for dx in range(-stroke_width, stroke_width + 1):
                 for dy in range(-stroke_width, stroke_width + 1):
                     if dx*dx + dy*dy <= stroke_width*stroke_width:
@@ -683,7 +683,7 @@ class ImageProcessor:
                         )
 
             # Draw shadow
-            shadow_offset = 3
+            shadow_offset = int(3)
             draw.text(
                 (current_x + shadow_offset, title_y + shadow_offset),
                 char,
@@ -720,13 +720,13 @@ class ImageProcessor:
 
         # "STARRING" label with letter-spacing
         starring_text = "STARRING"
-        starring_letter_spacing = 6
+        starring_letter_spacing = int(6)
 
         # Calculate total width with letter-spacing
         total_starring_width = 0
         for char in starring_text:
             char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
             total_starring_width += char_width + starring_letter_spacing
         total_starring_width -= starring_letter_spacing
 
@@ -737,7 +737,7 @@ class ImageProcessor:
         current_x = starring_x
         for char in starring_text:
             char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
 
             draw.text(
                 (current_x, starring_y),
@@ -750,13 +750,13 @@ class ImageProcessor:
 
         # Child name (bold, uppercase) with premium letter-spacing
         child_name_upper = child_name.upper()
-        name_letter_spacing = 8
+        name_letter_spacing = int(8)
 
         # Calculate total width with letter-spacing
         total_name_width = 0
         for char in child_name_upper:
             char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
             total_name_width += char_width + name_letter_spacing
         total_name_width -= name_letter_spacing
 
@@ -767,10 +767,10 @@ class ImageProcessor:
         current_x = name_x
         for char in child_name_upper:
             char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
-            char_width = char_bbox[2] - char_bbox[0]
+            char_width = int(char_bbox[2] - char_bbox[0])
 
             # Draw text stroke (subtle outline)
-            stroke_width = 2
+            stroke_width = int(2)
             for dx in range(-stroke_width, stroke_width + 1):
                 for dy in range(-stroke_width, stroke_width + 1):
                     if dx*dx + dy*dy <= stroke_width*stroke_width:

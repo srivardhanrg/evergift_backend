@@ -28,6 +28,7 @@ class CreationItem(BaseModel):
     cover_url: Optional[str] = None
     status: str
     payment_status: str  # "unpaid" or "paid"
+    order_type: Optional[str] = None
     created_at: str
     expires_at: str
     days_remaining: int
@@ -121,10 +122,13 @@ async def get_my_creations(request: Request):
         all_previews = result.data or []
         all_preview_ids = [p["preview_id"] for p in all_previews]
         paid_previews = set()
+        order_types_map = {}
 
         if all_preview_ids:
-            orders = db.table("orders").select("preview_id").in_("preview_id", all_preview_ids).execute()
-            paid_previews = {o["preview_id"] for o in (orders.data or [])}
+            orders = db.table("orders").select("preview_id, order_type").in_("preview_id", all_preview_ids).execute()
+            for o in (orders.data or []):
+                paid_previews.add(o["preview_id"])
+                order_types_map[o["preview_id"]] = o.get("order_type")
 
         # Filter out expired previews in Python (paid orders are exempt from expiry)
         previews = []
@@ -165,6 +169,7 @@ async def get_my_creations(request: Request):
                 cover_url=cover_url,
                 status=p["status"],
                 payment_status="paid" if p["preview_id"] in paid_previews else "unpaid",
+                order_type=order_types_map.get(p["preview_id"]),
                 created_at=p["created_at"],
                 expires_at=p["expires_at"],
                 days_remaining=calculate_days_remaining(p["expires_at"]),

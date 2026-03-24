@@ -243,7 +243,7 @@ async def generate_storygift_preview(
                 child_age=child_age,
                 child_gender=child_gender,
                 analyzed_features=analyzed_features,
-                aspect_ratio="1:1",  # Cover is square for PDF, story pages use 5:4
+                aspect_ratio="1:1",  # Square format for all pages
                 scene_type="cover",
                 preview_id=preview_id,
                 page_number=0  # Cover is page 0
@@ -485,7 +485,7 @@ async def generate_storygift_preview(
                     child_age=child_age,
                     child_gender=child_gender,
                     analyzed_features=analyzed_features,
-                    aspect_ratio="5:4",  # Explicit — prevents black bars / letterboxing
+                    aspect_ratio="1:1",  # Square format for consistency with flipbook viewer
                     scene_type=scene_type,
                     preview_id=preview_id,
                     page_number=page_num,
@@ -726,6 +726,56 @@ async def generate_storygift_preview(
                 page_data["url"] = filler_pages_processed.get(page_config.index)
 
             book_structure[page_key] = page_data
+
+        # ============================================
+        # CRITICAL VALIDATION: Ensure ALL preview pages have URLs
+        # ============================================
+        # Check that all AI-generated preview pages have valid URLs
+        missing_ai_pages = []
+        for idx in PREVIEW_AI_INDICES:  # [0, 5, 7, 9, 11, 13]
+            page_data = book_structure.get(str(idx))
+            if not page_data or not page_data.get("url"):
+                missing_ai_pages.append(idx)
+
+        # Check that all filler preview pages have valid URLs
+        missing_filler_pages = []
+        preview_filler_indices = [1, 2, 3, 4, 6, 8, 10, 12]  # Dedication, Intro1, Intro2, Text1-5
+        for idx in preview_filler_indices:
+            page_data = book_structure.get(str(idx))
+            if not page_data or not page_data.get("url"):
+                missing_filler_pages.append(idx)
+
+        # FAIL FAST: If any preview pages are missing URLs, fail the generation
+        if missing_ai_pages or missing_filler_pages:
+            error_msg = f"Preview generation incomplete - Missing AI pages: {missing_ai_pages}, Missing filler pages: {missing_filler_pages}"
+            logger.error(
+                error_msg,
+                preview_id=preview_id,
+                job_id=job_id,
+                missing_ai_pages=missing_ai_pages,
+                missing_filler_pages=missing_filler_pages,
+                book_structure_size=len(book_structure)
+            )
+
+            await update_preview_status(
+                preview_id=preview_id,
+                status=PreviewStatus.FAILED
+            )
+
+            await update_job_status(
+                job_id=job_id,
+                status=JobStatus.FAILED,
+                error=error_msg
+            )
+            return
+
+        logger.info(
+            "Preview validation passed - all pages have URLs",
+            preview_id=preview_id,
+            preview_ai_pages=len(PREVIEW_AI_INDICES),
+            preview_filler_pages=len(preview_filler_indices),
+            total_preview_pages=len(PREVIEW_AI_INDICES) + len(preview_filler_indices)
+        )
 
         # ============================================
         # PHASE 3: Finalize Preview (95% to 100%)

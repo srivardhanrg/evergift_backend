@@ -78,36 +78,75 @@ class StoryGiftPDFGeneratorV2:
         """
         try:
             logger.info(
-                "Starting V2 PDF generation",
+                "Starting V2 PDF generation (sequential to save memory)",
                 preview_id=preview_id,
                 page_count=len(page_urls),
                 total_expected=TOTAL_PAGE_COUNT
             )
 
-            # Download all page images in parallel
-            page_images = await self._download_all_images(page_urls)
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                tmp_path = tmp.name
 
-            # Generate PDF
-            pdf_bytes = self._create_pdf(
-                page_images=page_images,
-                story_title=story_title,
-                child_name=child_name,
-                add_blank_back_page=add_blank_back_page,
-            )
+            try:
+                c = canvas.Canvas(tmp_path, pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
+                successful_pages = 0
 
-            # Upload to storage
-            storage_path = f"final/{preview_id}/storybook_v2.pdf"
-            pdf_url = await self.storage.upload_pdf(pdf_bytes, storage_path)
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    for page_config in BOOK_STRUCTURE:
+                        idx = page_config.index
+                        url = page_urls.get(idx)
+                        
+                        image_bytes = None
+                        if url:
+                            try:
+                                response = await client.get(url)
+                                response.raise_for_status()
+                                image_bytes = response.content
+                                successful_pages += 1
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to download page {idx}: {e}",
+                                    page_index=idx
+                                )
+                                
+                        if image_bytes:
+                            self._draw_page(c, image_bytes, idx, page_config.page_type)
+                            # Help garbage collection
+                            image_bytes = None
+                        else:
+                            # Draw placeholder for missing pages
+                            self._draw_placeholder_page(
+                                c, idx, page_config.page_type, story_title, child_name
+                            )
+                        c.showPage()
+                
+                # Add blank back page for Lulu physical orders
+                if add_blank_back_page:
+                    self._draw_blank_page(c)
+                    c.showPage()
 
-            page_count = len([p for p in page_images.values() if p is not None])
-            total_pages = page_count + (1 if add_blank_back_page else 0)
+                c.save()
+
+                # Read the generated PDF
+                with open(tmp_path, 'rb') as f:
+                    pdf_bytes = f.read()
+
+                # Upload to storage
+                storage_path = f"final/{preview_id}/storybook_v2.pdf"
+                pdf_url = await self.storage.upload_pdf(pdf_bytes, storage_path)
+                
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
+            total_pdf_pages = len(BOOK_STRUCTURE) + (1 if add_blank_back_page else 0)
 
             logger.info(
                 "V2 PDF generated successfully",
                 preview_id=preview_id,
                 pdf_url=pdf_url[:80],
-                pages_included=page_count,
-                total_pdf_pages=total_pages,
+                pages_included=successful_pages,
+                total_pdf_pages=total_pdf_pages,
                 has_blank_back=add_blank_back_page,
                 size_bytes=len(pdf_bytes)
             )
@@ -121,94 +160,6 @@ class StoryGiftPDFGeneratorV2:
                 error=str(e)
             )
             raise StorageError(f"PDF generation failed: {str(e)}")
-
-    async def _download_all_images(
-        self,
-        page_urls: Dict[int, str]
-    ) -> Dict[int, Optional[bytes]]:
-        """Download all page images in parallel."""
-        async with httpx.AsyncClient(timeout=60.0) as client:
-
-            async def fetch(page_index: int, url: str):
-                try:
-                    response = await client.get(url)
-                    response.raise_for_status()
-                    return page_index, response.content
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to download page {page_index}: {e}",
-                        page_index=page_index
-                    )
-                    return page_index, None
-
-            # Build download tasks
-            tasks = [
-                fetch(idx, url)
-                for idx, url in page_urls.items()
-                if url  # Skip None URLs
-            ]
-
-            # Download all images concurrently
-            results = await asyncio.gather(*tasks)
-
-        images = {idx: data for idx, data in results}
-        successful = sum(1 for data in images.values() if data is not None)
-        logger.info(
-            f"Downloaded {successful}/{len(tasks)} page images",
-            successful=successful,
-            total=len(tasks)
-        )
-        return images
-
-    def _create_pdf(
-        self,
-        page_images: Dict[int, Optional[bytes]],
-        story_title: str,
-        child_name: str,
-        add_blank_back_page: bool = False,
-    ) -> bytes:
-        """Create the PDF from page images."""
-
-        # Create temporary file for PDF
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-            tmp_path = tmp.name
-
-        try:
-            # Create canvas
-            c = canvas.Canvas(tmp_path, pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
-
-            # Process pages in order (0-25)
-            for page_config in BOOK_STRUCTURE:
-                idx = page_config.index
-                image_bytes = page_images.get(idx)
-
-                if image_bytes:
-                    self._draw_page(c, image_bytes, idx, page_config.page_type)
-                else:
-                    # Draw placeholder for missing pages
-                    self._draw_placeholder_page(
-                        c, idx, page_config.page_type, story_title, child_name
-                    )
-
-                c.showPage()
-
-            # Add blank back page for Lulu physical orders
-            if add_blank_back_page:
-                self._draw_blank_page(c)
-                c.showPage()
-
-            c.save()
-
-            # Read the generated PDF
-            with open(tmp_path, 'rb') as f:
-                pdf_bytes = f.read()
-
-            return pdf_bytes
-
-        finally:
-            # Clean up temp file
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
 
     def _draw_page(
         self,

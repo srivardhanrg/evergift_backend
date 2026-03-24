@@ -326,14 +326,14 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         order = order_resp.data[0]
 
         # Read cover_type early — needed for PDF generation (spine, safety zone)
-        cover_type = order.get("cover_type", "hardcover")
+        cover_type = order.get("cover_type")
         if not cover_type or cover_type not in ("softcover", "hardcover"):
-            logger.warning(
-                "Invalid or missing cover_type in order, defaulting to hardcover",
+            logger.error(
+                "Missing or invalid cover_type in order. Cannot proceed with print job.",
                 order_id=order_id,
                 cover_type=cover_type,
             )
-            cover_type = "hardcover"
+            raise ValueError(f"Missing or invalid cover_type '{cover_type}' for physical order")
         logger.info("Cover type for this order", order_id=order_id, cover_type=cover_type)
 
         child_name = preview.get("child_name", "Child")
