@@ -529,21 +529,61 @@ async def get_preview(preview_id: str):
                     is_watermarked=False,  # No watermark for paid users
                     is_locked=False
                 ))
-        else:
+        elif preview.get("preview_images"):
             # For unpaid or in-progress: show first 5 watermarked
-            if preview.get("preview_images"):
-                for img_data in preview["preview_images"]:
-                    story_page = next(
-                        (sp for sp in preview["story_pages"] if sp["page"] == img_data["page"]),
-                        None
-                    )
-                    preview_pages.append(PageData(
-                        page_number=img_data["page"],
-                        image_url=img_data["url"],
-                        story_text=story_page["text"] if story_page else "",
-                        is_watermarked=not is_purchased,  # No watermark if purchased
-                        is_locked=False
+            for img_data in preview["preview_images"]:
+                story_page = next(
+                    (sp for sp in preview["story_pages"] if sp["page"] == img_data["page"]),
+                    None
+                )
+                preview_pages.append(PageData(
+                    page_number=img_data["page"],
+                    image_url=img_data["url"],
+                    story_text=story_page["text"] if story_page else "",
+                    is_watermarked=not is_purchased,  # No watermark if purchased
+                    is_locked=False
+                ))
+
+        # V2 fallback: if no pages from old format, extract from book_structure
+        # V2 generation stores pages in book_structure JSONB, not preview_images/hires_images
+        book_structure_data = preview.get("book_structure")
+        story_texts = preview.get("story_texts")
+        if len(preview_pages) <= 1 and book_structure_data:
+            # Cover may already be added (page 0); add AI-generated story pages from book_structure
+            # Map book_structure indices to old-style page numbers for frontend compatibility
+            # AI pages are at indices: 5,7,9,11,13 (preview) and 15,17,19,21,23 (locked)
+            ai_index_to_page = {5: 1, 7: 2, 9: 3, 11: 4, 13: 5, 15: 6, 17: 7, 19: 8, 21: 9, 23: 10}
+            for idx_str, page_data in book_structure_data.items():
+                try:
+                    idx = int(idx_str)
+                except (ValueError, TypeError):
+                    continue
+                if idx == 0 and not cover_url and page_data.get("url"):
+                    # Cover from book_structure
+                    cover_url = page_data["url"]
+                    preview_pages.insert(0, PageData(
+                        page_number=0,
+                        image_url=cover_url,
+                        story_text="",
+                        is_watermarked=not is_purchased,
+                        is_locked=False,
+                        is_cover=True
                     ))
+                elif idx in ai_index_to_page and page_data.get("url"):
+                    old_page_num = ai_index_to_page[idx]
+                    # Preview pages are 1-5 (indices 5,7,9,11,13), locked are 6-10
+                    is_preview_page = old_page_num <= 5
+                    if is_preview_page or is_purchased:
+                        text = ""
+                        if story_texts:
+                            text = story_texts.get(str(old_page_num)) or story_texts.get(old_page_num) or ""
+                        preview_pages.append(PageData(
+                            page_number=old_page_num,
+                            image_url=page_data["url"],
+                            story_text=text if isinstance(text, str) else "",
+                            is_watermarked=not is_purchased,
+                            is_locked=False
+                        ))
 
         # Prepare locked pages (pages 6-10)
         # Only show for unpaid users in preview phase
