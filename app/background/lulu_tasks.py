@@ -116,15 +116,13 @@ def _collect_pages_v2(preview: dict) -> list:
     """
     preview_id = preview.get("preview_id", "unknown")
 
-    # Get book structure
+    # Get book structure — stored as flat dict: {"0": {"url": "..."}, "1": {"url": "..."}, ...}
     book_structure = preview.get("book_structure") or {}
     if isinstance(book_structure, str):
         try:
             book_structure = json.loads(book_structure)
         except Exception:
             book_structure = {}
-
-    book_pages = book_structure.get("pages") or []
 
     # Get story texts for text pages
     story_texts = preview.get("story_texts") or {}
@@ -134,18 +132,16 @@ def _collect_pages_v2(preview: dict) -> list:
         except Exception:
             story_texts = {}
 
-    # Build index → page mapping for fast lookup
-    pages_by_index = {p.get("index"): p for p in book_pages}
-
     # Collect all interior pages (indices 1-24)
     pages = []
     missing_pages = []
     missing_images = []
 
     for page_index in range(1, 25):  # Indices 1 through 24 inclusive
-        page = pages_by_index.get(page_index)
+        # book_structure uses string keys: "0", "1", ..., "25"
+        page = book_structure.get(str(page_index)) or book_structure.get(page_index)
 
-        if not page:
+        if not page or not isinstance(page, dict):
             missing_pages.append(page_index)
             logger.error(
                 "Interior page missing from book_structure",
@@ -154,27 +150,26 @@ def _collect_pages_v2(preview: dict) -> list:
             )
             continue
 
-        # Validate that page has an image
-        image_url = page.get("imageUrl")
+        # Validate that page has an image — field is "url" (not "imageUrl")
+        image_url = page.get("url") or page.get("imageUrl")
         if not image_url:
             missing_images.append(page_index)
             logger.error(
-                "Interior page missing imageUrl",
+                "Interior page missing image URL",
                 preview_id=preview_id,
                 page_index=page_index,
-                page_type=page.get("pageType")
+                page_keys=list(page.keys())
             )
             continue
 
         # Get story text for text pages
         story_text = ""
-        if page.get("pageType") == "text":
-            # story_texts uses string keys (book indices)
+        if story_texts:
             story_text = story_texts.get(str(page_index), "")
 
         # Lulu page number = sequential 1-24
         pages.append({
-            "page_number": page_index,  # Use index directly as page_number
+            "page_number": page_index,
             "image_url": image_url,
             "story_text": story_text,
         })
@@ -381,27 +376,35 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             except Exception:
                 hires = []
 
+        # V2 uses book_structure instead of hires_images
+        book_structure = preview.get("book_structure") or {}
+        v2_page_count = len(book_structure) if isinstance(book_structure, dict) else 0
+        total_pages = len(hires) or v2_page_count
+
         phase = preview.get("generation_phase", "")
-        # Valid phases: pages_complete (legacy), preparing_print (new physical flow), complete (digital)
+        # Valid phases: pages_complete (legacy), preparing_print (new physical flow),
+        # complete (digital), print_failed (retry after previous Lulu failure)
         valid_phases = (
             GenerationPhase.PAGES_COMPLETE.value,
             GenerationPhase.PREPARING_PRINT.value,
             GenerationPhase.COMPLETE.value,
+            "print_failed",
         )
-        if phase not in valid_phases and len(hires) < 10:
+        if phase not in valid_phases and total_pages < 10:
             logger.error(
                 "Pages not ready for Lulu submission — this should not happen "
                 "since we're called after PDF generation",
                 phase=phase,
-                pages=len(hires),
+                pages_hires=len(hires),
+                pages_v2=v2_page_count,
                 preview_id=preview_id
             )
             raise RuntimeError(
-                f"Pages not ready: phase={phase}, pages={len(hires)}. "
+                f"Pages not ready: phase={phase}, pages={total_pages}. "
                 "submit_lulu_print_job must be called after PDF generation."
             )
 
-        logger.info("Pages verified ready for Lulu", pages=len(hires), preview_id=preview_id)
+        logger.info("Pages verified ready for Lulu", pages=total_pages, preview_id=preview_id)
 
         # ----------------------------------------------------------------
         # 4. Collect interior pages and resolve cover image URL
@@ -421,9 +424,15 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         cover_image_url = preview.get("cover_url") or None
         cover_url_source = "preview.cover_url"
 
+        if not cover_image_url and book_structure:
+            # V2 fallback: cover is at index 0 in book_structure
+            cover_data = book_structure.get("0") or book_structure.get(0)
+            if isinstance(cover_data, dict) and cover_data.get("url"):
+                cover_image_url = cover_data["url"]
+                cover_url_source = "book_structure[0]_fallback"
+
         if not cover_image_url:
-            # Fallback for legacy orders where cover_url column may not be populated:
-            # use the first hires_image (page 1) as the cover image.
+            # Legacy fallback: use the first interior page as the cover image
             cover_page = next((p for p in pages if p["page_number"] == 1), None)
             cover_image_url = cover_page["image_url"] if cover_page else None
             cover_url_source = "hires_images[page_1]_fallback"
