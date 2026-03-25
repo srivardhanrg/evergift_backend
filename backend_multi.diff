@@ -1,0 +1,614 @@
+﻿commit d76cc94ca43a64e089af242cc9c74c81b26546ab
+Author: srivardhanrg <srivardhan.gudibanda@gmail.com>
+Date:   Tue Mar 24 22:44:28 2026 +0530
+
+    feat: multi-face quality scoring, bug fixes, and photo_urls migration
+    
+    - Real face quality scoring (confidence 40%, face area 30%, sharpness 30%)
+    - Photos sorted by quality; best photo passed to Segmind face swap
+    - Fix preview.py to use photo_urls[0] instead of missing photo_url attr
+    - Fix storygift_tasks.py post-payment to read photo_urls JSONB from DB
+    - Fix retry endpoint wrong kwarg name for photo_urls
+    - Add migration 031 to add photo_urls JSONB column to previews table
+    
+    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
+diff --git a/app/ai/pipelines/cartoon_twostage_pipeline.py b/app/ai/pipelines/cartoon_twostage_pipeline.py
+index 5e70cb8..f69f071 100644
+--- a/app/ai/pipelines/cartoon_twostage_pipeline.py
++++ b/app/ai/pipelines/cartoon_twostage_pipeline.py
+@@ -209,7 +209,7 @@ class CartoonTwoStagePipeline:
+     async def _generate_scene(
+         self,
+         prompt: str,
+-        face_url: str,
++        face_url: List[str],  # Changed to support multiple reference images
+         aspect_ratio: str = "5:4",
+         seed: Optional[int] = None
+     ) -> Dict[str, Any]:
+@@ -241,7 +241,7 @@ class CartoonTwoStagePipeline:
+                 "prompt": full_prompt,
+                 "negative_prompt": PREMIUM_CARTOON_NEGATIVE.strip(),
+                 "aspect_ratio": aspect_ratio,
+-                "image_urls": [face_url],  # Required by NanoBanana /edit - rough face placement
++                "image_urls": face_url,  # face_url is now a list - pass all references
+             }
+ 
+             if seed:
+@@ -300,7 +300,7 @@ class CartoonTwoStagePipeline:
+     async def _face_swap_segmind(
+         self,
+         scene_image_url: str,
+-        child_photo_url: str,
++        child_photo_urls: List[str],  # Changed to support multiple photos
+         expression_prompt: str = "",
+         preview_id: str = "",
+         page_number: int = 0
+@@ -313,7 +313,7 @@ class CartoonTwoStagePipeline:
+ 
+         Args:
+             scene_image_url: Cartoon scene from Stage 1
+-            child_photo_url: Child's real photo
++            child_photo_urls: List of child's real photos (will select best for swap)
+             expression_prompt: Optional expression guidance (e.g., "happy, smiling")
+             preview_id: For R2 storage path
+             page_number: For R2 storage path
+@@ -324,6 +324,14 @@ class CartoonTwoStagePipeline:
+         start_time = time.time()
+ 
+         try:
++            # Select best photo for face swap
++            # Photos arrive pre-sorted by quality score (best first from upload endpoint)
++            best_photo_url = child_photo_urls[0] if child_photo_urls else None
++            if not best_photo_url:
++                return {"success": False, "error": "No photo URLs provided for face swap"}
++
++            logger.info(f"Using best photo (1/{len(child_photo_urls)}) for face swap",
++                       selected_url=best_photo_url[:60] if best_photo_url else None)
+             logger.info(
+                 "Stage 2: Segmind face swap starting",
+                 expression=expression_prompt[:50] if expression_prompt else "natural",
+@@ -336,7 +344,7 @@ class CartoonTwoStagePipeline:
+             page_seed = int(hashlib.md5(f"{preview_id}_{page_number}_stage2".encode()).hexdigest()[:8], 16) % 2147483647
+ 
+             payload = {
+-                "source_image": child_photo_url,    # Child's real face
++                "source_image": best_photo_url,     # Selected child's real face
+                 "target_image": scene_image_url,    # Cartoon scene
+                 "face_strength": 0.85,              # High identity preservation
+                 "style_strength": 0.75,             # Adapt to cartoon style
+@@ -435,7 +443,7 @@ class CartoonTwoStagePipeline:
+     async def generate_with_face_analysis(
+         self,
+         prompt: str,
+-        face_url: str,
++        face_url: List[str],  # Changed to support multiple reference images
+         child_name: str,
+         child_age: int,
+         child_gender: str,
+@@ -528,7 +536,7 @@ class CartoonTwoStagePipeline:
+             # ==========================================
+             swap_result = await self._face_swap_segmind(
+                 scene_image_url=scene_url,
+-                child_photo_url=face_url,
++                child_photo_urls=face_url,  # Pass all photos
+                 expression_prompt=expression_prompt,
+                 preview_id=preview_id,
+                 page_number=page_number
+@@ -593,7 +601,7 @@ class CartoonTwoStagePipeline:
+     async def generate_all_pages(
+         self,
+         story_pages: List[Dict[str, Any]],
+-        face_url: str,
++        face_url: List[str],  # Changed to support multiple reference images
+         child_name: str,
+         child_age: int,
+         child_gender: str,
+@@ -605,7 +613,7 @@ class CartoonTwoStagePipeline:
+ 
+         Args:
+             story_pages: List of page data with prompts and scene_type
+-            face_url: Child's reference photo URL
++            face_url: List of child's reference photo URLs (1-3 images)
+             child_name: Child's name
+             child_age: Child's age
+             child_gender: 'male' or 'female'
+diff --git a/app/ai/pipelines/photorealistic_pipeline.py b/app/ai/pipelines/photorealistic_pipeline.py
+index 7932f88..16ab59f 100644
+--- a/app/ai/pipelines/photorealistic_pipeline.py
++++ b/app/ai/pipelines/photorealistic_pipeline.py
+@@ -121,7 +121,7 @@ class PhotorealisticPipeline:
+     async def generate_with_face_analysis(
+         self,
+         prompt: str,
+-        face_url: str,
++        face_url: List[str],  # Changed to support multiple reference images
+         child_name: str,
+         child_age: int,
+         child_gender: str,
+@@ -178,7 +178,7 @@ class PhotorealisticPipeline:
+             async with httpx.AsyncClient(timeout=60.0) as client:
+                 payload = {
+                     "prompt": enhanced_prompt,
+-                    "image_urls": [face_url],
++                    "image_urls": face_url,  # face_url is now a list of URLs
+                     "aspect_ratio": aspect_ratio,
+                     "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
+                 }
+diff --git a/app/api/endpoints/preview.py b/app/api/endpoints/preview.py
+index f058cd9..be8968b 100644
+--- a/app/api/endpoints/preview.py
++++ b/app/api/endpoints/preview.py
+@@ -102,11 +102,13 @@ async def create_preview(
+         db_check = get_db()
+         cutoff_time = datetime.utcnow() - timedelta(seconds=30)
+ 
+-        # Check for recent preview with same photo and session
++        # Check for recent preview with same primary photo and session
++        # Use first photo URL as primary identifier for duplicate detection
++        primary_photo_url = preview_request.photo_urls[0]
+         # Note: Using simple .eq() queries only for Supabase compatibility
+         duplicate_check = db_check.table("previews").select(
+             "preview_id, created_at"
+-        ).eq("photo_url", preview_request.photo_url).eq(
++        ).eq("photo_url", primary_photo_url).eq(
+             "session_id", session_id
+         ).order("created_at", desc=True).limit(1).execute()
+ 
+@@ -205,8 +207,8 @@ async def create_preview(
+             "child_gender": preview_request.child_gender,
+             "theme": preview_request.theme.value,
+             "style": preview_request.style.value,
+-            "photo_url": preview_request.photo_url,
+-            "child_photo_url": preview_request.photo_url,  # Store for post-payment generation
++            "photo_url": preview_request.photo_urls[0],  # Primary photo for duplicate detection
++            "photo_urls": preview_request.photo_urls,     # All photos (JSONB) for multi-face generation
+             "photo_validated": True,
+             "status": PreviewStatus.GENERATING.value,
+             "generation_phase": "preview",  # V2 generation phase
+@@ -247,7 +249,7 @@ async def create_preview(
+             generate_full_preview,
+             job_id=job_id,
+             preview_id=preview_id,
+-            photo_url=preview_request.photo_url,
++            photo_urls=preview_request.photo_urls,
+             child_name=preview_request.child_name,
+             child_age=preview_request.child_age,
+             child_gender=preview_request.child_gender,
+@@ -414,7 +416,7 @@ async def retry_preview_generation(
+             generate_full_preview,
+             job_id=new_job_id,
+             preview_id=preview_id,
+-            photo_url=preview["photo_url"],
++            photo_urls=preview.get("photo_urls") or [preview["photo_url"]],
+             child_name=preview["child_name"],
+             child_age=preview["child_age"],
+             child_gender=preview["child_gender"],
+diff --git a/app/api/endpoints/upload.py b/app/api/endpoints/upload.py
+index 0aaf816..2465e28 100644
+--- a/app/api/endpoints/upload.py
++++ b/app/api/endpoints/upload.py
+@@ -5,10 +5,10 @@ Photo upload endpoint.
+ import uuid
+ import imghdr
+ from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Request
+-from typing import Optional
++from typing import Optional, List
+ import structlog
+ 
+-from app.models.schemas import PhotoUploadResponse, ErrorResponse
++from app.models.schemas import PhotoUploadResponse, PhotoData, ErrorResponse
+ from app.services.face_validation import FaceValidationService
+ from app.services.storage import StorageService
+ from app.core.exceptions import FaceValidationError, StorageError
+@@ -49,80 +49,126 @@ def validate_image_magic_bytes(file_bytes: bytes) -> str:
+     return image_type
+ 
+ 
+-@router.post("/upload-photo", response_model=PhotoUploadResponse)
++@router.post("/upload-photos", response_model=PhotoUploadResponse)
+ @limiter.limit("10/minute")
+-async def upload_photo(
++async def upload_photos(
+     request: Request,
+-    photo: UploadFile = File(..., description="Child's photo for face validation"),
++    photos: List[UploadFile] = File(..., min_items=1, max_items=3, description="Child's photos (1-3 images)"),
+     session_id: Optional[str] = Form(None, description="Optional session ID")
+ ):
+     """
+-    Upload and validate child photo.
++    Upload and validate 1-3 child photos.
+ 
+-    - Validates file type and size
++    - Validates file type and size for each photo
+     - Detects and validates face presence
+-    - Uploads to storage if valid
+-    - Returns photo URL for use in preview creation
++    - Uploads all photos to storage
++    - Returns all photo URLs (accepts if ANY photo passes validation)
+     """
+ 
+     try:
+-        logger.info("Photo upload started", filename=photo.filename, session_id=session_id)
+-
+-        # Read file bytes first
+-        photo_bytes = await photo.read()
+-
+-        # Validate file size (10MB limit)
+-        if len(photo_bytes) > 10 * 1024 * 1024:  # 10MB
++        if len(photos) > 3:
+             raise HTTPException(
+                 status_code=400,
+-                detail="File too large. Please upload an image smaller than 10MB."
++                detail="Maximum 3 photos allowed"
+             )
+ 
+-        # Validate image by magic bytes (more secure than Content-Type header)
+-        detected_type = validate_image_magic_bytes(photo_bytes)
+-
+-        logger.info(
+-            "Photo file validated",
+-            size_bytes=len(photo_bytes),
+-            detected_type=detected_type,
+-            content_type=photo.content_type
+-        )
++        logger.info("Multi-photo upload started", total_photos=len(photos), session_id=session_id)
+ 
+-        # Validate face
++        uploaded_photos = []
+         face_validator = FaceValidationService()
+-        validation_result = face_validator.validate(photo_bytes)
++        storage = StorageService()
+ 
+-        if not validation_result.is_valid:
+-            logger.warning("Face validation failed", error=validation_result.error_code)
++        # Process each photo
++        for i, photo in enumerate(photos):
++            try:
++                logger.info(f"Processing photo {i+1}/{len(photos)}", filename=photo.filename)
++
++                # Read file bytes
++                photo_bytes = await photo.read()
++
++                # Validate file size (10MB limit)
++                if len(photo_bytes) > 10 * 1024 * 1024:  # 10MB
++                    logger.warning(f"Photo {i+1} too large, skipping")
++                    continue
++
++                # Validate image by magic bytes
++                detected_type = validate_image_magic_bytes(photo_bytes)
++
++                logger.info(
++                    f"Photo {i+1} file validated",
++                    size_bytes=len(photo_bytes),
++                    detected_type=detected_type
++                )
++
++                # Validate face
++                validation_result = face_validator.validate(photo_bytes)
++
++                # Generate unique photo ID
++                photo_id = str(uuid.uuid4())
++
++                # Upload to storage (upload regardless of validation for user reference)
++                photo_path = f"uploads/{photo_id}/photo_{i+1}.jpg"
++                photo_url = await storage.upload_image(
++                    photo_bytes,
++                    photo_path,
++                    content_type="image/jpeg"
++                )
++
++                uploaded_photos.append({
++                    "photo_id": photo_id,
++                    "photo_url": photo_url,
++                    "upload_order": i + 1,
++                    "face_valid": validation_result.is_valid,
++                    "face_count": validation_result.face_count,
++                    "quality_score": validation_result.quality_score if validation_result.is_valid else 0.0
++                })
++
++                logger.info(f"Photo {i+1} processed",
++                           photo_id=photo_id,
++                           face_valid=validation_result.is_valid)
++
++            except Exception as e:
++                logger.error(f"Failed to process photo {i+1}", error=str(e))
++                continue
++
++        if not uploaded_photos:
+             raise HTTPException(
+                 status_code=400,
+-                detail={
+-                    "code": validation_result.error_code,
+-                    "message": validation_result.error_message,
+-                    "face_count": validation_result.face_count
+-                }
++                detail="No photos could be processed successfully"
+             )
+ 
+-        # Generate unique photo ID
+-        photo_id = str(uuid.uuid4())
+-
+-        # Upload to storage
+-        storage = StorageService()
+-        photo_path = f"uploads/{photo_id}/photo.jpg"
+-        photo_url = await storage.upload_image(
+-            photo_bytes,
+-            photo_path,
+-            content_type="image/jpeg"
+-        )
+-
+-        logger.info("Photo uploaded successfully", photo_id=photo_id, url=photo_url)
+-
+-        return PhotoUploadResponse(
+-            photo_id=photo_id,
+-            photo_url=photo_url,
+-            face_valid=True,
+-            face_count=1
++        # Get valid photos, sorted by quality score (best first)
++        valid_photos = sorted(
++            [p for p in uploaded_photos if p["face_valid"]],
++            key=lambda p: p["quality_score"],
++            reverse=True
+         )
++        valid_urls = [p["photo_url"] for p in valid_photos]
++
++        # Accept if ANY photo passes validation
++        if valid_photos:
++            logger.info("Upload successful",
++                       total_uploaded=len(uploaded_photos),
++                       valid_photos=len(valid_photos))
++            return PhotoUploadResponse(
++                photos=[PhotoData(**photo) for photo in uploaded_photos],
++                valid_photo_urls=valid_urls,
++                total_uploaded=len(uploaded_photos),
++                valid_count=len(valid_photos),
++                has_valid_photos=True,
++                message=f"Successfully uploaded {len(valid_photos)} valid photos out of {len(uploaded_photos)}"
++            )
++        else:
++            # All photos failed validation
++            logger.warning("All photos failed validation")
++            return PhotoUploadResponse(
++                photos=[PhotoData(**photo) for photo in uploaded_photos],
++                valid_photo_urls=[],
++                total_uploaded=len(uploaded_photos),
++                valid_count=0,
++                has_valid_photos=False,
++                message="No photos contain valid faces. Please upload clearer photos with visible faces."
++            )
+ 
+     except FaceValidationError as e:
+         logger.warning("Face validation error", error=str(e))
+diff --git a/app/background/storygift_tasks.py b/app/background/storygift_tasks.py
+index e012eb1..ef39bca 100644
+--- a/app/background/storygift_tasks.py
++++ b/app/background/storygift_tasks.py
+@@ -127,7 +127,7 @@ def get_progress_message(phase: str, page_num: int = None) -> str:
+ async def generate_storygift_preview(
+     job_id: str,
+     preview_id: str,
+-    photo_url: str,
++    photo_urls: List[str],  # Changed from single photo_url to multiple photo_urls
+     child_name: str,
+     child_age: int,
+     child_gender: str,
+@@ -238,7 +238,7 @@ async def generate_storygift_preview(
+             # Cover uses 1:1 aspect ratio to perfectly fit PDF page (10x10 inches)
+             cover_result = await pipeline.generate_with_face_analysis(
+                 prompt=cover_prompt,
+-                face_url=photo_url,
++                face_url=photo_urls,  # Pass all photo URLs
+                 child_name=safe_child_name,
+                 child_age=child_age,
+                 child_gender=child_gender,
+@@ -480,7 +480,7 @@ async def generate_storygift_preview(
+ 
+                 result = await pipeline.generate_with_face_analysis(
+                     prompt=prompt,
+-                    face_url=photo_url,
++                    face_url=photo_urls,  # Pass all photo URLs
+                     child_name=safe_child_name,
+                     child_age=child_age,
+                     child_gender=child_gender,
+@@ -784,7 +784,7 @@ async def generate_storygift_preview(
+             total_pages=TOTAL_PAGE_COUNT,  # 26 total pages (database column is 'total_pages')
+             book_structure=book_structure,  # Complete page structure JSONB
+             filler_pages_processed=filler_pages_processed,  # Processed filler URLs
+-            child_photo_url=photo_url,  # Store for post-payment generation
++            child_photo_url=photo_urls[0],  # Primary photo for post-payment generation
+             story_texts=story_texts  # All 10 story texts for locked page generation
+             # NOTE: pdf_url is NOT set - will be generated after payment
+         )
+@@ -939,6 +939,14 @@ async def generate_remaining_pages_and_pdf(
+             if not child_photo_url:
+                 raise StorageError(f"No child photo URL found for preview: {preview_id}")
+ 
++            # Build photo_urls list for multi-face pipeline
++            # Prefer stored photo_urls array (JSONB), fallback to single child_photo_url
++            stored_photo_urls = preview_data.get("photo_urls")
++            if stored_photo_urls and isinstance(stored_photo_urls, list) and len(stored_photo_urls) > 0:
++                photo_urls = stored_photo_urls
++            else:
++                photo_urls = [child_photo_url]
++
+             if not book_structure:
+                 raise StorageError(f"No book_structure found in preview: {preview_id}")
+ 
+@@ -1012,7 +1020,7 @@ async def generate_remaining_pages_and_pdf(
+                 # Generate image
+                 result = await pipeline.generate_with_face_analysis(
+                     prompt=prompt,
+-                    face_url=child_photo_url,
++                    face_url=photo_urls,  # Pass all photo URLs
+                     child_name=safe_child_name,
+                     child_age=child_age,
+                     child_gender=child_gender,
+diff --git a/app/background/tasks.py b/app/background/tasks.py
+index ad481a6..73de723 100644
+--- a/app/background/tasks.py
++++ b/app/background/tasks.py
+@@ -4,6 +4,7 @@ Uses NanoBanana pipeline for all generation.
+ """
+ 
+ import structlog
++from typing import List
+ 
+ # Import StoryGift task functions (uses NanoBanana pipeline)
+ from app.background.storygift_tasks import (
+@@ -38,7 +39,7 @@ logger = structlog.get_logger()
+ async def generate_full_preview(
+     job_id: str,
+     preview_id: str,
+-    photo_url: str,
++    photo_urls: List[str],  # Changed from single photo_url to multiple photo_urls
+     child_name: str,
+     child_age: int,
+     child_gender: str,
+@@ -59,7 +60,7 @@ async def generate_full_preview(
+     await generate_storygift_preview(
+         job_id=job_id,
+         preview_id=preview_id,
+-        photo_url=photo_url,
++        photo_urls=photo_urls,  # Pass multiple URLs
+         child_name=child_name,
+         child_age=child_age,
+         child_gender=child_gender,
+diff --git a/app/models/schemas.py b/app/models/schemas.py
+index 6e3b805..6f715f5 100644
+--- a/app/models/schemas.py
++++ b/app/models/schemas.py
+@@ -21,7 +21,7 @@ class PhotoUploadRequest(BaseModel):
+ 
+ class PreviewCreateRequest(BaseModel):
+     """Request to create a new preview."""
+-    photo_url: str = Field(..., description="URL of uploaded photo")
++    photo_urls: List[str] = Field(..., min_items=1, max_items=3, description="URLs of uploaded photos (1-3 images)")
+     child_name: str = Field(..., min_length=2, max_length=50)
+     child_age: int = Field(..., ge=2, le=12)
+     child_gender: str = Field(..., pattern="^(male|female)$")
+@@ -46,16 +46,32 @@ class FaceValidationResult(BaseModel):
+     """Result of face validation."""
+     is_valid: bool
+     face_count: int
++    quality_score: float = Field(0.0, ge=0.0, le=1.0, description="Overall quality score (0-1)")
++    confidence_score: float = Field(0.0, ge=0.0, le=1.0, description="Face detection confidence")
++    face_area: float = Field(0.0, ge=0.0, le=1.0, description="Face size relative to image")
++    blur_score: float = Field(0.0, ge=0.0, description="Blur score (higher = less blurry)")
+     error_code: Optional[str] = None
+     error_message: Optional[str] = None
+ 
+ 
+-class PhotoUploadResponse(BaseModel):
+-    """Response after successful photo upload."""
++class PhotoData(BaseModel):
++    """Data for a single uploaded photo."""
+     photo_id: str
+     photo_url: str
++    upload_order: int
+     face_valid: bool
+     face_count: int
++    quality_score: float = 0.0
++
++
++class PhotoUploadResponse(BaseModel):
++    """Response for multi-photo upload (1-3 images)."""
++    photos: List[PhotoData]
++    valid_photo_urls: List[str]
++    total_uploaded: int
++    valid_count: int
++    has_valid_photos: bool
++    message: str
+ 
+ 
+ class JobStartResponse(BaseModel):
+diff --git a/app/services/face_validation.py b/app/services/face_validation.py
+index 0981af1..7cab8c7 100644
+--- a/app/services/face_validation.py
++++ b/app/services/face_validation.py
+@@ -232,11 +232,36 @@ class FaceValidationService:
+                     error_message="Please ensure your child is facing the camera directly."
+                 )
+ 
++            # Compute blur score for quality calculation
++            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
++            blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
++
++            # Quality score: weighted combination of confidence, face area, and sharpness
++            # - confidence (40%): how clearly MediaPipe detects the face
++            # - face_area (30%): larger face = better reference for AI
++            # - sharpness (30%): sharper image = better detail preservation
++            sharpness_normalized = min(blur_score / 500.0, 1.0)  # Cap at 500 variance
++            face_area_normalized = min(face_area / 0.25, 1.0)    # Cap at 25% of image
++            quality_score = (
++                0.4 * confidence_score +
++                0.3 * face_area_normalized +
++                0.3 * sharpness_normalized
++            )
++            quality_score = round(min(max(quality_score, 0.0), 1.0), 3)
++
+             # All checks passed
+-            logger.info("Face validation successful", face_area=f"{face_area:.2%}", confidence=confidence_score)
++            logger.info("Face validation successful",
++                       face_area=f"{face_area:.2%}",
++                       confidence=confidence_score,
++                       blur_score=f"{blur_score:.1f}",
++                       quality_score=quality_score)
+             return FaceValidationResult(
+                 is_valid=True,
+                 face_count=1,
++                quality_score=quality_score,
++                confidence_score=round(confidence_score, 3),
++                face_area=round(face_area, 4),
++                blur_score=round(blur_score, 2),
+                 error_code=None,
+                 error_message=None
+             )
+diff --git a/app/stories/themes/storygift_birthday_magic.py b/app/stories/themes/storygift_birthday_magic.py
+index 037a59d..35c25ca 100644
+--- a/app/stories/themes/storygift_birthday_magic.py
++++ b/app/stories/themes/storygift_birthday_magic.py
+@@ -27,6 +27,7 @@ STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
+             scene_description="Magical birthday morning",
+             scene_type="discovery",
+             realistic_prompt="""Magical morning awakening, medium close-up portrait. The child named {name} sitting up in bed with big excited smile, face prominently filling the frame, sharp focus on facial features. Sunlight streaming through window creating god rays filled with dancing dust particles that look like tiny sparkles, warm light illuminating face. Room decorated with birthday decorations including banner saying 'Happy Birthday!' and balloons tied to bedpost, presents on a table slightly out of focus in background. Child wearing birthday pajamas, stretching arms up in joy. Through window, the world outside looks especially beautiful with bluebird on windowsill. Calendar on wall has today's date circled with hearts. Magical warm lighting, sense of excitement and specialness. Child's face is the absolute focal point, three-quarter view, clearly visible and detailed with sharp skin texture, showing pure birthday joy. A small playful comic-style speech bubble near the child saying "It's my birthday!", subtle and not covering the face.""",
++            story_text="Today was the most special day of the yearΓÇö{name}'s birthday! The sun seemed to shine a little brighter, the birds sang a little sweeter, and even the morning air felt like it was full of magic, just for {name}.",
+             costume="wearing birthday pajamas"
+         ),
+ 
+diff --git a/migrations/031_add_photo_urls_column.sql b/migrations/031_add_photo_urls_column.sql
+new file mode 100644
+index 0000000..bfc98bc
+--- /dev/null
++++ b/migrations/031_add_photo_urls_column.sql
+@@ -0,0 +1,30 @@
++-- ============================================================================
++-- Migration: 031_add_photo_urls_column.sql
++-- Description: Add photo_urls JSONB column for multi-face support
++-- ============================================================================
++-- Stores all uploaded photo URLs (1-3) as a JSON array.
++-- Previously only photo_url (single string) was stored, losing additional
++-- reference photos needed for multi-face AI generation.
++-- ============================================================================
++
++-- Add photo_urls JSONB array column
++ALTER TABLE previews
++ADD COLUMN IF NOT EXISTS photo_urls JSONB DEFAULT NULL;
++
++-- Backfill existing rows: wrap single photo_url into a JSON array
++UPDATE previews
++SET photo_urls = jsonb_build_array(photo_url)
++WHERE photo_urls IS NULL AND photo_url IS NOT NULL;
++
++-- Add comment
++COMMENT ON COLUMN previews.photo_urls IS
++'JSON array of all uploaded child photo URLs (1-3) for multi-face AI generation. Sorted by quality score (best first).';
++
++-- Verify migration
++DO $$
++DECLARE
++    backfilled INTEGER;
++BEGIN
++    SELECT COUNT(*) INTO backfilled FROM previews WHERE photo_urls IS NOT NULL;
++    RAISE NOTICE 'Migration 031 complete: Added photo_urls JSONB column, backfilled % rows', backfilled;
++END $$;

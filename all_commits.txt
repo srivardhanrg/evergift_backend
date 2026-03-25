@@ -1,0 +1,10 @@
+﻿0124308 Merge branch 'prod' of https://github.com/vvr1701/Magictales_backend into prod
+670a531 memory spikes
+c55f04d feat: add universal feedback endpoint and migration
+1e480dc memory spikes
+0992286 fix: fallback to book_structure in legacy preview endpoint
+c9d4d67 fixes
+d76cc94 feat: multi-face quality scoring, bug fixes, and photo_urls migration
+e642643 Merge prod into feature/speech-bubbles (26-page structure + column changes)
+b576d89 removed corrupt files
+2a1183f fixes

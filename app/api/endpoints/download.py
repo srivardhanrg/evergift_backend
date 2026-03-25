@@ -132,7 +132,8 @@ async def get_download(identifier: str):
         # =============================================
         # Step 3: Check preview completeness
         # =============================================
-        preview_ready = bool(preview_pdf_url) and generation_phase == "complete"
+        ready_phases = {"complete", "preparing_print", "submitting_print", "print_submitted"}
+        preview_ready = bool(preview_pdf_url) and generation_phase in ready_phases
 
         # Also check if all pages exist (pages_complete phase or 10+ story pages)
         story_pages = preview.get("story_pages", [])
