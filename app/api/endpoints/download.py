@@ -39,7 +39,14 @@ def _build_download_response(
     child_name_clean = preview["child_name"].strip().replace(" ", "_")
     pdf_filename = f"{child_name_clean}_{theme_name}_Book.pdf"
 
-    pdf_path = f"final/{preview['preview_id']}/storygift_book.pdf"
+    # Use actual PDF filename from database if available, fallback to default
+    preview_pdf_url = preview.get("pdf_url", "")
+    if preview_pdf_url:
+        # Extract filename from stored URL (e.g., "storybook_v2.pdf" or "storygift_book.pdf")
+        pdf_filename_on_r2 = preview_pdf_url.rstrip("/").split("/")[-1]
+    else:
+        pdf_filename_on_r2 = "storygift_book.pdf"
+    pdf_path = f"final/{preview['preview_id']}/{pdf_filename_on_r2}"
     pdf_url = f"{storage.settings.r2_public_url}/{pdf_path}"
 
     # Individual image downloads
@@ -53,6 +60,20 @@ def _build_download_response(
                 "url": image_signed_url,
                 "filename": f"page_{img_data['page']:02d}.jpg",
             })
+    elif preview.get("book_structure"):
+        # V2 fallback: build image downloads from book_structure
+        book_structure = preview["book_structure"]
+        for idx_str, page_data in sorted(book_structure.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 0):
+            if page_data.get("url"):
+                try:
+                    page_num = int(idx_str)
+                except (ValueError, TypeError):
+                    continue
+                image_downloads.append({
+                    "page": page_num,
+                    "url": page_data["url"],
+                    "filename": f"page_{page_num:02d}.jpg",
+                })
 
     now = datetime.utcnow()
     # Make both naive or both aware for subtraction
@@ -137,7 +158,9 @@ async def get_download(identifier: str):
 
         # Also check if all pages exist (pages_complete phase or 10+ story pages)
         story_pages = preview.get("story_pages", [])
-        all_pages_generated = len(story_pages) >= 10
+        book_structure = preview.get("book_structure")
+        # V2 stores pages in book_structure (26 entries for full book); legacy uses story_pages
+        all_pages_generated = len(story_pages) >= 10 or (bool(book_structure) and len(book_structure) >= 10)
 
         # =============================================
         # Step 4: Determine download availability
@@ -145,7 +168,12 @@ async def get_download(identifier: str):
 
         # FAST PATH: Preview says complete — verify PDF on R2 and serve
         if preview_ready:
-            pdf_path = f"final/{preview_id}/storygift_book.pdf"
+            # Use actual filename from pdf_url, not hardcoded name
+            if preview_pdf_url:
+                pdf_filename_on_r2 = preview_pdf_url.rstrip("/").split("/")[-1]
+            else:
+                pdf_filename_on_r2 = "storygift_book.pdf"
+            pdf_path = f"final/{preview_id}/{pdf_filename_on_r2}"
             pdf_exists = await storage.file_exists(pdf_path)
 
             if pdf_exists:
@@ -211,7 +239,7 @@ async def get_download(identifier: str):
 
         # Pages done, PDF is auto-generating in background — keep polling
         if generation_phase == "pages_complete":
-            pages_done = len(story_pages)
+            pages_done = len(story_pages) or (len(book_structure) if book_structure else 0)
             progress = min(90, int((pages_done / 10) * 80) + 10)
             return DownloadResponse(
                 status="generating",
@@ -230,7 +258,7 @@ async def get_download(identifier: str):
         # Still generating
         if generation_phase == "generating_full" or (preview_status == "purchased" and not preview_ready):
             # Calculate approximate progress
-            pages_done = len(story_pages)
+            pages_done = len(story_pages) or (len(book_structure) if book_structure else 0)
             progress = min(85, int((pages_done / 10) * 80) + 10) if pages_done > 5 else 25
 
             return DownloadResponse(

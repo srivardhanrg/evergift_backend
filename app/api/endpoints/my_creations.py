@@ -154,13 +154,18 @@ async def get_my_creations(request: Request):
         # Build response
         creations = []
         for p in previews:
-            # Get cover URL from cover_url or preview_images
+            # Get cover URL from cover_url, preview_images, or book_structure (V2)
             cover_url = p.get("cover_url")
             if not cover_url and p.get("preview_images"):
                 images = p.get("preview_images", [])
                 if images:
                     # First image might be cover (page 0) or first page
                     cover_url = images[0] if isinstance(images[0], str) else images[0].get("url")
+            if not cover_url and p.get("book_structure"):
+                # V2 fallback: cover is at index 0 in book_structure
+                cover_data = p["book_structure"].get("0") or p["book_structure"].get(0)
+                if cover_data and isinstance(cover_data, dict):
+                    cover_url = cover_data.get("url")
             
             creations.append(CreationItem(
                 preview_id=p["preview_id"],
