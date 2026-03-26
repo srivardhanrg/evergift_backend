@@ -860,14 +860,14 @@ class ImageProcessor:
         # Maximum width constraint (90% of page) to guarantee NO overflow
         max_cover_text_width = int(width * 0.90)
 
-        # Load adaptive premium title font (Cormorant Garamond Bold for luxury feel)
+        # Load adaptive premium title font (Cinzel Decorative Bold for fantasy storybook feel)
         story_title_upper = story_title.upper()
         title_letter_spacing = int(16)  # Premium letter-spacing in pixels appropriate for 300DPI
-        
+
         title_font, total_title_width = self._get_adaptive_cover_font(
             text=story_title_upper,
             base_font_size=240,
-            font_family="Cormorant Garamond Bold",
+            font_family="Cinzel Decorative Bold",
             letter_spacing=title_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -936,7 +936,7 @@ class ImageProcessor:
         starring_label_font, total_starring_width = self._get_adaptive_cover_font(
             text=starring_text,
             base_font_size=80,
-            font_family="Cormorant Garamond Bold",
+            font_family="Cinzel Bold",
             letter_spacing=starring_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -967,7 +967,7 @@ class ImageProcessor:
         child_name_font, total_name_width = self._get_adaptive_cover_font(
             text=child_name_upper,
             base_font_size=140,
-            font_family="Cormorant Garamond Bold",
+            font_family="Cinzel Bold",
             letter_spacing=name_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw

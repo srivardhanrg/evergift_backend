@@ -97,6 +97,9 @@ FONT_PATHS = {
     "Bubblegum Sans": "/app/fonts/BubblegumSans-Regular.ttf",
     "Caveat": "/app/fonts/Caveat-Regular.ttf",
     "Pacifico": "/app/fonts/Pacifico-Regular.ttf",
+    # Cover title fonts (fantasy storybook feel)
+    "Cinzel Decorative Bold": "/app/fonts/CinzelDecorative-Bold.ttf",
+    "Cinzel Bold": "/app/fonts/Cinzel-Bold.ttf",
     # Legacy fonts (kept for backward compatibility)
     "Dancing Script": "/app/fonts/DancingScript-Regular.ttf",
     "Playfair Display": "/app/fonts/PlayfairDisplay-Regular.ttf",

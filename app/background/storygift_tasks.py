@@ -302,7 +302,7 @@ async def generate_storygift_preview(
                     image_processor = get_image_processor()
                     cover_with_text_bytes = await image_processor.process_cover_page(
                         cover_image_url=cover_url,
-                        story_title=theme_display_name,
+                        story_title=story_title,
                         child_name=safe_child_name
                     )
 
