@@ -770,13 +770,12 @@ class ImageProcessor:
         while font_size > 20:
             font = self._load_font(font_family, font_size)
             total_width = 0
-            for idx, char in enumerate(text):
+            for char in text:
                 char_bbox = draw.textbbox((0, 0), char, font=font)
                 char_width = int(char_bbox[2] - char_bbox[0])
-                total_width += char_width
-                # Only add letter spacing between non-space characters
-                if char != " " and idx < len(text) - 1:
-                    total_width += letter_spacing
+                total_width += char_width + letter_spacing
+            if text:
+                total_width -= letter_spacing
 
             if total_width <= max_allowed_width:
                 return font, total_width
@@ -861,14 +860,14 @@ class ImageProcessor:
         # Maximum width constraint (90% of page) to guarantee NO overflow
         max_cover_text_width = int(width * 0.90)
 
-        # Load adaptive premium title font (Cinzel Decorative Bold for fantasy storybook feel)
+        # Load adaptive cover title font (Luckiest Guy — bold, chunky, kid-friendly)
         story_title_upper = story_title.upper()
-        title_letter_spacing = int(6)  # Tighter spacing for compact, powerful look
+        title_letter_spacing = int(8)  # Tighter spacing suits the chunky letterforms
 
         title_font, total_title_width = self._get_adaptive_cover_font(
             text=story_title_upper,
-            base_font_size=240,
-            font_family="Cinzel Decorative Bold",
+            base_font_size=220,
+            font_family="Luckiest Guy",
             letter_spacing=title_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -878,81 +877,45 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # --- Metallic gold gradient: light gold (top) → deep gold (bottom) ---
-        # Measure max character height for gradient mapping
-        sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
-        char_height = sample_bbox[3] - sample_bbox[1]
-        gold_top = (255, 223, 120)     # Bright warm gold highlight
-        gold_mid = (212, 175, 55)      # Classic antique gold
-        gold_bottom = (160, 120, 30)   # Deep shadow gold
+        # Premium antique gold color (more sophisticated than bright yellow)
+        gold_color = (212, 175, 55, 255)  # #D4AF37 - antique gold
 
-        def _gold_at_y(y_frac: float):
-            """Interpolate gold gradient: top highlight → mid → bottom shadow."""
-            if y_frac < 0.5:
-                t = y_frac * 2
-                return tuple(int(gold_top[i] + (gold_mid[i] - gold_top[i]) * t) for i in range(3))
-            else:
-                t = (y_frac - 0.5) * 2
-                return tuple(int(gold_mid[i] + (gold_bottom[i] - gold_mid[i]) * t) for i in range(3))
-
-        # Render title: per-character with gradient, emboss, and strong shadow
+        # Draw title with letter-spacing and stroke for premium depth
         current_x = title_x
-        for idx, char in enumerate(story_title_upper):
+        for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # For spaces, just advance by the space width (no rendering needed)
-            if char == " ":
-                space_bbox = draw.textbbox((0, 0), " ", font=title_font)
-                current_x += int(space_bbox[2] - space_bbox[0])
-                continue
+            # Draw text stroke (white outline for depth, adjusted for huge sizes)
+            stroke_width = int(4)
+            for dx in range(-stroke_width, stroke_width + 1):
+                for dy in range(-stroke_width, stroke_width + 1):
+                    if dx*dx + dy*dy <= stroke_width*stroke_width:
+                        draw.text(
+                            (current_x + dx, title_y + dy),
+                            char,
+                            font=title_font,
+                            fill=(255, 255, 255, 80)  # Semi-transparent white stroke
+                        )
 
-            # Layer 1: Strong dark drop shadow (depth)
-            shadow_offset = int(10)
+            # Draw bold drop shadow
+            shadow_offset = int(8)
             draw.text(
                 (current_x + shadow_offset, title_y + shadow_offset),
                 char,
                 font=title_font,
-                fill=(0, 0, 0, 200)
+                fill=(0, 0, 0, 180)
             )
 
-            # Layer 2: Dark brown inner shadow for emboss (slight offset)
+            # Draw main character in antique gold
             draw.text(
-                (current_x + 3, title_y + 3),
+                (current_x, title_y),
                 char,
                 font=title_font,
-                fill=(80, 55, 10, 180)
+                fill=gold_color
             )
 
-            # Layer 3: Bright highlight offset (top-left shine)
-            draw.text(
-                (current_x - 1, title_y - 1),
-                char,
-                font=title_font,
-                fill=(255, 235, 160, 90)
-            )
-
-            # Layer 4: Main gold gradient text (draw row-by-row via clipped mask)
-            cw = char_width + 10
-            ch = char_height + 10
-            char_img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-            char_draw = ImageDraw.Draw(char_img)
-            char_draw.text((0, 0), char, font=title_font, fill=(255, 255, 255, 255))
-            pixels = char_img.load()
-            for py in range(ch):
-                y_frac = py / max(ch - 1, 1)
-                r, g, b = _gold_at_y(y_frac)
-                for px in range(cw):
-                    a = pixels[px, py][3]
-                    if a > 0:
-                        pixels[px, py] = (r, g, b, a)
-            overlay.paste(char_img, (current_x, title_y), char_img)
-            char_img.close()
-
-            # Advance: char width + letter spacing (but not after last char)
-            current_x += char_width
-            if idx < len(story_title_upper) - 1:
-                current_x += title_letter_spacing
+            current_x += char_width + title_letter_spacing
 
         # ============================================
         # BOTTOM GRADIENT (25% height) with starring
@@ -973,7 +936,7 @@ class ImageProcessor:
         starring_label_font, total_starring_width = self._get_adaptive_cover_font(
             text=starring_text,
             base_font_size=80,
-            font_family="Cinzel Bold",
+            font_family="Cormorant Garamond Bold",
             letter_spacing=starring_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -984,7 +947,7 @@ class ImageProcessor:
 
         # Draw starring label
         current_x = starring_x
-        for idx, char in enumerate(starring_text):
+        for char in starring_text:
             char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
@@ -995,9 +958,7 @@ class ImageProcessor:
                 fill=(255, 255, 255, 180)  # Semi-transparent white
             )
 
-            current_x += char_width
-            if char != " " and idx < len(starring_text) - 1:
-                current_x += starring_letter_spacing
+            current_x += char_width + starring_letter_spacing
 
         # Child name (bold, uppercase) with luxury letter spacing & adaptive scaling
         child_name_upper = child_name.upper()
@@ -1006,7 +967,7 @@ class ImageProcessor:
         child_name_font, total_name_width = self._get_adaptive_cover_font(
             text=child_name_upper,
             base_font_size=140,
-            font_family="Cinzel Bold",
+            font_family="Cormorant Garamond Bold",
             letter_spacing=name_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -1017,14 +978,9 @@ class ImageProcessor:
 
         # Draw name with letter-spacing and stroke for depth
         current_x = name_x
-        for idx, char in enumerate(child_name_upper):
+        for char in child_name_upper:
             char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
             char_width = int(char_bbox[2] - char_bbox[0])
-
-            if char == " ":
-                space_bbox = draw.textbbox((0, 0), " ", font=child_name_font)
-                current_x += int(space_bbox[2] - space_bbox[0])
-                continue
 
             # Draw bold text stroke (subtle outline)
             stroke_width = int(4)
@@ -1054,9 +1010,7 @@ class ImageProcessor:
                 fill=(255, 255, 255, 255)  # Brilliant white
             )
 
-            current_x += char_width
-            if idx < len(child_name_upper) - 1:
-                current_x += name_letter_spacing
+            current_x += char_width + name_letter_spacing
 
         # Composite overlay onto cover
         result = Image.alpha_composite(cover_image, overlay)
