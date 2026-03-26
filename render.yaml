@@ -9,7 +9,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     region: singapore  # Closest to India for low latency
-    plan: starter  # $7/month - 512MB RAM, 0.5 CPU (upgrade to standard for prod)
+    plan: standard  # $7/month - 2GB RAM, 1 CPU (production-ready for PDF generation)
     healthCheckPath: /health
     envVars:
       # App Configuration

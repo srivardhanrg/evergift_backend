@@ -26,7 +26,7 @@ class PreviewCreateRequest(BaseModel):
     child_age: int = Field(..., ge=2, le=12)
     child_gender: str = Field(..., pattern="^(male|female)$")
     theme: Theme
-    style: BookStyle = BookStyle.PHOTOREALISTIC
+    # style removed - always defaults to photorealistic
     session_id: Optional[str] = None
     customer_email: Optional[str] = None
 
@@ -244,7 +244,7 @@ class PreviewResponseV2(BaseModel):
     story_title: str
     child_name: str
     theme: str
-    style: str
+    style: str  # Always returns "photorealistic" - kept for data consistency
 
     # Book structure
     book_structure: BookStructureResponse = Field(
@@ -290,7 +290,7 @@ class PreviewResponse(BaseModel):
     story_title: str
     child_name: str
     theme: str  # Changed from Theme to str for flexibility
-    style: str  # Changed from BookStyle to str for flexibility
+    style: str  # Always returns "photorealistic" - kept for data consistency
     cover_url: Optional[str] = None  # Dedicated cover image URL
     preview_pages: List[PageData]
     locked_pages: Optional[List[PageData]] = None

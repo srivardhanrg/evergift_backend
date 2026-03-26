@@ -1,7 +1,12 @@
 """
-Two-Stage Cartoon Pipeline - Scene Generation + Segmind Face Swap
+Two-Stage Cartoon Pipeline - PRESERVED FOR FUTURE USE
 
-This pipeline separates scene generation from face preservation:
+⚠️ NOTE: This pipeline is not exposed in the current version of the application.
+The application defaults to photorealistic pipeline only.
+
+This code is fully functional and tested, kept for potential feature expansion.
+
+Pipeline Architecture:
 - Stage 1: Generate cartoon scene with NanoBanana (placeholder child)
 - Stage 2: Face swap using Segmind FaceSwap Comic (real child's face)
 

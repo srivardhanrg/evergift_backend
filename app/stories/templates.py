@@ -72,6 +72,9 @@ Professional portrait photograph of a {age}-year-old child in fantasy scenery.
 
 # =============================================================================
 # CINEMATIC PAINTING COVER TEMPLATE
+# =============================================================================
+# CINEMATIC_COVER_PROMPT_TEMPLATE - Preserved for potential cartoon pipeline
+# (Not used - photorealistic only)
 # For cartoon3d/animated style - matches the interior page styling
 # Inspired by: Pixar concept art posters, Spider-Verse, DreamWorks key art
 # =============================================================================
@@ -145,25 +148,22 @@ class StoryTemplate:
         """Get formatted title for this story."""
         return self.title_template.format(name=child_name)
     
-    def get_cover_prompt(self, child_name: str, child_age: int, child_gender: str, style: str = "photorealistic") -> str:
+    def get_cover_prompt(self, child_name: str, child_age: int, child_gender: str) -> str:
         """
         Get formatted cover page prompt with zone-based composition.
+
+        Always uses photorealistic template.
 
         Args:
             child_name: Child's name for personalization
             child_age: Child's age for age-appropriate features
             child_gender: Child's gender ('male' or 'female')
-            style: Art style - 'photorealistic' (default) or 'cartoon3d'/'animated'
-                   Uses different prompt templates for visual consistency
 
         Returns:
-            Formatted cover prompt matching the selected art style
+            Formatted cover prompt (photorealistic style)
         """
-        # Choose template based on style
-        if style in ("cartoon3d", "animated", "cinematic_painting"):
-            template = CINEMATIC_COVER_PROMPT_TEMPLATE
-        else:
-            template = COVER_PROMPT_TEMPLATE
+        # Always use photorealistic template
+        template = COVER_PROMPT_TEMPLATE
 
         # Convert gender to boy/girl for prompt
         gender_word = "boy" if child_gender.lower() == "male" else "girl"

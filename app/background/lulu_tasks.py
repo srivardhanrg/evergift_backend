@@ -26,6 +26,60 @@ from app.stories.themes import get_theme
 logger = structlog.get_logger()
 
 
+def _validate_page_count(page_count: int, cover_type: str) -> None:
+    """
+    Validate that page count meets Lulu's requirements for the given cover type.
+
+    Lulu Requirements:
+    - Saddle Stitch (softcover): 4-48 pages, must be even
+    - Hardcover (casewrap): 24-800 pages, must be even
+
+    Args:
+        page_count: Number of interior pages
+        cover_type: "softcover" or "hardcover"
+
+    Raises:
+        ValueError: If page count doesn't meet requirements
+    """
+    # Page count must be even (required by all binding types)
+    if page_count % 2 != 0:
+        raise ValueError(
+            f"Page count must be even for Lulu print jobs. Got {page_count} pages. "
+            f"This is a critical error - Lulu will reject the job."
+        )
+
+    # Cover-type specific validation
+    if cover_type == "softcover":
+        # Saddle stitch: 4-48 pages
+        if page_count < 4:
+            raise ValueError(
+                f"Softcover (saddle stitch) requires minimum 4 pages. Got {page_count} pages."
+            )
+        if page_count > 48:
+            raise ValueError(
+                f"Softcover (saddle stitch) supports maximum 48 pages. Got {page_count} pages. "
+                f"Use hardcover binding for books with more than 48 pages."
+            )
+    else:  # hardcover
+        # Hardcover casewrap: 24-800 pages
+        if page_count < 24:
+            raise ValueError(
+                f"Hardcover (casewrap) requires minimum 24 pages. Got {page_count} pages. "
+                f"Use softcover binding for books with fewer than 24 pages."
+            )
+        if page_count > 800:
+            raise ValueError(
+                f"Hardcover (casewrap) supports maximum 800 pages. Got {page_count} pages."
+            )
+
+    logger.info(
+        "Page count validation passed",
+        page_count=page_count,
+        cover_type=cover_type,
+        is_even=page_count % 2 == 0,
+    )
+
+
 def _truncate_field(value: str, max_length: int) -> str:
     """Truncate a field to max_length, preserving whole words if possible."""
     if not value or len(value) <= max_length:
@@ -124,7 +178,18 @@ def _collect_pages_v2(preview: dict) -> list:
         except Exception:
             book_structure = {}
 
-    book_pages = book_structure.get("pages") or []
+    # V2 format stores pages as flat dict with string keys: {"0": {...}, "1": {...}, ...}
+    # Convert to index → page mapping
+    pages_by_index = {}
+    for idx_str, page_data in book_structure.items():
+        if idx_str.isdigit():  # Skip non-numeric keys
+            page_index = int(idx_str)
+            pages_by_index[page_index] = {
+                "index": page_index,
+                "imageUrl": page_data.get("url"),
+                "pageType": page_data.get("type"),
+                "isLocked": page_data.get("is_locked", False)
+            }
 
     # Get story texts for text pages
     story_texts = preview.get("story_texts") or {}
@@ -133,9 +198,6 @@ def _collect_pages_v2(preview: dict) -> list:
             story_texts = json.loads(story_texts)
         except Exception:
             story_texts = {}
-
-    # Build index → page mapping for fast lookup
-    pages_by_index = {p.get("index"): p for p in book_pages}
 
     # Collect all interior pages (indices 1-24)
     pages = []
@@ -436,23 +498,24 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
         )
 
         # ----------------------------------------------------------------
-        # 4. Generate interior + cover PDFs
+        # 4. Generate interior + cover PDFs (with MD5 hashes)
         # ----------------------------------------------------------------
         pdf_start_time = _time.monotonic()
 
         logger.info("Generating Lulu interior PDF", preview_id=preview_id, pages_count=len(pages))
-        interior_url = await generate_interior_pdf(pages, preview_id, child_name)
+        interior_url, interior_md5 = await generate_interior_pdf(pages, preview_id, child_name)
         interior_duration_ms = round((_time.monotonic() - pdf_start_time) * 1000)
         logger.info(
             "Lulu interior PDF generated",
             preview_id=preview_id,
             interior_url=interior_url[:80] + "..." if interior_url else None,
+            interior_md5=interior_md5,
             duration_ms=interior_duration_ms,
         )
 
         cover_start_time = _time.monotonic()
         logger.info("Generating Lulu cover PDF", preview_id=preview_id, cover_type=cover_type)
-        cover_url = await generate_cover_pdf(
+        cover_url, cover_md5 = await generate_cover_pdf(
             cover_image_url=cover_image_url,
             child_name=child_name,
             story_title=story_title,
@@ -464,8 +527,34 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
             "Lulu cover PDF generated",
             preview_id=preview_id,
             cover_url=cover_url[:80] + "..." if cover_url else None,
+            cover_md5=cover_md5,
             duration_ms=cover_duration_ms,
         )
+
+        # ----------------------------------------------------------------
+        # 4b. Validate page count before Lulu submission (pre-flight check)
+        # ----------------------------------------------------------------
+        # The interior PDF is always generated with 24 pages (TOTAL_PAGES constant),
+        # but we validate explicitly as a safeguard and to make requirements clear.
+        # Lulu will reject jobs with odd page counts or out-of-range counts AFTER
+        # job creation, wasting API calls and causing silent failures.
+        from app.services.lulu_pdf_generator import TOTAL_PAGES
+
+        try:
+            _validate_page_count(TOTAL_PAGES, cover_type)
+        except ValueError as e:
+            logger.error(
+                "Page count validation failed - cannot submit to Lulu",
+                order_id=order_id,
+                preview_id=preview_id,
+                page_count=TOTAL_PAGES,
+                cover_type=cover_type,
+                error=str(e),
+            )
+            raise RuntimeError(
+                f"Page count validation failed: {e}. "
+                f"This is a configuration error - please contact support."
+            )
 
         # ----------------------------------------------------------------
         # 5. Insert or update print_orders record
@@ -524,7 +613,9 @@ async def submit_lulu_print_job(order_id: str, preview_id: str) -> None:
 
         lulu_response = await create_print_job(
             interior_url=interior_url,
+            interior_md5=interior_md5,
             cover_url=cover_url,
+            cover_md5=cover_md5,
             shipping_address=shipping_address,
             order_id=order_id,
             child_name=child_name,

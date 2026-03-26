@@ -41,9 +41,9 @@ class JobType(str, Enum):
 
 
 class BookStyle(str, Enum):
-    """Storybook visual style."""
+    """Storybook visual style. Currently photorealistic only."""
     PHOTOREALISTIC = "photorealistic"
-    CARTOON_3D = "cartoon_3d"  # Disney/Pixar 3D animation style
+    # CARTOON_3D = "cartoon_3d"  # Removed - pipeline code preserved but not exposed
 
 
 class LuluPrintStatus(str, Enum):

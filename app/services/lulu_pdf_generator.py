@@ -20,6 +20,7 @@ Both PDFs are uploaded to R2 and their public URLs are returned for submission t
 """
 
 import asyncio
+import hashlib
 import io
 import tempfile
 from typing import List, Dict, Optional, Tuple
@@ -95,7 +96,18 @@ COVER_TEXT_COLOR = white
 TEXT_BG_COLOR = HexColor("#FFF0F5")         # Soft pink
 TEXT_COLOR = HexColor("#2D2D2D")
 
-TOTAL_PAGES = 24                            # Must be multiple of 4 for binding
+# ----------------------------------------------------------------
+# CRITICAL: Page count must meet Lulu requirements
+# ----------------------------------------------------------------
+# Lulu Print API requirements:
+# - Saddle Stitch (softcover): 4-48 pages, MUST BE EVEN
+# - Hardcover (casewrap): 24-800 pages, MUST BE EVEN
+# - Page count MUST be divisible by 4 for proper binding (multiples of 4)
+#
+# Our choice: 24 pages (meets both softcover and hardcover minimums)
+# This value is validated in lulu_tasks.py before Lulu API submission
+# ----------------------------------------------------------------
+TOTAL_PAGES = 24                            # 24 pages: even, divisible by 4, meets all requirements
 
 # Gutter margin: minimum 0.20" from the inner (binding) edge — using 0.25" for safety
 GUTTER = 0.25 * inch
@@ -213,7 +225,7 @@ async def generate_interior_pdf(
     pages: List[Dict],
     preview_id: str,
     child_name: str,
-) -> str:
+) -> Tuple[str, str]:
     """
     Generate a Lulu-spec interior PDF for a 24-page story (indices 1-24).
 
@@ -223,7 +235,7 @@ async def generate_interior_pdf(
         child_name: for logging
 
     Returns:
-        R2 public URL of the uploaded PDF
+        Tuple of (R2 public URL, MD5 hash) for the uploaded PDF
     """
     import time as _time
     start_time = _time.monotonic()
@@ -282,6 +294,9 @@ async def generate_interior_pdf(
     c.save()
     pdf_bytes = pdf_buffer.getvalue()
 
+    # Calculate MD5 hash for Lulu API integrity verification
+    pdf_md5 = hashlib.md5(pdf_bytes).hexdigest()
+
     # Upload to R2
     r2_key = f"lulu/{preview_id}/interior.pdf"
     pdf_url = await storage.upload_pdf(
@@ -299,9 +314,10 @@ async def generate_interior_pdf(
         pages_drawn=drawn,
         images_downloaded=len(image_bytes_map),
         pdf_size_kb=pdf_size_kb,
+        pdf_md5=pdf_md5,
         duration_ms=duration_ms,
     )
-    return pdf_url
+    return pdf_url, pdf_md5
 
 
 # ---------------------------------------------------------------------------
@@ -315,40 +331,52 @@ async def generate_cover_pdf(
     preview_id: str,
     cover_type: str = "hardcover",
     spine_width_inches: Optional[float] = None,  # If None, derived from cover_type
-) -> str:
+) -> Tuple[str, str]:
     """
     Generate a Lulu-spec cover wrap PDF.
 
-    The cover is a single landscape page:
-      width  = 2 * (trim_width + bleed) + spine
-      height = trim_height + 2 * bleed
+    Per Lulu official specifications (8.5" × 8.5" square, 24 pages):
+    - Softcover (Saddle Stitch): 17.25" × 8.75" (no spine)
+    - Hardcover (Case Wrap):     19.00" × 10.25" (0.25" spine, includes board turn-in)
+
+    The cover is a single landscape page: [back] [spine] [front]
 
     Args:
         cover_image_url: optional URL of the generated cover image
         child_name: printed on cover
         story_title: printed on cover
         preview_id: for naming the R2 file
-        spine_width_inches: calculated spine width (default 0.12" for 24 pages 80# coated)
+        cover_type: "softcover" (saddle stitch) or "hardcover" (case wrap)
+        spine_width_inches: manual spine override (default: 0.0 softcover, 0.25 hardcover)
 
     Returns:
-        R2 public URL of the uploaded cover PDF
+        Tuple of (R2 public URL, MD5 hash) for the uploaded cover PDF
     """
     import time as _time
     start_time = _time.monotonic()
 
     storage = StorageService()
 
-    # Derive spine width and safety zone from cover_type (Lulu spec)
-    if spine_width_inches is None:
-        if cover_type == "softcover":
-            _spine_inches = 0.0   # Saddle stitch: no spine
-        else:
-            _spine_inches = 0.25  # Hardcover casewrap: 0.25" for 24 pages
+    # Lulu official cover dimensions (per spec, not calculated)
+    # These are EXACT specifications from Lulu for 8.5" × 8.5" square books with 24 pages
+    if cover_type == "softcover":
+        # Saddle stitch: 17.25" × 8.75" (no spine)
+        wrap_w = 17.25 * inch
+        wrap_h = 8.75 * inch
+        _spine_inches = 0.0  # Saddle stitch has no spine
+        _cover_safety = SOFTCOVER_COVER_SAFETY  # 0.50" from trim
     else:
+        # Hardcover casewrap: 19.00" × 10.25" (includes 0.25" spine + board turn-in)
+        wrap_w = 19.0 * inch
+        wrap_h = 10.25 * inch
+        _spine_inches = 0.25  # Hardcover spine width for 24 pages
+        _cover_safety = HARDCOVER_COVER_SAFETY  # 0.75" from trim
+
+    # Allow manual override of spine width if provided (rare, for custom page counts)
+    if spine_width_inches is not None:
         _spine_inches = spine_width_inches
 
-    # Safety margin on cover: hardcover needs 0.75", softcover 0.50"
-    _cover_safety = HARDCOVER_COVER_SAFETY if cover_type == "hardcover" else SOFTCOVER_COVER_SAFETY
+    spine = _spine_inches * inch
 
     logger.info(
         "Generating Lulu cover PDF - starting",
@@ -358,17 +386,10 @@ async def generate_cover_pdf(
         has_cover_image=bool(cover_image_url),
         cover_type=cover_type,
         spine_width_inches=_spine_inches,
-        cover_safety_inches=_spine_inches,
+        cover_safety_inches=_cover_safety / inch,
+        wrap_width_inches=wrap_w / inch,
+        wrap_height_inches=wrap_h / inch,
     )
-
-    trim_w = 8.5 * inch
-    trim_h = 8.5 * inch
-    bleed = BLEED
-    spine = _spine_inches * inch
-
-    # Total wrap dimensions
-    wrap_w = 2 * (trim_w + bleed) + spine
-    wrap_h = trim_h + 2 * bleed
 
     # Download cover image if provided
     cover_img_bytes: Optional[bytes] = None
@@ -385,9 +406,27 @@ async def generate_cover_pdf(
     c.setFillColor(COVER_BG_COLOR)
     c.rect(0, 0, wrap_w, wrap_h, fill=1, stroke=0)
 
-    # ---- Front cover (right half) ----
-    front_x = bleed + trim_w + spine  # x-start of front cover area
-    front_w = trim_w + bleed          # extends to right bleed edge
+    # ---- Calculate panel dimensions ----
+    # Layout: [back panel] [spine] [front panel]
+    # For symmetry, center the spine and divide remaining width equally
+    if _spine_inches > 0:
+        # Hardcover: total 19", spine 0.25" centered
+        # Spine center: wrap_w / 2
+        # Back panel: 0 to (spine_center - spine/2)
+        # Front panel: (spine_center + spine/2) to wrap_w
+        spine_center_x = wrap_w / 2
+        spine_left_x = spine_center_x - spine / 2
+        spine_right_x = spine_center_x + spine / 2
+
+        back_w = spine_left_x
+        front_x = spine_right_x
+        front_w = wrap_w - spine_right_x
+    else:
+        # Softcover: total 17.25", no spine
+        # Split equally: back = left half, front = right half
+        back_w = wrap_w / 2
+        front_x = wrap_w / 2
+        front_w = wrap_w / 2
 
     if cover_img_bytes:
         try:
@@ -421,35 +460,38 @@ async def generate_cover_pdf(
     c.setFont(FONT_REGULAR, 14)
     c.drawCentredString(front_x + front_w / 2, subtitle_y, f"Starring {child_name}")
 
-    # ---- Back cover (left half) ----
+    # ---- Back cover (left panel) ----
     c.setFillColor(COVER_BG_COLOR)
-    c.rect(0, 0, bleed + trim_w, wrap_h, fill=1, stroke=0)
+    c.rect(0, 0, back_w, wrap_h, fill=1, stroke=0)
 
     c.setFillColor(white)
     c.setFont(FONT_REGULAR, 10)
     c.drawCentredString(
-        (bleed + trim_w) / 2,
+        back_w / 2,  # Center of back panel
         bleed + _cover_safety,  # Safety zone from bottom trim (hardcover: 0.75", softcover: 0.50")
         "A personalised storybook by StoryGift · storygift.in",
     )
 
-    # ---- Spine ----
-    spine_x = bleed + trim_w
-    c.setFillColor(COVER_BG_COLOR)
-    c.rect(spine_x, 0, spine, wrap_h, fill=1, stroke=0)
+    # ---- Spine (only for hardcover) ----
+    if _spine_inches > 0:
+        c.setFillColor(COVER_BG_COLOR)
+        c.rect(spine_left_x, 0, spine, wrap_h, fill=1, stroke=0)
 
-    # Spine text (rotated) — only if spine is wide enough
-    if _spine_inches >= 0.18:
-        c.saveState()
-        c.translate(spine_x + spine / 2, wrap_h / 2)
-        c.rotate(90)
-        c.setFillColor(white)
-        c.setFont(FONT_BOLD, 8)
-        c.drawCentredString(0, 0, f"{story_title} · {child_name}")
-        c.restoreState()
+        # Spine text (rotated) — only if spine is wide enough
+        if _spine_inches >= 0.18:
+            c.saveState()
+            c.translate(spine_center_x, wrap_h / 2)
+            c.rotate(90)
+            c.setFillColor(white)
+            c.setFont(FONT_BOLD, 8)
+            c.drawCentredString(0, 0, f"{story_title} · {child_name}")
+            c.restoreState()
 
     c.save()
     pdf_bytes = pdf_buffer.getvalue()
+
+    # Calculate MD5 hash for Lulu API integrity verification
+    pdf_md5 = hashlib.md5(pdf_bytes).hexdigest()
 
     # Upload to R2
     r2_key = f"lulu/{preview_id}/cover.pdf"
@@ -466,7 +508,8 @@ async def generate_cover_pdf(
         preview_id=preview_id,
         url=cover_url[:80] + "..." if cover_url else None,
         pdf_size_kb=pdf_size_kb,
+        pdf_md5=pdf_md5,
         duration_ms=duration_ms,
         has_cover_image=bool(cover_img_bytes),
     )
-    return cover_url
+    return cover_url, pdf_md5

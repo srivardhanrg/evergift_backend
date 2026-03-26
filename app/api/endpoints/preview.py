@@ -88,6 +88,9 @@ async def create_preview(
     - These are used to link previews to Shopify customers for order matching
     """
 
+    # Style selection removed from API - always use photorealistic
+    style = "photorealistic"
+
     try:
         # Extract Shopify customer context from headers
         shopify_customer_id, shopify_customer_email = extract_shopify_customer_context(request)
@@ -178,7 +181,7 @@ async def create_preview(
             "Creating preview",
             child_name=preview_request.child_name,
             theme=preview_request.theme,
-            style=preview_request.style.value,
+            style=style,
             shopify_customer_id=shopify_customer_id,
             session_id_prefix=session_id[:8] if session_id else None,
             is_guest=shopify_customer_id is None,
@@ -206,7 +209,7 @@ async def create_preview(
             "child_age": preview_request.child_age,
             "child_gender": preview_request.child_gender,
             "theme": preview_request.theme.value,
-            "style": preview_request.style.value,
+            "style": style,  # Hardcoded to photorealistic
             "photo_url": preview_request.photo_urls[0],  # Primary photo for duplicate detection
             "photo_urls": preview_request.photo_urls,     # All photos (JSONB) for multi-face generation
             "photo_validated": True,
@@ -254,10 +257,10 @@ async def create_preview(
             child_age=preview_request.child_age,
             child_gender=preview_request.child_gender,
             theme=theme_value,
-            style=preview_request.style.value  # Pass art style to background task
+            style=style  # Pass hardcoded photorealistic style
         )
 
-        logger.info("Preview generation job started", job_id=job_id, preview_id=preview_id, style=preview_request.style.value)
+        logger.info("Preview generation job started", job_id=job_id, preview_id=preview_id, style=style)
 
         return JobStartResponse(
             job_id=job_id,

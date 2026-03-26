@@ -174,7 +174,9 @@ async def calculate_print_cost(
 
 async def create_print_job(
     interior_url: str,
+    interior_md5: str,
     cover_url: str,
+    cover_md5: str,
     shipping_address: dict,
     order_id: str,
     child_name: str,
@@ -187,7 +189,9 @@ async def create_print_job(
 
     Args:
         interior_url: URL to interior PDF (24 pages)
+        interior_md5: MD5 hash of interior PDF for integrity verification
         cover_url: URL to cover wrap PDF
+        cover_md5: MD5 hash of cover PDF for integrity verification
         shipping_address: Dict with name, street1, city, state_code, country_code, postcode, phone_number
         order_id: Shopify order ID (used as external_id)
         child_name: Child's name for book title
@@ -219,15 +223,30 @@ async def create_print_job(
             {
                 "title": f"{child_name}'s MagicTales Storybook",
                 "quantity": quantity,
-                # Lulu API requires cover/interior/pod_package_id nested inside
-                # printable_normalization (the shorthand flat structure causes 500 errors)
+                # IMPORTANT: Lulu API Payload Structure
+                #
+                # The Lulu Print API documentation shows a FLAT structure:
+                #   "pod_package_id": "...", "cover": {...}, "interior": {...}
+                #
+                # However, testing (2024-2025) revealed that the flat structure causes
+                # 500 Internal Server Error from Lulu's sandbox API.
+                #
+                # The NESTED structure below (with printable_normalization wrapper) works correctly.
+                # This may be a sandbox vs production API difference, or an undocumented
+                # requirement in the current API version.
+                #
+                # DO NOT change to flat structure without extensive testing in sandbox first.
+                # Reference: LULU_PDF_SPEC_COMPLIANCE_AUDIT.md (Issue #3)
+                #
                 "printable_normalization": {
                     "pod_package_id": pod_package_id,
                     "cover": {
                         "source_url": cover_url,
+                        "source_md5_sum": cover_md5,  # For integrity verification
                     },
                     "interior": {
                         "source_url": interior_url,
+                        "source_md5_sum": interior_md5,  # For integrity verification
                     },
                 },
             }

@@ -43,18 +43,19 @@ async def generate_full_preview(
     child_name: str,
     child_age: int,
     child_gender: str,
-    theme: str,
-    style: str = "photorealistic"  # NEW: art style parameter with backward-compatible default
+    theme: str
 ):
     """
-    Generate story preview using appropriate pipeline based on style.
+    Generate story preview using photorealistic pipeline.
 
     Supports all themes with configurable page generation.
     Testing mode: 5 pages, Production mode: 10 pages
-    
-    Args:
-        style: "photorealistic" (default) or "cartoon_3d"
+
+    Note: Cartoon pipeline code preserved but not exposed in API.
     """
+    # Hardcoded to photorealistic - cartoon pipeline preserved but not exposed
+    style = "photorealistic"
+
     logger.info("Preview generation started", theme=theme, style=style, preview_id=preview_id)
 
     await generate_storygift_preview(
@@ -65,7 +66,7 @@ async def generate_full_preview(
         child_age=child_age,
         child_gender=child_gender,
         theme=theme,
-        style=style  # Pass style through
+        style=style  # Pass hardcoded photorealistic style
     )
 
 

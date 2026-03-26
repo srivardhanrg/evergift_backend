@@ -131,15 +131,19 @@ async def generate_storygift_preview(
     child_name: str,
     child_age: int,
     child_gender: str,
-    theme: str,
-    style: str = "photorealistic"  # Art style (photorealistic or cartoon_3d)
+    theme: str
 ):
     """
-    Generate StoryGift-style preview with configurable page count.
+    Generate StoryGift-style preview with photorealistic pipeline.
 
     Uses photorealistic pipeline with VLM face analysis.
     Supports testing mode (5 pages) vs production mode (10 pages).
+
+    Note: Cartoon pipeline code preserved but not exposed in API.
     """
+    # Hardcoded to photorealistic - cartoon pipeline preserved but not exposed
+    style = "photorealistic"
+
     try:
         # PREVIEW MODE: Always generate 5 pages first (remaining 5 after payment)
         preview_pages = 5
@@ -221,9 +225,9 @@ async def generate_storygift_preview(
 
         cover_url = None
         try:
-            # Get cover prompt from template (using sanitized name, age, gender and matching style)
-            # This ensures cover and pages use consistent artistic styling
-            cover_prompt = template.get_cover_prompt(safe_child_name, child_age, child_gender, style=style)
+            # Get cover prompt from template (using sanitized name, age, gender)
+            # Always uses photorealistic style
+            cover_prompt = template.get_cover_prompt(safe_child_name, child_age, child_gender)
             logger.info(
                 "Generating cover image with face-preserving pipeline",
                 preview_id=preview_id,
@@ -1322,7 +1326,7 @@ async def generate_remaining_pages_and_pdf(
                     customer_email = preview_data.get("customer_email")
 
                     if customer_email:
-                        await email_service.send_order_complete_email(
+                        await email_service.send_book_ready_email(
                             to_email=customer_email,
                             child_name=safe_child_name,
                             preview_id=preview_id,

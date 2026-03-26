@@ -82,8 +82,8 @@ class Settings(BaseSettings):
     lulu_api_base: str = "https://api.sandbox.lulu.com"
     lulu_auth_url: str = "https://api.sandbox.lulu.com/auth/realms/glasstree/protocol/openid-connect/token"
     lulu_pod_package_id: str = "0850X0850FCPRESS080CW444GXX"  # DEPRECATED - use softcover/hardcover
-    lulu_pod_package_id_softcover: str = "0850X0850BCSADSTDLW444GXX"  # 8.5x8.5" B&W saddle stitch (24 pages)
-    lulu_pod_package_id_hardcover: str = "0850X0850FCPERFGLOSSGW"     # 8.5x8.5" color perfect bound (24 pages)
+    lulu_pod_package_id_softcover: str = "0850X0850FCPRESS080CW444GXX"  # 8.5x8.5" Full Color Press (24 pages)
+    lulu_pod_package_id_hardcover: str = "0850X0850FCPRECW080CW444GXX"  # 8.5x8.5" Full Color Premium (24 pages)
     lulu_webhook_secret: str = ""  # Set to your lulu_client_secret value — Lulu uses it to sign webhooks
 
     # Rate Limiting

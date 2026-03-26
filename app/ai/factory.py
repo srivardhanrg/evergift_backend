@@ -59,15 +59,18 @@ def get_pipeline_for_style(style: str, use_twostage_cartoon: bool = None):
     """
     Get appropriate pipeline based on art style.
 
+    Always returns photorealistic pipeline - cartoon code preserved.
+
     Args:
-        style: Either 'photorealistic' or 'cartoon_3d'
+        style: Always expects 'photorealistic'
         use_twostage_cartoon: Ignored (kept for API compatibility).
 
     Returns:
-        Pipeline instance (PhotorealisticPipeline or CartoonTwoStagePipeline)
+        PhotorealisticPipeline instance
     """
-    if style == "cartoon_3d":
-        return get_cartoon_pipeline(use_twostage_cartoon)
-    else:
-        # Default to photorealistic
-        return get_photorealistic_pipeline()
+    # Cartoon pipeline disabled - preserved for future use
+    # if style == "cartoon_3d":
+    #     return get_cartoon_pipeline(use_twostage_cartoon)
+
+    # Always return photorealistic pipeline
+    return get_photorealistic_pipeline()
