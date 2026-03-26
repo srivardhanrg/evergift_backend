@@ -93,6 +93,11 @@ This magical story was made just for you. May it fill your heart with wonder and
 # These fonts are downloaded during Docker build from Google Fonts
 
 FONT_PATHS = {
+    # Primary fonts (playful + kid-friendly)
+    "Bubblegum Sans": "/app/fonts/BubblegumSans-Regular.ttf",
+    "Caveat": "/app/fonts/Caveat-Regular.ttf",
+    "Pacifico": "/app/fonts/Pacifico-Regular.ttf",
+    # Legacy fonts (kept for backward compatibility)
     "Dancing Script": "/app/fonts/DancingScript-Regular.ttf",
     "Playfair Display": "/app/fonts/PlayfairDisplay-Regular.ttf",
     "Cormorant Garamond": "/app/fonts/CormorantGaramond-Regular.ttf",
@@ -106,672 +111,288 @@ FONT_PATHS = {
 # ============================================================================
 # THEME-SPECIFIC TEXT CONFIGURATIONS
 # ============================================================================
+# Fonts: Bubblegum Sans (story) + Caveat (dedication) — playful & kid-friendly
+# Text fills ~75% of page width for maximum impact
+# Cloud bubble behind text for readability against any background
+
+# Shared bubble defaults (theme color overrides below)
+_STORY_BUBBLE_DEFAULTS = {
+    "enabled": True,
+    "opacity": 0.72,
+    "corner_radius": 120,
+    "padding_x": 100,
+    "padding_y": 70,
+    "blur_edge": 12,
+    "shape": "cloud",       # "cloud" = bumpy edges, "rounded" = plain rounded rect
+    "cloud_bump_size": 60,  # radius of each bump circle (at 2550px)
+}
+
+_DEDICATION_BUBBLE_DEFAULTS = {
+    "enabled": True,
+    "opacity": 0.75,
+    "corner_radius": 120,
+    "padding_x": 130,
+    "padding_y": 90,
+    "blur_edge": 14,
+    "shape": "cloud",
+    "cloud_bump_size": 60,
+}
+
+# Shared story text config (overridden per-theme for colors only)
+_STORY_BASE = {
+    "font_family": "Bubblegum Sans",
+    "font_size": 100,
+    "line_height": 1.8,
+    "shadow": {
+        "color": "#000000",
+        "opacity": 0.12,
+        "offset_x": 3,
+        "offset_y": 4,
+        "blur": 5
+    },
+    "alignment": TextAlignment.CENTER,
+    "max_width_percent": 75,
+    "vertical_position": "center",
+    "drop_cap": {
+        "enabled": True,
+        "font_size": 260,
+        "font_family": "Bubblegum Sans",
+        "color": None,  # overridden per theme
+        "lines_to_span": 3
+    },
+    "letter_spacing": 0.5,
+}
+
+_DEDICATION_BASE = {
+    "font_family": "Caveat",
+    "font_size": 130,
+    "line_height": 1.6,
+    "shadow": {
+        "color": "#000000",
+        "opacity": 0.10,
+        "offset_x": 3,
+        "offset_y": 4,
+        "blur": 6
+    },
+    "alignment": TextAlignment.CENTER,
+    "max_width_percent": 75,
+    "vertical_position": "center",
+    "drop_cap": None,
+    "page_colors": None,
+    "letter_spacing": 0.8,
+}
+
+
+def _make_theme(
+    dedication_color: str,
+    story_color: str,
+    drop_cap_color: str,
+    bubble_color: str,
+    page_colors: dict,
+    shadow_color: str = "#000000",
+) -> Dict[str, TextConfig]:
+    """Build a complete theme config from just the colors."""
+    return {
+        "dedication": {
+            **_DEDICATION_BASE,
+            "color": dedication_color,
+            "bubble": {**_DEDICATION_BUBBLE_DEFAULTS, "color": bubble_color},
+        },
+        "story": {
+            **_STORY_BASE,
+            "color": story_color,
+            "shadow": {**_STORY_BASE["shadow"], "color": shadow_color},
+            "drop_cap": {**_STORY_BASE["drop_cap"], "color": drop_cap_color},
+            "page_colors": page_colors,
+            "bubble": {**_STORY_BUBBLE_DEFAULTS, "color": bubble_color},
+        },
+    }
+
 
 THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
     # ========================================================================
-    # ENCHANTED FOREST THEME
+    # ENCHANTED FOREST — warm parchment bubble, forest greens
     # ========================================================================
-    # Color palette inspired by magical forest imagery:
-    # - Forest greens (#2D5016, #1B4D3E)
-    # - Earth browns (#5D4037)
-    # - Waterfall blues (#1565C0)
-    # - Mystical purples (#4A148C)
-    # - Golden endings (#FFB300)
-    "storygift_enchanted_forest": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#2D5016",  # Deep forest green
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.12,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#F5F0E1",  # Warm parchment — forest scroll feel
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_enchanted_forest": _make_theme(
+        dedication_color="#2D5016",
+        story_color="#2D5016",
+        drop_cap_color="#1B4D3E",
+        bubble_color="#F5F0E1",
+        shadow_color="#1A3009",
+        page_colors={
+            "text1": {"color": "#2D5016", "shadow_color": "#1A3009"},
+            "text2": {"color": "#5D4037", "shadow_color": "#3E2723"},
+            "text3": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text4": {"color": "#2D5016", "shadow_color": "#1A3009"},
+            "text5": {"color": "#4A148C", "shadow_color": "#311B92"},
+            "text6": {"color": "#5D4037", "shadow_color": "#3E2723"},
+            "text7": {"color": "#388E3C", "shadow_color": "#1B5E20"},
+            "text8": {"color": "#1976D2", "shadow_color": "#0D47A1"},
+            "text9": {"color": "#6D4C41", "shadow_color": "#4E342E"},
+            "text10": {"color": "#F57F17", "shadow_color": "#E65100"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#2D5016",  # Default forest green
-            "shadow": {
-                "color": "#1A3009",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#1B4D3E",  # Darker forest accent
-                "lines_to_span": 3
-            },
-            # Page-specific colors based on filler image aesthetics
-            "page_colors": {
-                # Text page 1 - Opening forest scene (green tones)
-                "text1": {"color": "#2D5016", "shadow_color": "#1A3009"},
-                # Text page 2 - Earth/woodland scene (warm brown)
-                "text2": {"color": "#5D4037", "shadow_color": "#3E2723"},
-                # Text page 3 - Waterfall/stream scene (water blue)
-                "text3": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                # Text page 4 - Deep forest (forest green)
-                "text4": {"color": "#2D5016", "shadow_color": "#1A3009"},
-                # Text page 5 - Mystical encounter (mystical purple)
-                "text5": {"color": "#4A148C", "shadow_color": "#311B92"},
-                # Text page 6 - Tree/bark scene (earth brown)
-                "text6": {"color": "#5D4037", "shadow_color": "#3E2723"},
-                # Text page 7 - Meadow scene (fresh green)
-                "text7": {"color": "#388E3C", "shadow_color": "#1B5E20"},
-                # Text page 8 - Twilight scene (soft blue)
-                "text8": {"color": "#1976D2", "shadow_color": "#0D47A1"},
-                # Text page 9 - Dawn scene (warm brown)
-                "text9": {"color": "#6D4C41", "shadow_color": "#4E342E"},
-                # Text page 10 - Triumphant ending (golden)
-                "text10": {"color": "#F57F17", "shadow_color": "#E65100"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#F5F0E1",  # Warm parchment
-                "opacity": 0.65,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # MAGIC CASTLE THEME
+    # MAGIC CASTLE — soft lavender bubble, royal purples
     # ========================================================================
-    # Color palette inspired by magical academy:
-    # - Royal purples (#6A1B9A, #4A148C)
-    # - Midnight blues (#1A237E)
-    # - Gold accents (#FFD600)
-    "storygift_magic_castle": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#4A148C",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.12,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#EDE7F6",  # Soft lavender — magical, regal
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_magic_castle": _make_theme(
+        dedication_color="#4A148C",
+        story_color="#4A148C",
+        drop_cap_color="#6A1B9A",
+        bubble_color="#EDE7F6",
+        shadow_color="#311B92",
+        page_colors={
+            "text1": {"color": "#4A148C", "shadow_color": "#311B92"},
+            "text2": {"color": "#1A237E", "shadow_color": "#0D1642"},
+            "text3": {"color": "#6A1B9A", "shadow_color": "#4A148C"},
+            "text4": {"color": "#4527A0", "shadow_color": "#311B92"},
+            "text5": {"color": "#283593", "shadow_color": "#1A237E"},
+            "text6": {"color": "#6A1B9A", "shadow_color": "#4A148C"},
+            "text7": {"color": "#4A148C", "shadow_color": "#311B92"},
+            "text8": {"color": "#1A237E", "shadow_color": "#0D1642"},
+            "text9": {"color": "#4527A0", "shadow_color": "#311B92"},
+            "text10": {"color": "#F57F17", "shadow_color": "#E65100"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#4A148C",
-            "shadow": {
-                "color": "#311B92",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#6A1B9A",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#4A148C", "shadow_color": "#311B92"},
-                "text2": {"color": "#1A237E", "shadow_color": "#0D1642"},
-                "text3": {"color": "#6A1B9A", "shadow_color": "#4A148C"},
-                "text4": {"color": "#4527A0", "shadow_color": "#311B92"},
-                "text5": {"color": "#283593", "shadow_color": "#1A237E"},
-                "text6": {"color": "#6A1B9A", "shadow_color": "#4A148C"},
-                "text7": {"color": "#4A148C", "shadow_color": "#311B92"},
-                "text8": {"color": "#1A237E", "shadow_color": "#0D1642"},
-                "text9": {"color": "#4527A0", "shadow_color": "#311B92"},
-                "text10": {"color": "#F57F17", "shadow_color": "#E65100"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#EDE7F6",  # Soft lavender
-                "opacity": 0.65,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # COSMIC ADVENTURE THEME
+    # COSMIC DREAMER — pale indigo bubble, space blues
     # ========================================================================
-    # Color palette inspired by space exploration:
-    # - Deep space blues (#1A237E, #0D47A1)
-    # - Nebula purples (#4A148C)
-    # - Starlight silver (#546E7A)
-    "storygift_cosmic_dreamer": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#1A237E",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.15,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 10
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#E8EAF6",  # Pale indigo — dreamy, spacey
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_cosmic_dreamer": _make_theme(
+        dedication_color="#1A237E",
+        story_color="#1A237E",
+        drop_cap_color="#283593",
+        bubble_color="#E8EAF6",
+        shadow_color="#0D1642",
+        page_colors={
+            "text1": {"color": "#1A237E", "shadow_color": "#0D1642"},
+            "text2": {"color": "#4A148C", "shadow_color": "#311B92"},
+            "text3": {"color": "#0D47A1", "shadow_color": "#01579B"},
+            "text4": {"color": "#283593", "shadow_color": "#1A237E"},
+            "text5": {"color": "#4A148C", "shadow_color": "#311B92"},
+            "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text7": {"color": "#1A237E", "shadow_color": "#0D1642"},
+            "text8": {"color": "#4527A0", "shadow_color": "#311B92"},
+            "text9": {"color": "#0D47A1", "shadow_color": "#01579B"},
+            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#1A237E",
-            "shadow": {
-                "color": "#0D1642",
-                "opacity": 0.18,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#283593",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#1A237E", "shadow_color": "#0D1642"},
-                "text2": {"color": "#4A148C", "shadow_color": "#311B92"},
-                "text3": {"color": "#0D47A1", "shadow_color": "#01579B"},
-                "text4": {"color": "#283593", "shadow_color": "#1A237E"},
-                "text5": {"color": "#4A148C", "shadow_color": "#311B92"},
-                "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                "text7": {"color": "#1A237E", "shadow_color": "#0D1642"},
-                "text8": {"color": "#4527A0", "shadow_color": "#311B92"},
-                "text9": {"color": "#0D47A1", "shadow_color": "#01579B"},
-                "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#E8EAF6",  # Pale indigo
-                "opacity": 0.60,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # OCEAN EXPLORER THEME
+    # OCEAN EXPLORER — light cyan bubble, ocean blues
     # ========================================================================
-    # Color palette inspired by underwater world:
-    # - Ocean blues (#0277BD, #01579B)
-    # - Coral (#E65100)
-    # - Sea green (#00695C)
-    "storygift_ocean_explorer": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#01579B",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.12,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#E0F7FA",  # Light cyan — watery, aquatic
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_ocean_explorer": _make_theme(
+        dedication_color="#01579B",
+        story_color="#01579B",
+        drop_cap_color="#0277BD",
+        bubble_color="#E0F7FA",
+        shadow_color="#002F6C",
+        page_colors={
+            "text1": {"color": "#01579B", "shadow_color": "#002F6C"},
+            "text2": {"color": "#00695C", "shadow_color": "#004D40"},
+            "text3": {"color": "#0277BD", "shadow_color": "#01579B"},
+            "text4": {"color": "#00838F", "shadow_color": "#006064"},
+            "text5": {"color": "#01579B", "shadow_color": "#002F6C"},
+            "text6": {"color": "#00695C", "shadow_color": "#004D40"},
+            "text7": {"color": "#0277BD", "shadow_color": "#01579B"},
+            "text8": {"color": "#00838F", "shadow_color": "#006064"},
+            "text9": {"color": "#01579B", "shadow_color": "#002F6C"},
+            "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#01579B",
-            "shadow": {
-                "color": "#002F6C",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#0277BD",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#01579B", "shadow_color": "#002F6C"},
-                "text2": {"color": "#00695C", "shadow_color": "#004D40"},
-                "text3": {"color": "#0277BD", "shadow_color": "#01579B"},
-                "text4": {"color": "#00838F", "shadow_color": "#006064"},
-                "text5": {"color": "#01579B", "shadow_color": "#002F6C"},
-                "text6": {"color": "#00695C", "shadow_color": "#004D40"},
-                "text7": {"color": "#0277BD", "shadow_color": "#01579B"},
-                "text8": {"color": "#00838F", "shadow_color": "#006064"},
-                "text9": {"color": "#01579B", "shadow_color": "#002F6C"},
-                "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#E0F7FA",  # Light cyan
-                "opacity": 0.60,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # SAFARI ADVENTURE THEME
+    # SAFARI ADVENTURE — warm cream bubble, earth browns
     # ========================================================================
-    # Color palette inspired by African savanna:
-    # - Savanna gold (#F57F17, #E65100)
-    # - Earth brown (#5D4037)
-    # - Sunset orange (#EF6C00)
-    "storygift_safari_adventure": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#5D4037",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.12,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#FFF8E1",  # Warm cream — sandy, savanna
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_safari_adventure": _make_theme(
+        dedication_color="#5D4037",
+        story_color="#5D4037",
+        drop_cap_color="#6D4C41",
+        bubble_color="#FFF8E1",
+        shadow_color="#3E2723",
+        page_colors={
+            "text1": {"color": "#5D4037", "shadow_color": "#3E2723"},
+            "text2": {"color": "#EF6C00", "shadow_color": "#E65100"},
+            "text3": {"color": "#6D4C41", "shadow_color": "#4E342E"},
+            "text4": {"color": "#F57F17", "shadow_color": "#E65100"},
+            "text5": {"color": "#5D4037", "shadow_color": "#3E2723"},
+            "text6": {"color": "#EF6C00", "shadow_color": "#E65100"},
+            "text7": {"color": "#6D4C41", "shadow_color": "#4E342E"},
+            "text8": {"color": "#F57F17", "shadow_color": "#E65100"},
+            "text9": {"color": "#5D4037", "shadow_color": "#3E2723"},
+            "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#5D4037",
-            "shadow": {
-                "color": "#3E2723",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#6D4C41",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#5D4037", "shadow_color": "#3E2723"},
-                "text2": {"color": "#EF6C00", "shadow_color": "#E65100"},
-                "text3": {"color": "#6D4C41", "shadow_color": "#4E342E"},
-                "text4": {"color": "#F57F17", "shadow_color": "#E65100"},
-                "text5": {"color": "#5D4037", "shadow_color": "#3E2723"},
-                "text6": {"color": "#EF6C00", "shadow_color": "#E65100"},
-                "text7": {"color": "#6D4C41", "shadow_color": "#4E342E"},
-                "text8": {"color": "#F57F17", "shadow_color": "#E65100"},
-                "text9": {"color": "#5D4037", "shadow_color": "#3E2723"},
-                "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#FFF8E1",  # Warm cream
-                "opacity": 0.65,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # MIGHTY GUARDIAN (SUPERHERO) THEME
+    # MIGHTY GUARDIAN — soft red bubble, hero reds & blues
     # ========================================================================
-    "storygift_mighty_guardian": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#B71C1C",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.15,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#FFEBEE",  # Soft red tint — heroic energy
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_mighty_guardian": _make_theme(
+        dedication_color="#B71C1C",
+        story_color="#B71C1C",
+        drop_cap_color="#C62828",
+        bubble_color="#FFEBEE",
+        shadow_color="#7F0000",
+        page_colors={
+            "text1": {"color": "#B71C1C", "shadow_color": "#7F0000"},
+            "text2": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text3": {"color": "#C62828", "shadow_color": "#B71C1C"},
+            "text4": {"color": "#1976D2", "shadow_color": "#1565C0"},
+            "text5": {"color": "#B71C1C", "shadow_color": "#7F0000"},
+            "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text7": {"color": "#C62828", "shadow_color": "#B71C1C"},
+            "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
+            "text9": {"color": "#B71C1C", "shadow_color": "#7F0000"},
+            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#B71C1C",
-            "shadow": {
-                "color": "#7F0000",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#C62828",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#B71C1C", "shadow_color": "#7F0000"},
-                "text2": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                "text3": {"color": "#C62828", "shadow_color": "#B71C1C"},
-                "text4": {"color": "#1976D2", "shadow_color": "#1565C0"},
-                "text5": {"color": "#B71C1C", "shadow_color": "#7F0000"},
-                "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                "text7": {"color": "#C62828", "shadow_color": "#B71C1C"},
-                "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
-                "text9": {"color": "#B71C1C", "shadow_color": "#7F0000"},
-                "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#FFEBEE",  # Soft red tint
-                "opacity": 0.60,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # BIRTHDAY MAGIC THEME
+    # BIRTHDAY MAGIC — pink bubble, party pinks & purples
     # ========================================================================
-    "storygift_birthday_magic": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#AD1457",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.12,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#FCE4EC",  # Pink tint — festive, party
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_birthday_magic": _make_theme(
+        dedication_color="#AD1457",
+        story_color="#AD1457",
+        drop_cap_color="#C2185B",
+        bubble_color="#FCE4EC",
+        shadow_color="#880E4F",
+        page_colors={
+            "text1": {"color": "#AD1457", "shadow_color": "#880E4F"},
+            "text2": {"color": "#7B1FA2", "shadow_color": "#6A1B9A"},
+            "text3": {"color": "#C2185B", "shadow_color": "#AD1457"},
+            "text4": {"color": "#8E24AA", "shadow_color": "#7B1FA2"},
+            "text5": {"color": "#AD1457", "shadow_color": "#880E4F"},
+            "text6": {"color": "#7B1FA2", "shadow_color": "#6A1B9A"},
+            "text7": {"color": "#C2185B", "shadow_color": "#AD1457"},
+            "text8": {"color": "#8E24AA", "shadow_color": "#7B1FA2"},
+            "text9": {"color": "#AD1457", "shadow_color": "#880E4F"},
+            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#AD1457",
-            "shadow": {
-                "color": "#880E4F",
-                "opacity": 0.15,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#C2185B",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#AD1457", "shadow_color": "#880E4F"},
-                "text2": {"color": "#7B1FA2", "shadow_color": "#6A1B9A"},
-                "text3": {"color": "#C2185B", "shadow_color": "#AD1457"},
-                "text4": {"color": "#8E24AA", "shadow_color": "#7B1FA2"},
-                "text5": {"color": "#AD1457", "shadow_color": "#880E4F"},
-                "text6": {"color": "#7B1FA2", "shadow_color": "#6A1B9A"},
-                "text7": {"color": "#C2185B", "shadow_color": "#AD1457"},
-                "text8": {"color": "#8E24AA", "shadow_color": "#7B1FA2"},
-                "text9": {"color": "#AD1457", "shadow_color": "#880E4F"},
-                "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#FCE4EC",  # Pink tint
-                "opacity": 0.60,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 
     # ========================================================================
-    # SECRET AGENT THEME
+    # SECRET AGENT — cool gray bubble, sleek grays & blues
     # ========================================================================
-    "storygift_secret_agent": {
-        "dedication": {
-            "font_family": "Dancing Script",
-            "font_size": 110,
-            "line_height": 1.7,
-            "color": "#37474F",
-            "shadow": {
-                "color": "#000000",
-                "opacity": 0.15,
-                "offset_x": 4,
-                "offset_y": 5,
-                "blur": 8
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": None,
-            "page_colors": None,
-            "letter_spacing": 0.5,
-            "bubble": {
-                "enabled": True,
-                "color": "#ECEFF1",  # Cool gray — sleek, sophisticated
-                "opacity": 0.70,
-                "corner_radius": 100,
-                "padding_x": 120,
-                "padding_y": 80,
-                "blur_edge": 12,
-            }
+    "storygift_secret_agent": _make_theme(
+        dedication_color="#37474F",
+        story_color="#37474F",
+        drop_cap_color="#455A64",
+        bubble_color="#ECEFF1",
+        shadow_color="#263238",
+        page_colors={
+            "text1": {"color": "#37474F", "shadow_color": "#263238"},
+            "text2": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text3": {"color": "#455A64", "shadow_color": "#37474F"},
+            "text4": {"color": "#1976D2", "shadow_color": "#1565C0"},
+            "text5": {"color": "#37474F", "shadow_color": "#263238"},
+            "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
+            "text7": {"color": "#455A64", "shadow_color": "#37474F"},
+            "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
+            "text9": {"color": "#37474F", "shadow_color": "#263238"},
+            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
         },
-        "story": {
-            "font_family": "Playfair Display",
-            "font_size": 80,
-            "line_height": 1.9,
-            "color": "#37474F",
-            "shadow": {
-                "color": "#263238",
-                "opacity": 0.18,
-                "offset_x": 3,
-                "offset_y": 5,
-                "blur": 6
-            },
-            "alignment": TextAlignment.CENTER,
-            "max_width_percent": 65,
-            "vertical_position": "center",
-            "drop_cap": {
-                "enabled": True,
-                "font_size": 240,
-                "font_family": "Cormorant Garamond Bold",
-                "color": "#455A64",
-                "lines_to_span": 3
-            },
-            "page_colors": {
-                "text1": {"color": "#37474F", "shadow_color": "#263238"},
-                "text2": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                "text3": {"color": "#455A64", "shadow_color": "#37474F"},
-                "text4": {"color": "#1976D2", "shadow_color": "#1565C0"},
-                "text5": {"color": "#37474F", "shadow_color": "#263238"},
-                "text6": {"color": "#1565C0", "shadow_color": "#0D47A1"},
-                "text7": {"color": "#455A64", "shadow_color": "#37474F"},
-                "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
-                "text9": {"color": "#37474F", "shadow_color": "#263238"},
-                "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
-            },
-            "letter_spacing": 0.3,
-            "bubble": {
-                "enabled": True,
-                "color": "#ECEFF1",  # Cool gray
-                "opacity": 0.65,
-                "corner_radius": 100,
-                "padding_x": 100,
-                "padding_y": 60,
-                "blur_edge": 10,
-            }
-        }
-    },
+    ),
 }
 
 
