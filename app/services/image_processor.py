@@ -548,8 +548,8 @@ class ImageProcessor:
             )
             _dc_bbox = _dc_font.getbbox("A")
             _dc_height = _dc_bbox[3] - _dc_bbox[1]
-            # Drop cap line uses (cap_height + line_height) instead of line_height
-            _drop_cap_extra = _dc_height
+            # Drop cap line uses (cap_height + 0.5*line_height) instead of line_height
+            _drop_cap_extra = max(0, _dc_height + int(line_height * 0.5) - line_height)
             total_height += _drop_cap_extra
 
         # Calculate starting Y position (center by default)
@@ -661,9 +661,8 @@ class ImageProcessor:
                         shadow_config
                     )
 
-                # Advance past the drop cap with generous spacing to match
-                # the visual gap between regular lines
-                current_y += cap_height + line_height
+                # Advance past the drop cap with balanced spacing
+                current_y += cap_height + int(line_height * 0.5)
             else:
                 # Draw regular line
                 self._draw_shadow_text(
@@ -771,19 +770,20 @@ class ImageProcessor:
         while font_size > 20:
             font = self._load_font(font_family, font_size)
             total_width = 0
-            for char in text:
+            for idx, char in enumerate(text):
                 char_bbox = draw.textbbox((0, 0), char, font=font)
                 char_width = int(char_bbox[2] - char_bbox[0])
-                total_width += char_width + letter_spacing
-            if text:
-                total_width -= letter_spacing
-            
+                total_width += char_width
+                # Only add letter spacing between non-space characters
+                if char != " " and idx < len(text) - 1:
+                    total_width += letter_spacing
+
             if total_width <= max_allowed_width:
                 return font, total_width
-            
+
             # Reduce size to fit
             font_size -= 5
-            
+
         # Fallback
         font = self._load_font(font_family, font_size)
         return font, max_allowed_width
@@ -897,9 +897,15 @@ class ImageProcessor:
 
         # Render title: per-character with gradient, emboss, and strong shadow
         current_x = title_x
-        for char in story_title_upper:
+        for idx, char in enumerate(story_title_upper):
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
+
+            # For spaces, just advance by the space width (no rendering needed)
+            if char == " ":
+                space_bbox = draw.textbbox((0, 0), " ", font=title_font)
+                current_x += int(space_bbox[2] - space_bbox[0])
+                continue
 
             # Layer 1: Strong dark drop shadow (depth)
             shadow_offset = int(10)
@@ -927,14 +933,11 @@ class ImageProcessor:
             )
 
             # Layer 4: Main gold gradient text (draw row-by-row via clipped mask)
-            # Create a small image for this character with gradient fill
             cw = char_width + 10
             ch = char_height + 10
             char_img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
             char_draw = ImageDraw.Draw(char_img)
-            # Draw white text as mask
             char_draw.text((0, 0), char, font=title_font, fill=(255, 255, 255, 255))
-            # Apply gradient row by row
             pixels = char_img.load()
             for py in range(ch):
                 y_frac = py / max(ch - 1, 1)
@@ -943,11 +946,13 @@ class ImageProcessor:
                     a = pixels[px, py][3]
                     if a > 0:
                         pixels[px, py] = (r, g, b, a)
-            # Paste onto overlay
             overlay.paste(char_img, (current_x, title_y), char_img)
             char_img.close()
 
-            current_x += char_width + title_letter_spacing
+            # Advance: char width + letter spacing (but not after last char)
+            current_x += char_width
+            if idx < len(story_title_upper) - 1:
+                current_x += title_letter_spacing
 
         # ============================================
         # BOTTOM GRADIENT (25% height) with starring
@@ -979,7 +984,7 @@ class ImageProcessor:
 
         # Draw starring label
         current_x = starring_x
-        for char in starring_text:
+        for idx, char in enumerate(starring_text):
             char_bbox = draw.textbbox((0, 0), char, font=starring_label_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
@@ -990,7 +995,9 @@ class ImageProcessor:
                 fill=(255, 255, 255, 180)  # Semi-transparent white
             )
 
-            current_x += char_width + starring_letter_spacing
+            current_x += char_width
+            if char != " " and idx < len(starring_text) - 1:
+                current_x += starring_letter_spacing
 
         # Child name (bold, uppercase) with luxury letter spacing & adaptive scaling
         child_name_upper = child_name.upper()
@@ -1010,9 +1017,14 @@ class ImageProcessor:
 
         # Draw name with letter-spacing and stroke for depth
         current_x = name_x
-        for char in child_name_upper:
+        for idx, char in enumerate(child_name_upper):
             char_bbox = draw.textbbox((0, 0), char, font=child_name_font)
             char_width = int(char_bbox[2] - char_bbox[0])
+
+            if char == " ":
+                space_bbox = draw.textbbox((0, 0), " ", font=child_name_font)
+                current_x += int(space_bbox[2] - space_bbox[0])
+                continue
 
             # Draw bold text stroke (subtle outline)
             stroke_width = int(4)
@@ -1042,7 +1054,9 @@ class ImageProcessor:
                 fill=(255, 255, 255, 255)  # Brilliant white
             )
 
-            current_x += char_width + name_letter_spacing
+            current_x += char_width
+            if idx < len(child_name_upper) - 1:
+                current_x += name_letter_spacing
 
         # Composite overlay onto cover
         result = Image.alpha_composite(cover_image, overlay)
