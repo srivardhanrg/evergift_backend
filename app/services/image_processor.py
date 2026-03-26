@@ -548,7 +548,8 @@ class ImageProcessor:
             )
             _dc_bbox = _dc_font.getbbox("A")
             _dc_height = _dc_bbox[3] - _dc_bbox[1]
-            _drop_cap_extra = max(0, _dc_height + int(line_height * 0.2) - line_height)
+            # Drop cap line uses (cap_height + line_height) instead of line_height
+            _drop_cap_extra = _dc_height
             total_height += _drop_cap_extra
 
         # Calculate starting Y position (center by default)
@@ -660,9 +661,9 @@ class ImageProcessor:
                         shadow_config
                     )
 
-                # Advance past the full drop cap height (not just line_height)
-                # This prevents the next line from overlapping the drop cap
-                current_y += max(line_height, cap_height + int(line_height * 0.2))
+                # Advance past the drop cap with generous spacing to match
+                # the visual gap between regular lines
+                current_y += cap_height + line_height
             else:
                 # Draw regular line
                 self._draw_shadow_text(
@@ -862,7 +863,7 @@ class ImageProcessor:
 
         # Load adaptive premium title font (Cinzel Decorative Bold for fantasy storybook feel)
         story_title_upper = story_title.upper()
-        title_letter_spacing = int(16)  # Premium letter-spacing in pixels appropriate for 300DPI
+        title_letter_spacing = int(6)  # Tighter spacing for compact, powerful look
 
         title_font, total_title_width = self._get_adaptive_cover_font(
             text=story_title_upper,
@@ -877,43 +878,74 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # Premium antique gold color (more sophisticated than bright yellow)
-        gold_color = (212, 175, 55, 255)  # #D4AF37 - antique gold
+        # --- Metallic gold gradient: light gold (top) → deep gold (bottom) ---
+        # Measure max character height for gradient mapping
+        sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
+        char_height = sample_bbox[3] - sample_bbox[1]
+        gold_top = (255, 223, 120)     # Bright warm gold highlight
+        gold_mid = (212, 175, 55)      # Classic antique gold
+        gold_bottom = (160, 120, 30)   # Deep shadow gold
 
-        # Draw title with letter-spacing and stroke for premium depth
+        def _gold_at_y(y_frac: float):
+            """Interpolate gold gradient: top highlight → mid → bottom shadow."""
+            if y_frac < 0.5:
+                t = y_frac * 2
+                return tuple(int(gold_top[i] + (gold_mid[i] - gold_top[i]) * t) for i in range(3))
+            else:
+                t = (y_frac - 0.5) * 2
+                return tuple(int(gold_mid[i] + (gold_bottom[i] - gold_mid[i]) * t) for i in range(3))
+
+        # Render title: per-character with gradient, emboss, and strong shadow
         current_x = title_x
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Draw text stroke (white outline for depth, adjusted for huge sizes)
-            stroke_width = int(4)
-            for dx in range(-stroke_width, stroke_width + 1):
-                for dy in range(-stroke_width, stroke_width + 1):
-                    if dx*dx + dy*dy <= stroke_width*stroke_width:
-                        draw.text(
-                            (current_x + dx, title_y + dy),
-                            char,
-                            font=title_font,
-                            fill=(255, 255, 255, 80)  # Semi-transparent white stroke
-                        )
-
-            # Draw bold drop shadow
-            shadow_offset = int(8)
+            # Layer 1: Strong dark drop shadow (depth)
+            shadow_offset = int(10)
             draw.text(
                 (current_x + shadow_offset, title_y + shadow_offset),
                 char,
                 font=title_font,
-                fill=(0, 0, 0, 180)
+                fill=(0, 0, 0, 200)
             )
 
-            # Draw main character in antique gold
+            # Layer 2: Dark brown inner shadow for emboss (slight offset)
             draw.text(
-                (current_x, title_y),
+                (current_x + 3, title_y + 3),
                 char,
                 font=title_font,
-                fill=gold_color
+                fill=(80, 55, 10, 180)
             )
+
+            # Layer 3: Bright highlight offset (top-left shine)
+            draw.text(
+                (current_x - 1, title_y - 1),
+                char,
+                font=title_font,
+                fill=(255, 235, 160, 90)
+            )
+
+            # Layer 4: Main gold gradient text (draw row-by-row via clipped mask)
+            # Create a small image for this character with gradient fill
+            cw = char_width + 10
+            ch = char_height + 10
+            char_img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+            char_draw = ImageDraw.Draw(char_img)
+            # Draw white text as mask
+            char_draw.text((0, 0), char, font=title_font, fill=(255, 255, 255, 255))
+            # Apply gradient row by row
+            pixels = char_img.load()
+            for py in range(ch):
+                y_frac = py / max(ch - 1, 1)
+                r, g, b = _gold_at_y(y_frac)
+                for px in range(cw):
+                    a = pixels[px, py][3]
+                    if a > 0:
+                        pixels[px, py] = (r, g, b, a)
+            # Paste onto overlay
+            overlay.paste(char_img, (current_x, title_y), char_img)
+            char_img.close()
 
             current_x += char_width + title_letter_spacing
 
