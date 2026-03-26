@@ -49,6 +49,17 @@ class PageTextStyle(TypedDict):
     shadow_color: str   # Shadow color (hex)
 
 
+class BubbleConfig(TypedDict):
+    """Fun semi-transparent bubble behind text for kid-friendly readability."""
+    enabled: bool
+    color: str              # Hex color (theme-specific)
+    opacity: float          # 0.0 - 1.0 (recommend 0.55-0.70)
+    corner_radius: int      # Pixels — large values = pillow/cloud feel (80-120 at 300 DPI)
+    padding_x: int          # Horizontal padding beyond text bounds
+    padding_y: int          # Vertical padding beyond text bounds
+    blur_edge: int          # Gaussian blur on bubble edge (0=sharp, 8-15=soft pillow feel)
+
+
 class TextConfig(TypedDict):
     """Complete text styling configuration."""
     font_family: str
@@ -62,6 +73,7 @@ class TextConfig(TypedDict):
     drop_cap: Optional[DropCapConfig]
     page_colors: Optional[Dict[str, PageTextStyle]]
     letter_spacing: Optional[float]  # Extra letter spacing
+    bubble: Optional[BubbleConfig]   # Semi-transparent fun bubble behind text
 
 
 # ============================================================================
@@ -123,7 +135,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#F5F0E1",  # Warm parchment — forest scroll feel
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -170,7 +191,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 # Text page 10 - Triumphant ending (golden)
                 "text10": {"color": "#F57F17", "shadow_color": "#E65100"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#F5F0E1",  # Warm parchment
+                "opacity": 0.65,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -199,7 +229,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#EDE7F6",  # Soft lavender — magical, regal
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -235,7 +274,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#4527A0", "shadow_color": "#311B92"},
                 "text10": {"color": "#F57F17", "shadow_color": "#E65100"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#EDE7F6",  # Soft lavender
+                "opacity": 0.65,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -264,7 +312,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#E8EAF6",  # Pale indigo — dreamy, spacey
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -300,7 +357,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#0D47A1", "shadow_color": "#01579B"},
                 "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#E8EAF6",  # Pale indigo
+                "opacity": 0.60,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -329,7 +395,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#E0F7FA",  # Light cyan — watery, aquatic
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -365,7 +440,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#01579B", "shadow_color": "#002F6C"},
                 "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#E0F7FA",  # Light cyan
+                "opacity": 0.60,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -394,7 +478,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#FFF8E1",  # Warm cream — sandy, savanna
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -430,7 +523,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#5D4037", "shadow_color": "#3E2723"},
                 "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#FFF8E1",  # Warm cream
+                "opacity": 0.65,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -455,7 +557,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#FFEBEE",  # Soft red tint — heroic energy
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -491,7 +602,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#B71C1C", "shadow_color": "#7F0000"},
                 "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#FFEBEE",  # Soft red tint
+                "opacity": 0.60,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -516,7 +636,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#FCE4EC",  # Pink tint — festive, party
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -552,7 +681,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#AD1457", "shadow_color": "#880E4F"},
                 "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#FCE4EC",  # Pink tint
+                "opacity": 0.60,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 
@@ -577,7 +715,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "vertical_position": "center",
             "drop_cap": None,
             "page_colors": None,
-            "letter_spacing": 0.5
+            "letter_spacing": 0.5,
+            "bubble": {
+                "enabled": True,
+                "color": "#ECEFF1",  # Cool gray — sleek, sophisticated
+                "opacity": 0.70,
+                "corner_radius": 100,
+                "padding_x": 120,
+                "padding_y": 80,
+                "blur_edge": 12,
+            }
         },
         "story": {
             "font_family": "Playfair Display",
@@ -613,7 +760,16 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
                 "text9": {"color": "#37474F", "shadow_color": "#263238"},
                 "text10": {"color": "#FFD600", "shadow_color": "#F57F17"}
             },
-            "letter_spacing": 0.3
+            "letter_spacing": 0.3,
+            "bubble": {
+                "enabled": True,
+                "color": "#ECEFF1",  # Cool gray
+                "opacity": 0.65,
+                "corner_radius": 100,
+                "padding_x": 100,
+                "padding_y": 60,
+                "blur_edge": 10,
+            }
         }
     },
 }

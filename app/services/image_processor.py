@@ -23,6 +23,7 @@ from app.config.text_styling import (
     get_font_path,
     TextConfig,
     TextAlignment,
+    BubbleConfig,
     FONT_PATHS,
 )
 from app.services.storage import StorageService
@@ -290,6 +291,75 @@ class ImageProcessor:
         # Draw main text
         draw.text(position, text, font=font, fill=text_color)
 
+    def _draw_text_bubble(
+        self,
+        page_size: Tuple[int, int],
+        text_bounds: Tuple[int, int, int, int],
+        bubble_config: dict,
+    ) -> Image.Image:
+        """
+        Draw a soft, kid-friendly bubble behind the text area.
+
+        Creates a rounded rectangle with blurred edges that looks like
+        a pillowy cloud/thought bubble — fun and readable.
+
+        Args:
+            page_size: (width, height) of the page
+            text_bounds: (x1, y1, x2, y2) bounding box of the text block
+            bubble_config: BubbleConfig dict with color, opacity, radius, etc.
+
+        Returns:
+            RGBA Image layer with the bubble drawn on it
+        """
+        width, height = page_size
+        x1, y1, x2, y2 = text_bounds
+
+        # Expand bounds by padding
+        pad_x = bubble_config.get("padding_x", 100)
+        pad_y = bubble_config.get("padding_y", 60)
+
+        bx1 = max(0, x1 - pad_x)
+        by1 = max(0, y1 - pad_y)
+        bx2 = min(width, x2 + pad_x)
+        by2 = min(height, y2 + pad_y)
+
+        # Parse color and opacity
+        hex_color = bubble_config.get("color", "#FFFFFF")
+        opacity = bubble_config.get("opacity", 0.65)
+        corner_radius = bubble_config.get("corner_radius", 100)
+        blur_edge = bubble_config.get("blur_edge", 10)
+
+        rgb = self._hex_to_rgb(hex_color)
+        alpha = int(255 * opacity)
+        fill_color = (*rgb, alpha)
+
+        # Create bubble on a separate RGBA layer
+        bubble_layer = Image.new("RGBA", page_size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(bubble_layer)
+
+        # Draw the rounded rectangle (pillow shape)
+        draw.rounded_rectangle(
+            [(bx1, by1), (bx2, by2)],
+            radius=corner_radius,
+            fill=fill_color,
+        )
+
+        # Soften edges with Gaussian blur for that dreamy pillow feel
+        if blur_edge > 0:
+            bubble_layer = bubble_layer.filter(
+                ImageFilter.GaussianBlur(radius=blur_edge)
+            )
+
+        logger.debug(
+            "Drew text bubble",
+            bounds=(bx1, by1, bx2, by2),
+            color=hex_color,
+            opacity=opacity,
+            corner_radius=corner_radius,
+        )
+
+        return bubble_layer
+
     async def overlay_text(
         self,
         background_url: str,
@@ -434,6 +504,30 @@ class ImageProcessor:
             lines[0] and
             lines[0][0].isalpha()
         )
+
+        # Draw fun bubble behind text for readability
+        bubble_config = text_config.get("bubble")
+        if bubble_config and bubble_config.get("enabled"):
+            # Calculate text bounding box for bubble sizing
+            # Account for drop cap overshoot on the left/top
+            margin = (width - max_text_width) // 2
+            text_x1 = margin
+            text_x2 = width - margin
+            text_y1 = start_y
+            text_y2 = start_y + total_height
+
+            # If drop cap exists, extend the top a bit for the large letter
+            if has_drop_cap:
+                drop_cap_font_size = drop_cap_config.get("font_size", 240)
+                text_y1 = min(text_y1, start_y - int(drop_cap_font_size * 0.1))
+
+            bubble_layer = self._draw_text_bubble(
+                page_size=(width, height),
+                text_bounds=(text_x1, text_y1, text_x2, text_y2),
+                bubble_config=bubble_config,
+            )
+            background = Image.alpha_composite(background, bubble_layer)
+            bubble_layer.close()
 
         # Draw each line
         current_y = start_y
