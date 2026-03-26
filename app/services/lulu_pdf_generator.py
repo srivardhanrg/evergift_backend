@@ -446,12 +446,12 @@ async def generate_cover_pdf(
     # Title must be inside safety zone: bleed + cover_safety from top edge
     # e.g. hardcover: bleed (0.125") + safety (0.75") = 0.875" from page top
     c.setFillColor(COVER_BG_COLOR)
-    overlay_h = _cover_safety + bleed + 0.5 * inch   # Safety zone + some visual breathing room
+    overlay_h = _cover_safety + BLEED + 0.5 * inch   # Safety zone + some visual breathing room
     c.rect(front_x, wrap_h - overlay_h, front_w, overlay_h, fill=1, stroke=0)
 
     # Title y position: inside safety zone from the TOP trim
     # Top of text should be at least (bleed + _cover_safety) from top page edge
-    title_y = wrap_h - bleed - _cover_safety - 0.05 * inch
+    title_y = wrap_h - BLEED - _cover_safety - 0.05 * inch
     subtitle_y = title_y - 0.45 * inch
 
     c.setFillColor(white)
@@ -468,7 +468,7 @@ async def generate_cover_pdf(
     c.setFont(FONT_REGULAR, 10)
     c.drawCentredString(
         back_w / 2,  # Center of back panel
-        bleed + _cover_safety,  # Safety zone from bottom trim (hardcover: 0.75", softcover: 0.50")
+        BLEED + _cover_safety,  # Safety zone from bottom trim (hardcover: 0.75", softcover: 0.50")
         "A personalised storybook by StoryGift · storygift.in",
     )
 
