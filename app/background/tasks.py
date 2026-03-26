@@ -43,7 +43,8 @@ async def generate_full_preview(
     child_name: str,
     child_age: int,
     child_gender: str,
-    theme: str
+    theme: str,
+    style: str = "photorealistic"  # Added style parameter with default
 ):
     """
     Generate story preview using photorealistic pipeline.
@@ -53,9 +54,7 @@ async def generate_full_preview(
 
     Note: Cartoon pipeline code preserved but not exposed in API.
     """
-    # Hardcoded to photorealistic - cartoon pipeline preserved but not exposed
-    style = "photorealistic"
-
+    # Use passed style parameter (defaults to photorealistic)
     logger.info("Preview generation started", theme=theme, style=style, preview_id=preview_id)
 
     await generate_storygift_preview(
@@ -66,7 +65,7 @@ async def generate_full_preview(
         child_age=child_age,
         child_gender=child_gender,
         theme=theme,
-        style=style  # Pass hardcoded photorealistic style
+        style=style  # Pass style parameter
     )
 
 

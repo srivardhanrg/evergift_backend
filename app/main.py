@@ -96,6 +96,18 @@ app.add_middleware(
 async def log_requests(request: Request, call_next):
     """Log every HTTP request with method, path, status code, and duration."""
     start = time.monotonic()
+
+    # Handle OPTIONS requests explicitly for CORS preflight
+    if request.method == "OPTIONS":
+        logger.info(
+            "CORS preflight request",
+            method=request.method,
+            path=request.url.path,
+            origin=request.headers.get("origin"),
+            client_ip=request.client.host if request.client else None,
+        )
+        # Let CORS middleware handle it, but log it
+
     response: Response = await call_next(request)
     duration_ms = round((time.monotonic() - start) * 1000, 1)
     # Skip noisy health-check polling from Render's uptime monitor
