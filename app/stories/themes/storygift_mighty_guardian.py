@@ -13,10 +13,10 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
     theme_id="storygift_mighty_guardian",
     title_template="{name} The Mighty Guardian",
     description="Every child is a hero—now they can see it",
-    default_costume="wearing a custom superhero costume in metallic blue and red with gold accents and a flowing cape",
+    default_costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex with visible muscle definition, gold chest emblem, red cape flowing behind, red boots with gold trim",
     protagonist_description="confident heroic expression, bright determined eyes",
     # Cover page settings for typography-ready composition
-    cover_costume="wearing a metallic blue and red superhero suit with gold accents, flowing cape billowing dramatically behind, gold emblem on chest",
+    cover_costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting glossy spandex with visible muscle definition, gold emblem on chest, flowing red cape billowing dramatically behind, red boots with gold trim",
     cover_header_atmosphere="Dramatic city skyline at sunset with lens flare, epic clouds in orange and purple hues",
     cover_magical_elements="Energy auras radiating from the body in gold and blue, motion lines suggesting speed and power. Dynamic flying pose with one fist forward in classic superhero stance.",
     cover_footer_description="City rooftops below with twinkling lights, dynamic perspective looking up at the hero",
@@ -48,7 +48,7 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
             scene_type="action",
             realistic_prompt="""Epic power awakening scene. The child named {name} in full superhero costume with metallic blue and red suit, gold accents, and flowing cape, standing alone on a city rooftop at golden hour. Child's right fist raised upward glowing with brilliant blue energy, a massive golden energy shield expanding outward from their body in a shockwave ring. Cape billowing dramatically behind in the wind. Child's face shows exhilarated determination and wonder, mouth slightly open in awe at their own power, looking toward camera. Blue and gold energy crackling around the child's raised fist and arms only, not on face. City skyline behind with warm golden sunset light. Energy particles and sparks swirling upward around the fist. Single child alone on rooftop, single face, front-facing portrait composition with the child filling the center of the frame. Cinematic superhero movie quality. Child's face clearly visible, naturally lit by warm sunset glow, no colored energy lighting on face or eyes.""",
             story_text="{name} discovered amazing powers—super strength to lift anything, super speed to run faster than the wind, and the ability to fly through the clouds! But the greatest power of all was {name}'s brave and caring heart.",
-            costume="wearing full superhero costume with metallic blue and red suit, gold accents, flowing cape"
+            costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex with visible muscle definition, gold chest emblem, red cape flowing behind, red boots with gold trim"
         ),
 
         # === PAGE 4 - THE CALL FOR HELP ===
@@ -56,9 +56,9 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
             page_number=4,
             scene_description="Responding to a call for help",
             scene_type="heroic",
-            realistic_prompt="""Heroic response moment at eye-level. The child named {name} in superhero costume standing confidently in a park, facing the camera with determined compassionate expression. One fist raised confidently ready to leap into action, other hand on hip in heroic stance — face fully unobstructed, both eyes and full face clearly visible looking toward camera. To the side, an enormous oak tree with a tiny frightened kitten visible on the highest branch, sunlight filtering through leaves. A worried child who owns the kitten stands in soft focus background, pointing up at the tree with tears. The child hero has assessed the situation and is about to leap into action. Golden afternoon light illuminating the hero's face warmly, detailed tree bark and leaves visible to the side. Child's determined compassionate face is the clear focal point, naturally lit, front-facing toward viewer. A small reassuring comic-style speech bubble near the child saying "I’ve got you!", gentle and confident, subtle and not covering the face.""",
-            story_text="Suddenly, {name} heard a call for help! A kitten was stuck at the very top of the tallest tree, too scared to climb down. 'Don't worry, little friend,' called {name}, 'I'm on my way!'",
-            costume="wearing superhero costume with cape"
+            realistic_prompt="""Heroic response moment at eye-level. The child named {name} wearing a skin-tight superhero bodysuit in vivid metallic blue with bold red accents on the shoulders, sides, and boots — form-fitting spandex material that hugs the body like Superman’s suit with visible muscle definition underneath, a bold gold emblem on the chest, and a flowing red cape attached at the shoulders. The suit is sleek, shiny, and realistic — not baggy, not a Halloween costume, not armor. Standing confidently in a park, facing the camera with determined compassionate expression. One fist raised confidently ready to leap into action, other hand on hip in classic Superman heroic stance — face fully unobstructed, both eyes and full face clearly visible looking toward camera. To the side, an enormous oak tree with a tiny frightened kitten visible on the highest branch, sunlight filtering through leaves. A worried child who owns the kitten stands in soft focus background, pointing up at the tree with tears. The child hero has assessed the situation and is about to leap into action. Golden afternoon light illuminating the hero’s face warmly, detailed tree bark and leaves visible to the side. Child’s determined compassionate face is the clear focal point, naturally lit, front-facing toward viewer.""",
+            story_text="Suddenly, {name} heard a call for help! A kitten was stuck at the very top of the tallest tree, too scared to climb down. ‘Don’t worry, little friend,’ called {name}, ‘I’m on my way!’",
+            costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex with visible muscle definition, gold chest emblem, red cape flowing behind, red boots with gold trim"
         ),
 
         # === PAGE 5 - THE RESCUE ===
@@ -68,7 +68,7 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
             scene_type="bonding",
             realistic_prompt="""Triumphant rescue scene. The child named {name} in superhero costume descending gracefully through the air in protective pose, cradling a small orange kitten against their chest with both arms. The kitten nuzzles warmly into child's neck, tiny paw resting on child's shoulder — face completely unobstructed, no paw or object on cheek or any part of the face. Child's expression is peaceful and warm, face clearly visible and front-facing toward camera. Child's cape billows upward from the descent, golden energy particles trail from boots. Dappled sunlight through tree leaves creates beautiful natural lighting on the child's face from above. Grateful crowd of kids below looking up and cheering with raised arms, soft focus background. Gentle landing moment, dust particles just starting to disturb on ground. Warm, heartwarming atmosphere, emotional connection between hero and rescued animal. Child's face the clear focal point, sharp detailed foreground. A small comic-style speech bubble near the child saying "Up!", subtle and not covering the face.""",
             story_text="With a mighty leap, {name} soared up, up, up! Gently cradling the grateful kitten, our hero flew back down, landing softly on the ground. The kitten purred and nuzzled {name}'s cheek. Mission accomplished!",
-            costume="wearing superhero costume with cape billowing"
+            costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex, gold chest emblem, red cape billowing upward from descent, red boots with gold trim"
         ),
 
         # === PAGE 6 - SAVING THE TOWN ===
@@ -78,7 +78,7 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
             scene_type="climax",
             realistic_prompt="""Epic storm battle, medium close-up composition. The child named {name} in superhero costume flying alone through stormy sky, completely alone with no other people visible anywhere. Upper body and face filling one-third of the frame prominently. Both arms extended forward with golden energy beams shooting from hands toward dark purple storm clouds. Child's cape whips dramatically behind, rain droplets frozen mid-air around them. Child's face shows intense concentration and fierce determination, jaw set, eyes focused forward toward camera with natural eye color. Wind-blown hair, rain streaking past. Dark dramatic storm clouds surround the child but do not obscure the face. Empty sky and distant landscape far below, no town or people visible. Cinematic superhero action shot with child as the sole figure in frame. Child's determined face is the absolute focal point, warmly lit by the golden glow from their hands, face naturally lit without colored lighting or glowing effects on eyes or skin. A sharp comic-style speech bubble near the child saying "No!", bold and forceful, subtle and not covering the face.""",
             story_text="But the day wasn't over! Dark storm clouds gathered, and {name} heard that a big storm was heading toward the town. Using incredible powers, {name} flew high into the sky and used super strength to gently push the storm clouds away from the town!",
-            costume="wearing superhero costume, cape whipping in wind"
+            costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex, gold chest emblem, red cape whipping dramatically in wind, red boots with gold trim"
         ),
 
         # === PAGE 7 - VICTORY CELEBRATION ===
@@ -88,7 +88,7 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
             scene_type="celebration",
             realistic_prompt="""Victory celebration. The child named {name} in superhero costume hovering or standing in town square, surrounded by cheering crowd of diverse adults and children throwing confetti, waving banners with child's initial, holding balloons. Enormous vibrant rainbow arcs across clearing sky behind hero. Sun rays breaking through clouds create dramatic god rays. The child is waving with humble smile, slightly embarrassed but proud expression. Mayor offering a golden key to the city. Reporters with cameras, kids asking for autographs. Banner reads 'Thank you Guardian!' Festive, joyful atmosphere, warm golden hour lighting, confetti catching light. Wide celebration shot with hero as focal point. Rich details throughout. A cheerful comic-style speech bubble near the child saying "We did it!", light and celebratory, subtle and not covering the face.""",
             story_text="The sun broke through the clouds, and a beautiful rainbow appeared. The whole town came out to cheer for {name} THE MIGHTY GUARDIAN! Flags waved, confetti flew, and everyone celebrated their amazing hero!",
-            costume="wearing superhero costume, standing heroically"
+            costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex, gold chest emblem, red cape draped heroically, red boots with gold trim"
         ),
 
         # === PAGE 8 - RETURNING HOME ===
