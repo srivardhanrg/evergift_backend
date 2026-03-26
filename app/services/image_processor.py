@@ -936,7 +936,7 @@ class ImageProcessor:
         starring_label_font, total_starring_width = self._get_adaptive_cover_font(
             text=starring_text,
             base_font_size=80,
-            font_family="Cormorant Garamond Bold",
+            font_family="Luckiest Guy",
             letter_spacing=starring_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -967,7 +967,7 @@ class ImageProcessor:
         child_name_font, total_name_width = self._get_adaptive_cover_font(
             text=child_name_upper,
             base_font_size=140,
-            font_family="Cormorant Garamond Bold",
+            font_family="Luckiest Guy",
             letter_spacing=name_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
