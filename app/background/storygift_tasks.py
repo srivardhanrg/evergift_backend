@@ -131,7 +131,8 @@ async def generate_storygift_preview(
     child_name: str,
     child_age: int,
     child_gender: str,
-    theme: str
+    theme: str,
+    style: str = "photorealistic"  # Added style parameter with default
 ):
     """
     Generate StoryGift-style preview with photorealistic pipeline.
@@ -141,8 +142,7 @@ async def generate_storygift_preview(
 
     Note: Cartoon pipeline code preserved but not exposed in API.
     """
-    # Hardcoded to photorealistic - cartoon pipeline preserved but not exposed
-    style = "photorealistic"
+    # Use passed style parameter (defaults to photorealistic if not provided)
 
     try:
         # PREVIEW MODE: Always generate 5 pages first (remaining 5 after payment)
