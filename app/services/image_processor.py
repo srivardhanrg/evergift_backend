@@ -877,14 +877,25 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # Rich antique gold — warm and deep, not yellow
-        gold_color = (212, 175, 55, 255)       # #D4AF37 antique gold
+        # Metallic gold gradient: bright top → rich mid → deep bottom
+        gold_top = (245, 220, 120)      # Bright highlight gold
+        gold_mid = (212, 175, 55)       # Rich antique gold
+        gold_bottom = (150, 110, 25)    # Deep shadow gold
 
-        # Measure title char height for sparkle zone
+        def _gold_at_y(y_frac: float):
+            """Interpolate metallic gold gradient top→mid→bottom."""
+            if y_frac < 0.4:
+                t = y_frac / 0.4
+                return tuple(int(gold_top[i] + (gold_mid[i] - gold_top[i]) * t) for i in range(3))
+            else:
+                t = (y_frac - 0.4) / 0.6
+                return tuple(int(gold_mid[i] + (gold_bottom[i] - gold_mid[i]) * t) for i in range(3))
+
+        # Measure title char height for sparkle zone and gradient
         sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
         title_char_height = sample_bbox[3] - sample_bbox[1]
 
-        # Draw title: thick dark outline + solid gold fill
+        # Draw title: thick dark outline + metallic gold gradient fill
         current_x = title_x
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
@@ -899,16 +910,25 @@ class ImageProcessor:
                             (current_x + dx, title_y + dy),
                             char,
                             font=title_font,
-                            fill=(20, 15, 0, 255)  # Near-black, fully opaque
+                            fill=(20, 15, 0, 255)
                         )
 
-            # Layer 2: Solid gold fill — no transparency
-            draw.text(
-                (current_x, title_y),
-                char,
-                font=title_font,
-                fill=gold_color
-            )
+            # Layer 2: Metallic gold gradient (per-pixel row mapping)
+            cw = char_width + 12
+            ch = title_char_height + 12
+            char_img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+            char_draw = ImageDraw.Draw(char_img)
+            char_draw.text((0, 0), char, font=title_font, fill=(255, 255, 255, 255))
+            pixels = char_img.load()
+            for py in range(ch):
+                y_frac = py / max(ch - 1, 1)
+                r, g, b = _gold_at_y(y_frac)
+                for px in range(cw):
+                    a = pixels[px, py][3]
+                    if a > 0:
+                        pixels[px, py] = (r, g, b, a)
+            overlay.paste(char_img, (current_x, title_y), char_img)
+            char_img.close()
 
             current_x += char_width + title_letter_spacing
 
