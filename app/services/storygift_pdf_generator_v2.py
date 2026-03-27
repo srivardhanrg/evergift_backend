@@ -94,6 +94,12 @@ class StoryGiftPDFGeneratorV2:
                 async with httpx.AsyncClient(timeout=60.0) as client:
                     for page_config in BOOK_STRUCTURE:
                         idx = page_config.index
+
+                        # Skip end_page (index 24) for digital PDFs — it's a plain white filler.
+                        # Physical/Lulu orders keep it as the last interior left-hand page.
+                        if page_config.page_type == PageType.END_PAGE and not add_blank_back_page:
+                            continue
+
                         url = page_urls.get(idx)
                         
                         image_bytes = None
@@ -143,7 +149,9 @@ class StoryGiftPDFGeneratorV2:
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
 
-            total_pdf_pages = len(BOOK_STRUCTURE) + (1 if add_blank_back_page else 0)
+            # Digital PDF: 25 pages (end_page skipped). Physical PDF: 26 + 1 blank back = 27.
+            end_page_skipped = 1 if not add_blank_back_page else 0
+            total_pdf_pages = len(BOOK_STRUCTURE) - end_page_skipped + (1 if add_blank_back_page else 0)
 
             logger.info(
                 "V2 PDF generated successfully",
