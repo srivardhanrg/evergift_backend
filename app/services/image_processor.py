@@ -877,53 +877,37 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # Sparkly gold colors
-        gold_color = (255, 215, 0, 255)        # Bright gold
-        gold_shadow = (160, 120, 20, 200)       # Deep gold shadow
-        sparkle_color = (255, 255, 200, 255)     # Warm white sparkle
+        # Solid gold colors — fully opaque, no transparency
+        gold_color = (255, 215, 0, 255)        # Bright solid gold
 
         # Measure title char height for sparkle zone
         sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
         title_char_height = sample_bbox[3] - sample_bbox[1]
 
-        # Draw title with letter-spacing, glow, and sparkle effect
+        # Draw title: thick dark outline + solid gold fill
         current_x = title_x
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Layer 1: Soft outer glow (warm gold halo)
-            glow_offsets = [(-3, -3), (3, -3), (-3, 3), (3, 3), (0, -4), (0, 4), (-4, 0), (4, 0)]
-            for dx, dy in glow_offsets:
-                draw.text(
-                    (current_x + dx, title_y + dy),
-                    char,
-                    font=title_font,
-                    fill=(255, 223, 100, 50)  # Soft warm glow
-                )
+            # Layer 1: Thick solid dark outline (ensures readability on ANY bg)
+            outline_width = 7
+            for dx in range(-outline_width, outline_width + 1):
+                for dy in range(-outline_width, outline_width + 1):
+                    if dx * dx + dy * dy <= outline_width * outline_width:
+                        draw.text(
+                            (current_x + dx, title_y + dy),
+                            char,
+                            font=title_font,
+                            fill=(20, 15, 0, 255)  # Near-black, fully opaque
+                        )
 
-            # Layer 2: Drop shadow for depth
-            draw.text(
-                (current_x + 6, title_y + 6),
-                char,
-                font=title_font,
-                fill=gold_shadow
-            )
-
-            # Layer 3: Main character in bright gold
+            # Layer 2: Solid gold fill — no transparency
             draw.text(
                 (current_x, title_y),
                 char,
                 font=title_font,
                 fill=gold_color
-            )
-
-            # Layer 4: Inner highlight on upper portion for shimmer
-            draw.text(
-                (current_x, title_y - 1),
-                char,
-                font=title_font,
-                fill=(255, 245, 150, 60)  # Bright highlight
             )
 
             current_x += char_width + title_letter_spacing
