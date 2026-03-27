@@ -877,8 +877,8 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # Solid gold colors — fully opaque, no transparency
-        gold_color = (255, 215, 0, 255)        # Bright solid gold
+        # Rich antique gold — warm and deep, not yellow
+        gold_color = (212, 175, 55, 255)       # #D4AF37 antique gold
 
         # Measure title char height for sparkle zone
         sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
