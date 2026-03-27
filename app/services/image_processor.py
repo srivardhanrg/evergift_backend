@@ -23,6 +23,7 @@ from app.config.text_styling import (
     get_font_path,
     TextConfig,
     TextAlignment,
+    BubbleConfig,
     FONT_PATHS,
 )
 from app.services.storage import StorageService
@@ -290,6 +291,128 @@ class ImageProcessor:
         # Draw main text
         draw.text(position, text, font=font, fill=text_color)
 
+    def _draw_text_bubble(
+        self,
+        page_size: Tuple[int, int],
+        text_bounds: Tuple[int, int, int, int],
+        bubble_config: dict,
+    ) -> Image.Image:
+        """
+        Draw a fun cloud-shaped bubble behind the text area.
+
+        Uses overlapping circles along the perimeter of a rounded rectangle
+        to create bumpy "thought bubble" edges that kids love.
+        Falls back to a plain rounded rectangle if shape != "cloud".
+
+        Args:
+            page_size: (width, height) of the page
+            text_bounds: (x1, y1, x2, y2) bounding box of the text block
+            bubble_config: BubbleConfig dict with color, opacity, radius, etc.
+
+        Returns:
+            RGBA Image layer with the bubble drawn on it
+        """
+        import math
+
+        width, height = page_size
+        x1, y1, x2, y2 = text_bounds
+
+        # Expand bounds by padding
+        pad_x = bubble_config.get("padding_x", 100)
+        pad_y = bubble_config.get("padding_y", 70)
+
+        bx1 = max(0, x1 - pad_x)
+        by1 = max(0, y1 - pad_y)
+        bx2 = min(width, x2 + pad_x)
+        by2 = min(height, y2 + pad_y)
+
+        # Parse color and opacity
+        hex_color = bubble_config.get("color", "#FFFFFF")
+        opacity = bubble_config.get("opacity", 0.72)
+        corner_radius = bubble_config.get("corner_radius", 120)
+        blur_edge = bubble_config.get("blur_edge", 12)
+        shape = bubble_config.get("shape", "cloud")
+        bump_size = bubble_config.get("cloud_bump_size", 60)
+
+        rgb = self._hex_to_rgb(hex_color)
+        alpha = int(255 * opacity)
+        fill_color = (*rgb, alpha)
+
+        # Create bubble on a separate RGBA layer
+        bubble_layer = Image.new("RGBA", page_size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(bubble_layer)
+
+        if shape == "cloud":
+            # ---- Cloud bubble: rounded rect core + bumpy circle border ----
+
+            # 1. Draw the inner rounded rectangle (slightly inset so bumps extend outward)
+            inset = bump_size // 3
+            draw.rounded_rectangle(
+                [(bx1 + inset, by1 + inset), (bx2 - inset, by2 - inset)],
+                radius=corner_radius,
+                fill=fill_color,
+            )
+
+            # 2. Draw overlapping circles along the perimeter for bumpy edges
+            # Walk the perimeter and place circles at regular intervals
+            rect_w = bx2 - bx1
+            rect_h = by2 - by1
+            perimeter = 2 * (rect_w + rect_h)
+            # Space bumps so they overlap nicely
+            bump_spacing = int(bump_size * 1.2)
+            num_bumps = max(8, int(perimeter / bump_spacing))
+
+            for i in range(num_bumps):
+                # Walk along perimeter
+                t = i / num_bumps * perimeter
+
+                if t < rect_w:
+                    # Top edge (left to right)
+                    cx = bx1 + t
+                    cy = by1
+                elif t < rect_w + rect_h:
+                    # Right edge (top to bottom)
+                    cx = bx2
+                    cy = by1 + (t - rect_w)
+                elif t < 2 * rect_w + rect_h:
+                    # Bottom edge (right to left)
+                    cx = bx2 - (t - rect_w - rect_h)
+                    cy = by2
+                else:
+                    # Left edge (bottom to top)
+                    cx = bx1
+                    cy = by2 - (t - 2 * rect_w - rect_h)
+
+                # Draw circle at this perimeter point
+                r = bump_size
+                draw.ellipse(
+                    [(cx - r, cy - r), (cx + r, cy + r)],
+                    fill=fill_color,
+                )
+        else:
+            # ---- Fallback: plain rounded rectangle ----
+            draw.rounded_rectangle(
+                [(bx1, by1), (bx2, by2)],
+                radius=corner_radius,
+                fill=fill_color,
+            )
+
+        # Soften edges with Gaussian blur for dreamy, soft feel
+        if blur_edge > 0:
+            bubble_layer = bubble_layer.filter(
+                ImageFilter.GaussianBlur(radius=blur_edge)
+            )
+
+        logger.debug(
+            "Drew text bubble",
+            shape=shape,
+            bounds=(bx1, by1, bx2, by2),
+            color=hex_color,
+            opacity=opacity,
+        )
+
+        return bubble_layer
+
     async def overlay_text(
         self,
         background_url: str,
@@ -404,8 +527,30 @@ class ImageProcessor:
         single_line_height = bbox[3] - bbox[1]
         line_height = int(single_line_height * line_height_multiplier)
 
-        # Calculate total text height
+        # Calculate total text height (account for drop cap being taller)
         total_height = line_height * len(lines)
+
+        # Pre-compute drop cap height for centering and bubble sizing
+        _drop_cap_extra = 0
+        drop_cap_config = text_config.get("drop_cap")
+        _has_drop_cap = (
+            page_type == "story" and
+            drop_cap_config and
+            drop_cap_config.get("enabled", False) and
+            lines and
+            lines[0] and
+            lines[0][0].isalpha()
+        )
+        if _has_drop_cap:
+            _dc_font = self._load_font(
+                drop_cap_config.get("font_family", "Bubblegum Sans"),
+                drop_cap_config.get("font_size", 260)
+            )
+            _dc_bbox = _dc_font.getbbox("A")
+            _dc_height = _dc_bbox[3] - _dc_bbox[1]
+            # Drop cap line uses (cap_height + 0.5*line_height) instead of line_height
+            _drop_cap_extra = max(0, _dc_height + int(line_height * 0.5) - line_height)
+            total_height += _drop_cap_extra
 
         # Calculate starting Y position (center by default)
         vertical_position = text_config.get("vertical_position", "center")
@@ -424,16 +569,32 @@ class ImageProcessor:
         # Convert color
         text_color = self._hex_to_rgba(color)
 
-        # Handle drop cap for story pages
-        drop_cap_config = text_config.get("drop_cap")
-        has_drop_cap = (
-            page_type == "story" and
-            drop_cap_config and
-            drop_cap_config.get("enabled", False) and
-            lines and
-            lines[0] and
-            lines[0][0].isalpha()
-        )
+        # Use pre-computed drop cap state (computed above for centering)
+        has_drop_cap = _has_drop_cap
+
+        # Draw fun bubble behind text for readability
+        bubble_config = text_config.get("bubble")
+        if bubble_config and bubble_config.get("enabled"):
+            # Calculate text bounding box for bubble sizing
+            # Account for drop cap overshoot on the left/top
+            margin = (width - max_text_width) // 2
+            text_x1 = margin
+            text_x2 = width - margin
+            text_y1 = start_y
+            text_y2 = start_y + total_height
+
+            # If drop cap exists, extend the top a bit for the large letter
+            if has_drop_cap:
+                drop_cap_font_size = drop_cap_config.get("font_size", 240)
+                text_y1 = min(text_y1, start_y - int(drop_cap_font_size * 0.1))
+
+            bubble_layer = self._draw_text_bubble(
+                page_size=(width, height),
+                text_bounds=(text_x1, text_y1, text_x2, text_y2),
+                bubble_config=bubble_config,
+            )
+            background = Image.alpha_composite(background, bubble_layer)
+            bubble_layer.close()
 
         # Draw each line
         current_y = start_y
@@ -463,8 +624,8 @@ class ImageProcessor:
 
                 # Load drop cap font
                 drop_cap_font = self._load_font(
-                    drop_cap_config.get("font_family", "Cormorant Garamond Bold"),
-                    drop_cap_config.get("font_size", 96)
+                    drop_cap_config.get("font_family", "Bubblegum Sans"),
+                    drop_cap_config.get("font_size", 260)
                 )
 
                 # Get drop cap dimensions
@@ -475,11 +636,10 @@ class ImageProcessor:
                 # Position drop cap
                 cap_color = self._hex_to_rgba(drop_cap_config.get("color", color))
 
-                # Draw drop cap (slightly lower to align with text baseline)
-                cap_y = current_y - int(cap_height * 0.1)
+                # Draw drop cap aligned to the top of first line
                 self._draw_shadow_text(
                     draw,
-                    (x, cap_y),
+                    (x, current_y),
                     first_char,
                     drop_cap_font,
                     cap_color,
@@ -487,16 +647,22 @@ class ImageProcessor:
                 )
 
                 # Draw remaining text on first line (offset by drop cap width)
+                # Vertically center remaining text relative to drop cap
                 if remaining_text.strip():
-                    remaining_x = x + cap_width + 10
+                    remaining_x = x + cap_width + 15
+                    # Align remaining text to bottom of drop cap
+                    remaining_y = current_y + cap_height - single_line_height
                     self._draw_shadow_text(
                         draw,
-                        (remaining_x, current_y),
+                        (remaining_x, remaining_y),
                         remaining_text.lstrip(),
                         font,
                         text_color,
                         shadow_config
                     )
+
+                # Advance past the drop cap with balanced spacing
+                current_y += cap_height + int(line_height * 0.5)
             else:
                 # Draw regular line
                 self._draw_shadow_text(
@@ -508,7 +674,7 @@ class ImageProcessor:
                     shadow_config
                 )
 
-            current_y += line_height
+                current_y += line_height
 
         # Composite text layer onto background
         result = Image.alpha_composite(background, text_layer)
@@ -610,13 +776,13 @@ class ImageProcessor:
                 total_width += char_width + letter_spacing
             if text:
                 total_width -= letter_spacing
-            
+
             if total_width <= max_allowed_width:
                 return font, total_width
-            
+
             # Reduce size to fit
             font_size -= 5
-            
+
         # Fallback
         font = self._load_font(font_family, font_size)
         return font, max_allowed_width
@@ -694,14 +860,14 @@ class ImageProcessor:
         # Maximum width constraint (90% of page) to guarantee NO overflow
         max_cover_text_width = int(width * 0.90)
 
-        # Load adaptive premium title font (Cormorant Garamond Bold for luxury feel)
+        # Load adaptive cover title font (Luckiest Guy — bold, chunky, kid-friendly)
         story_title_upper = story_title.upper()
-        title_letter_spacing = int(16)  # Premium letter-spacing in pixels appropriate for 300DPI
-        
+        title_letter_spacing = int(8)  # Tighter spacing suits the chunky letterforms
+
         title_font, total_title_width = self._get_adaptive_cover_font(
             text=story_title_upper,
-            base_font_size=240,
-            font_family="Cormorant Garamond Bold",
+            base_font_size=220,
+            font_family="Luckiest Guy",
             letter_spacing=title_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -770,7 +936,7 @@ class ImageProcessor:
         starring_label_font, total_starring_width = self._get_adaptive_cover_font(
             text=starring_text,
             base_font_size=80,
-            font_family="Cormorant Garamond Bold",
+            font_family="Luckiest Guy",
             letter_spacing=starring_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -801,7 +967,7 @@ class ImageProcessor:
         child_name_font, total_name_width = self._get_adaptive_cover_font(
             text=child_name_upper,
             base_font_size=140,
-            font_family="Cormorant Garamond Bold",
+            font_family="Luckiest Guy",
             letter_spacing=name_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
