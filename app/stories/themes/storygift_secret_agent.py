@@ -19,6 +19,7 @@ STORYGIFT_SECRET_AGENT_THEME = StoryTemplate(
     theme_id="storygift_secret_agent",
     title_template="{name} The Secret Agent",
     description="Go undercover as a doctor, police officer, firefighter, scientist, and more!",
+    cover_display_title="The Secret Agent",
     default_costume="wearing a sleek black spy suit with silver accents",
     protagonist_description="confident determined eyes, clever and brave expression",
     # Cover page settings for typography-ready composition

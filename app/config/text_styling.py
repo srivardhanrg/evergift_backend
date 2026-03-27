@@ -97,7 +97,8 @@ FONT_PATHS = {
     "Bubblegum Sans": "/app/fonts/BubblegumSans-Regular.ttf",
     "Caveat": "/app/fonts/Caveat-Regular.ttf",
     "Pacifico": "/app/fonts/Pacifico-Regular.ttf",
-    # Cover title font (bold, chunky, kid-friendly)
+    # Cover fonts
+    "Magical Neverland": "/app/fonts/MagicalNeverland-Regular.ttf",
     "Luckiest Guy": "/app/fonts/LuckiestGuy-Regular.ttf",
     # Legacy fonts (kept for backward compatibility)
     "Dancing Script": "/app/fonts/DancingScript-Regular.ttf",

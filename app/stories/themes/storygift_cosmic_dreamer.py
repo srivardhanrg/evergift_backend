@@ -23,6 +23,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_COSMIC_DREAMER_THEME = StoryTemplate(
     theme_id="storygift_cosmic_dreamer",
     title_template="{name}'s Cosmic Adventure",
+    cover_display_title="Cosmic Adventure",
     description="Watch your child reach for the stars on an epic space journey",
     default_costume="wearing a premium white and silver astronaut suit with gold star accents",
     protagonist_description="bright curious eyes, expression of gentle wonder",

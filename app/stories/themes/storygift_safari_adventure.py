@@ -17,6 +17,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_SAFARI_ADVENTURE_THEME = StoryTemplate(
     theme_id="storygift_safari_adventure",
     title_template="{name}'s Wild Safari Adventure",
+    cover_display_title="Wild Safari Adventure",
     description="Where the wild things know your name - become the chosen Safari Guardian",
     default_costume="wearing khaki safari explorer outfit with adventure vest, boots, and explorer hat",
     protagonist_description="bright adventurous eyes, expression of wonder and courage",

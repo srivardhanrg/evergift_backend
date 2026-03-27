@@ -283,30 +283,20 @@ async def generate_storygift_preview(
                 # Apply text overlay to cover (theme title + "Starring {name}")
                 # ============================================
                 try:
-                    # Get story title from theme template
-                    story_title = template.get_title(safe_child_name)
-                    # Extract just the theme name portion
-                    # e.g., "Emma's Enchanted Forest Adventure" -> "Enchanted Forest"
-                    # e.g., "Emma and the Enchanted Forest" -> "The Enchanted Forest"
-                    theme_display_name = (
-                        template.title_template
-                        .replace("{name}'s ", "")
-                        .replace("{name} and the ", "The ")
-                        .replace("{name} and The ", "The ")
-                        .replace(" Adventure", "")
-                    )
+                    # Use cover_display_title (theme-only, no child name)
+                    # Falls back to full title if not set
+                    cover_title = getattr(template, 'cover_display_title', None) or template.get_title(safe_child_name)
 
                     logger.info(
                         "Processing cover text overlay",
-                        story_title=story_title,
-                        theme_display_name=theme_display_name,
+                        cover_title=cover_title,
                         child_name=safe_child_name
                     )
 
                     image_processor = get_image_processor()
                     cover_with_text_bytes = await image_processor.process_cover_page(
                         cover_image_url=cover_url,
-                        story_title=story_title,
+                        story_title=cover_title,
                         child_name=safe_child_name
                     )
 
@@ -1220,8 +1210,8 @@ async def generate_remaining_pages_and_pdf(
                     total_pages=len(page_urls)
                 )
 
-                # Get story title
-                story_title = template.get_title(safe_child_name) if hasattr(template, 'get_title') else f"{safe_child_name}'s Adventure"
+                # Get theme-only title for PDF cover (no child name)
+                story_title = getattr(template, 'cover_display_title', None) or template.get_title(safe_child_name)
 
                 # Use V2 PDF generator
                 pdf_generator_v2 = get_pdf_generator_v2()

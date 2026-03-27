@@ -12,6 +12,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_MAGIC_CASTLE_THEME = StoryTemplate(
     theme_id="storygift_magic_castle",
     title_template="{name}'s First Day of Magic School",
+    cover_display_title="First Day of Magic School",
     description="A detailed magical academy adventure",
     default_costume="wearing wizard robes",
     protagonist_description="bright expressive eyes, curious and brave expression",

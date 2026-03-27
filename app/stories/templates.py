@@ -140,6 +140,7 @@ class StoryTemplate:
     # Cover page settings
     cover_setting: Optional[str] = None  # Theme-specific cover setting description
     cover_costume: Optional[str] = None  # Special costume for cover (if different)
+    cover_display_title: Optional[str] = None  # Theme-only title for cover (no child name)
     cover_header_atmosphere: Optional[str] = None  # Top zone atmosphere
     cover_magical_elements: Optional[str] = None  # Magical elements around child
     cover_footer_description: Optional[str] = None  # Footer zone description

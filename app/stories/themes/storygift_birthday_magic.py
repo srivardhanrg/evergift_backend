@@ -12,6 +12,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_BIRTHDAY_MAGIC_THEME = StoryTemplate(
     theme_id="storygift_birthday_magic",
     title_template="{name}'s Magical Birthday Wish",
+    cover_display_title="Magical Birthday Wish",
     description="The birthday gift that makes their wildest birthday wishes come true",
     default_costume="wearing a special birthday outfit with a golden birthday crown",
     protagonist_description="bright joyful eyes, expression of pure happiness and wonder",

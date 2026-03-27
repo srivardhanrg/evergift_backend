@@ -860,14 +860,14 @@ class ImageProcessor:
         # Maximum width constraint (90% of page) to guarantee NO overflow
         max_cover_text_width = int(width * 0.90)
 
-        # Load adaptive cover title font (Luckiest Guy — bold, chunky, kid-friendly)
+        # Load adaptive cover title font (Magical Neverland — whimsical fantasy)
         story_title_upper = story_title.upper()
-        title_letter_spacing = int(8)  # Tighter spacing suits the chunky letterforms
+        title_letter_spacing = int(10)
 
         title_font, total_title_width = self._get_adaptive_cover_font(
             text=story_title_upper,
-            base_font_size=220,
-            font_family="Luckiest Guy",
+            base_font_size=240,
+            font_family="Magical Neverland",
             letter_spacing=title_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -877,37 +877,40 @@ class ImageProcessor:
         title_x = (width - total_title_width) // 2
         title_y = int(height * 0.10)
 
-        # Premium antique gold color (more sophisticated than bright yellow)
-        gold_color = (212, 175, 55, 255)  # #D4AF37 - antique gold
+        # Sparkly gold colors
+        gold_color = (255, 215, 0, 255)        # Bright gold
+        gold_shadow = (160, 120, 20, 200)       # Deep gold shadow
+        sparkle_color = (255, 255, 200, 255)     # Warm white sparkle
 
-        # Draw title with letter-spacing and stroke for premium depth
+        # Measure title char height for sparkle zone
+        sample_bbox = draw.textbbox((0, 0), "A", font=title_font)
+        title_char_height = sample_bbox[3] - sample_bbox[1]
+
+        # Draw title with letter-spacing, glow, and sparkle effect
         current_x = title_x
         for char in story_title_upper:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Draw text stroke (white outline for depth, adjusted for huge sizes)
-            stroke_width = int(4)
-            for dx in range(-stroke_width, stroke_width + 1):
-                for dy in range(-stroke_width, stroke_width + 1):
-                    if dx*dx + dy*dy <= stroke_width*stroke_width:
-                        draw.text(
-                            (current_x + dx, title_y + dy),
-                            char,
-                            font=title_font,
-                            fill=(255, 255, 255, 80)  # Semi-transparent white stroke
-                        )
+            # Layer 1: Soft outer glow (warm gold halo)
+            glow_offsets = [(-3, -3), (3, -3), (-3, 3), (3, 3), (0, -4), (0, 4), (-4, 0), (4, 0)]
+            for dx, dy in glow_offsets:
+                draw.text(
+                    (current_x + dx, title_y + dy),
+                    char,
+                    font=title_font,
+                    fill=(255, 223, 100, 50)  # Soft warm glow
+                )
 
-            # Draw bold drop shadow
-            shadow_offset = int(8)
+            # Layer 2: Drop shadow for depth
             draw.text(
-                (current_x + shadow_offset, title_y + shadow_offset),
+                (current_x + 6, title_y + 6),
                 char,
                 font=title_font,
-                fill=(0, 0, 0, 180)
+                fill=gold_shadow
             )
 
-            # Draw main character in antique gold
+            # Layer 3: Main character in bright gold
             draw.text(
                 (current_x, title_y),
                 char,
@@ -915,7 +918,56 @@ class ImageProcessor:
                 fill=gold_color
             )
 
+            # Layer 4: Inner highlight on upper portion for shimmer
+            draw.text(
+                (current_x, title_y - 1),
+                char,
+                font=title_font,
+                fill=(255, 245, 150, 60)  # Bright highlight
+            )
+
             current_x += char_width + title_letter_spacing
+
+        # --- Sparkle particles scattered around the title text ---
+        import random
+        sparkle_layer = Image.new("RGBA", overlay.size, (0, 0, 0, 0))
+        sparkle_draw = ImageDraw.Draw(sparkle_layer)
+        random.seed(42)  # Deterministic sparkles for consistency
+
+        num_sparkles = 40
+        sparkle_zone_x1 = max(0, title_x - 30)
+        sparkle_zone_x2 = min(width, title_x + total_title_width + 30)
+        sparkle_zone_y1 = max(0, title_y - 20)
+        sparkle_zone_y2 = min(height, title_y + title_char_height + 20)
+
+        for _ in range(num_sparkles):
+            sx = random.randint(sparkle_zone_x1, sparkle_zone_x2)
+            sy = random.randint(sparkle_zone_y1, sparkle_zone_y2)
+            size = random.randint(3, 8)
+            alpha = random.randint(140, 255)
+
+            # Draw a 4-pointed star sparkle
+            # Vertical line
+            sparkle_draw.line(
+                [(sx, sy - size), (sx, sy + size)],
+                fill=(255, 255, 220, alpha), width=2
+            )
+            # Horizontal line
+            sparkle_draw.line(
+                [(sx - size, sy), (sx + size, sy)],
+                fill=(255, 255, 220, alpha), width=2
+            )
+            # Bright center dot
+            sparkle_draw.ellipse(
+                [(sx - 2, sy - 2), (sx + 2, sy + 2)],
+                fill=(255, 255, 255, alpha)
+            )
+
+        # Slight blur on sparkles for a soft glow feel
+        sparkle_layer = sparkle_layer.filter(ImageFilter.GaussianBlur(radius=1))
+        overlay = Image.alpha_composite(overlay, sparkle_layer)
+        sparkle_layer.close()
+        draw = ImageDraw.Draw(overlay)  # Refresh draw for remaining text
 
         # ============================================
         # BOTTOM GRADIENT (25% height) with starring
@@ -936,7 +988,7 @@ class ImageProcessor:
         starring_label_font, total_starring_width = self._get_adaptive_cover_font(
             text=starring_text,
             base_font_size=80,
-            font_family="Luckiest Guy",
+            font_family="Magical Neverland",
             letter_spacing=starring_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw
@@ -967,7 +1019,7 @@ class ImageProcessor:
         child_name_font, total_name_width = self._get_adaptive_cover_font(
             text=child_name_upper,
             base_font_size=140,
-            font_family="Luckiest Guy",
+            font_family="Magical Neverland",
             letter_spacing=name_letter_spacing,
             max_allowed_width=max_cover_text_width,
             draw=draw

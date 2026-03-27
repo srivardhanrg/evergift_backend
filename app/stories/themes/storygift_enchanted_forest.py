@@ -12,6 +12,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_ENCHANTED_FOREST_THEME = StoryTemplate(
     theme_id="storygift_enchanted_forest",
     title_template="{name} and the Enchanted Forest",
+    cover_display_title="The Enchanted Forest",
     description="A magical journey through whispering woods and singing streams",
     default_costume="wearing comfortable outdoor clothes",
     protagonist_description="bright curious eyes, sense of wonder and adventure",

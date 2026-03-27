@@ -13,6 +13,7 @@ STORYGIFT_MIGHTY_GUARDIAN_THEME = StoryTemplate(
     theme_id="storygift_mighty_guardian",
     title_template="{name} The Mighty Guardian",
     description="Every child is a hero—now they can see it",
+    cover_display_title="The Mighty Guardian",
     default_costume="wearing a skin-tight metallic blue and red superhero bodysuit like Superman — form-fitting spandex with visible muscle definition, gold chest emblem, red cape flowing behind, red boots with gold trim",
     protagonist_description="confident heroic expression, bright determined eyes",
     # Cover page settings for typography-ready composition

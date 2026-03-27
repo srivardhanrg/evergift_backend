@@ -12,6 +12,7 @@ from app.stories.templates import StoryTemplate, PageTemplate
 STORYGIFT_OCEAN_EXPLORER_THEME = StoryTemplate(
     theme_id="storygift_ocean_explorer",
     title_template="{name}'s Underwater Kingdom",
+    cover_display_title="Underwater Kingdom",
     description="Dive into a world where imagination runs as deep as the ocean",
     default_costume="wearing a sleek magical diving suit in turquoise and silver with glowing trim and small translucent fins",
     protagonist_description="bright curious eyes, expression of wonder and joy",
