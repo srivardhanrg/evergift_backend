@@ -347,7 +347,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#C62828", "shadow_color": "#B71C1C"},
             "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
             "text9": {"color": "#B71C1C", "shadow_color": "#7F0000"},
-            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
+            "text10": {"color": "#1A237E", "shadow_color": "#0D47A1"},
         },
     ),
 
