@@ -278,7 +278,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#1A237E", "shadow_color": "#0D1642"},
             "text8": {"color": "#4527A0", "shadow_color": "#311B92"},
             "text9": {"color": "#0D47A1", "shadow_color": "#01579B"},
-            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
+            "text10": {"color": "#1A237E", "shadow_color": "#0D1642"},
         },
     ),
 
@@ -301,7 +301,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#0277BD", "shadow_color": "#01579B"},
             "text8": {"color": "#00838F", "shadow_color": "#006064"},
             "text9": {"color": "#01579B", "shadow_color": "#002F6C"},
-            "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"},
+            "text10": {"color": "#00695C", "shadow_color": "#004D40"},
         },
     ),
 
@@ -324,7 +324,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#6D4C41", "shadow_color": "#4E342E"},
             "text8": {"color": "#F57F17", "shadow_color": "#E65100"},
             "text9": {"color": "#5D4037", "shadow_color": "#3E2723"},
-            "text10": {"color": "#FFB300", "shadow_color": "#FF8F00"},
+            "text10": {"color": "#5D4037", "shadow_color": "#3E2723"},
         },
     ),
 
@@ -370,7 +370,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#C2185B", "shadow_color": "#AD1457"},
             "text8": {"color": "#8E24AA", "shadow_color": "#7B1FA2"},
             "text9": {"color": "#AD1457", "shadow_color": "#880E4F"},
-            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
+            "text10": {"color": "#7B1FA2", "shadow_color": "#6A1B9A"},
         },
     ),
 
@@ -393,7 +393,7 @@ THEME_TEXT_CONFIGS: Dict[str, Dict[str, TextConfig]] = {
             "text7": {"color": "#455A64", "shadow_color": "#37474F"},
             "text8": {"color": "#1976D2", "shadow_color": "#1565C0"},
             "text9": {"color": "#37474F", "shadow_color": "#263238"},
-            "text10": {"color": "#FFD600", "shadow_color": "#F57F17"},
+            "text10": {"color": "#37474F", "shadow_color": "#263238"},
         },
     ),
 }

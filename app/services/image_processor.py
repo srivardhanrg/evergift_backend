@@ -901,7 +901,7 @@ class ImageProcessor:
             char_bbox = draw.textbbox((0, 0), char, font=title_font)
             char_width = int(char_bbox[2] - char_bbox[0])
 
-            # Layer 1: Thick solid dark outline (ensures readability on ANY bg)
+            # Layer 1: Thick gold outline (warm metallic border)
             outline_width = 7
             for dx in range(-outline_width, outline_width + 1):
                 for dy in range(-outline_width, outline_width + 1):
@@ -910,7 +910,7 @@ class ImageProcessor:
                             (current_x + dx, title_y + dy),
                             char,
                             font=title_font,
-                            fill=(20, 15, 0, 255)
+                            fill=(180, 140, 20, 255)
                         )
 
             # Layer 2: Metallic gold gradient (per-pixel row mapping)
