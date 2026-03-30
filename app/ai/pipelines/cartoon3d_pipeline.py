@@ -164,6 +164,7 @@ class Cartoon3DPipeline:
             logger.info("Starting ENHANCED VLM face analysis for animated portrait", image_url=face_image_url)
             start_time = time.time()
 
+            # TODO: gate with FAL_SEMAPHORE when cartoon themes are activated
             async with httpx.AsyncClient(timeout=45.0) as client:  # Increased timeout for detailed analysis
                 response = await client.post(
                     "https://fal.run/fal-ai/llava-next",
@@ -264,6 +265,7 @@ class Cartoon3DPipeline:
             )
 
             # NanoBanana API call with animated portrait configuration
+            # TODO: gate with FAL_SEMAPHORE when cartoon themes are activated
             async with httpx.AsyncClient(timeout=60.0) as client:
                 payload = {
                     "prompt": enhanced_prompt,

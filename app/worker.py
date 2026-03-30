@@ -86,21 +86,45 @@ async def preview_generation_task(
             error_type=type(e).__name__
         )
 
+        # Check if this is the final attempt
+        current_attempt = ctx.get("job_try", 1)
+        max_tries = 3  # Should match WorkerSettings.max_tries
+        is_final_attempt = current_attempt >= max_tries
+
         # Update job and preview status in database
         try:
             db = get_db()
-            db.table("generation_jobs").update({
-                "status": JobStatus.FAILED.value,
-                "error": error_msg
-            }).eq("job_id", job_id).execute()
 
-            db.table("previews").update({
-                "status": PreviewStatus.FAILED.value
-            }).eq("preview_id", preview_id).execute()
+            # Only set FAILED on final attempt, otherwise set to indicate retry
+            if is_final_attempt:
+                db.table("generation_jobs").update({
+                    "status": JobStatus.FAILED.value,
+                    "error": error_msg
+                }).eq("job_id", job_id).execute()
+
+                db.table("previews").update({
+                    "status": PreviewStatus.FAILED.value
+                }).eq("preview_id", preview_id).execute()
+
+                logger.error(
+                    "Preview generation failed after all retries",
+                    job_id=job_id,
+                    preview_id=preview_id,
+                    attempts=current_attempt
+                )
+            else:
+                # Not final attempt - will retry
+                logger.warning(
+                    "Preview generation failed, will retry",
+                    job_id=job_id,
+                    preview_id=preview_id,
+                    attempt=current_attempt,
+                    max_tries=max_tries
+                )
 
         except Exception as db_error:
             logger.error(
-                "Failed to update failure status in database",
+                "Failed to update status in database",
                 job_id=job_id,
                 preview_id=preview_id,
                 error=str(db_error)
@@ -157,23 +181,47 @@ async def post_payment_generation_task(
             error_type=type(e).__name__
         )
 
+        # Check if this is the final attempt
+        current_attempt = ctx.get("job_try", 1)
+        max_tries = 3  # Should match WorkerSettings.max_tries
+        is_final_attempt = current_attempt >= max_tries
+
         # Update order status in database
         try:
             from app.models.enums import OrderStatus
             db = get_db()
-            db.table("orders").update({
-                "status": OrderStatus.FAILED.value,
-                "error_message": error_msg
-            }).eq("order_id", order_id).execute()
 
-            db.table("previews").update({
-                "generation_phase": "failed",
-                "status": PreviewStatus.FAILED.value
-            }).eq("preview_id", preview_id).execute()
+            # Only set FAILED on final attempt, otherwise set to indicate retry
+            if is_final_attempt:
+                db.table("orders").update({
+                    "status": OrderStatus.FAILED.value,
+                    "error_message": error_msg
+                }).eq("order_id", order_id).execute()
+
+                db.table("previews").update({
+                    "generation_phase": "failed",
+                    "status": PreviewStatus.FAILED.value
+                }).eq("preview_id", preview_id).execute()
+
+                logger.error(
+                    "Post-payment generation failed after all retries",
+                    order_id=order_id,
+                    preview_id=preview_id,
+                    attempts=current_attempt
+                )
+            else:
+                # Not final attempt - will retry
+                logger.warning(
+                    "Post-payment generation failed, will retry",
+                    order_id=order_id,
+                    preview_id=preview_id,
+                    attempt=current_attempt,
+                    max_tries=max_tries
+                )
 
         except Exception as db_error:
             logger.error(
-                "Failed to update failure status in database",
+                "Failed to update status in database",
                 order_id=order_id,
                 preview_id=preview_id,
                 error=str(db_error)
@@ -201,6 +249,11 @@ async def startup(ctx: dict) -> None:
 async def shutdown(ctx: dict) -> None:
     """Called when worker shuts down."""
     logger.info("ARQ worker shutting down")
+
+
+async def health_check(ctx: dict) -> None:
+    """Periodic health check for worker monitoring."""
+    logger.info("ARQ worker health check")
 
 
 class WorkerSettings:
@@ -235,7 +288,7 @@ class WorkerSettings:
     # Worker polling settings
     poll_delay = 0.5  # Check for new jobs every 0.5 seconds
 
-    # Health check cron (runs every minute)
+    # Health check cron (runs every 15 minutes)
     cron_jobs = [
-        cron(func=lambda ctx: logger.info("ARQ worker health check"), minute={0, 15, 30, 45})
+        cron(func=health_check, minute={0, 15, 30, 45})
     ]

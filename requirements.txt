@@ -10,7 +10,7 @@ pydantic-settings==2.1.0
 supabase==2.3.4
 
 # Job Queue
-arq[watch]==0.26.1
+arq==0.26.1
 redis>=5.0.0
 
 # Storage (Cloudflare R2 - S3 compatible)

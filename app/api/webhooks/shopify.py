@@ -11,7 +11,7 @@ from app.config import get_settings
 from app.models.database import get_db
 from app.models.enums import OrderStatus, PreviewStatus
 from app.core.security import verify_shopify_webhook, verify_shop_domain
-from app.background.tasks import generate_pdf
+from app.api.redis_utils import get_redis_pool
 # NOTE: submit_lulu_print_job is no longer queued separately.
 # It is called sequentially from within generate_pdf when order_type='physical'.
 
@@ -280,7 +280,8 @@ async def handle_order_paid(request: Request):
         else:
             logger.info("Digital PDF order — enqueueing page generation", order_id=order_id)
 
-        await request.app.state.redis_pool.enqueue_job(
+        redis_pool = get_redis_pool(request)
+        await redis_pool.enqueue_job(
             "post_payment_generation_task",
             order_id,
             preview_id,
@@ -514,7 +515,8 @@ async def test_order_paid(request: Request):
         # Enqueue PDF generation in ARQ queue
         # Replaced with ARQ queue - see worker.py
         child_name_from_preview = preview.get("child_name", "Child")
-        await request.app.state.redis_pool.enqueue_job(
+        redis_pool = get_redis_pool(request)
+        await redis_pool.enqueue_job(
             "post_payment_generation_task",
             str(order_id),
             preview_id,

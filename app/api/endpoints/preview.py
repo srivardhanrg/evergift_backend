@@ -32,9 +32,9 @@ from app.config.book_structure import (
     PREVIEW_AI_INDICES,
     AI_GENERATED_INDICES,
 )
-from app.background.tasks import generate_full_preview
 from app.config import get_settings
 from app.core.rate_limiter import limiter
+from app.api.redis_utils import get_redis_pool
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -247,7 +247,8 @@ async def create_preview(
         # Replaced with ARQ queue - see worker.py
         theme_value = preview_request.theme.value
 
-        await request.app.state.redis_pool.enqueue_job(
+        redis_pool = get_redis_pool(request)
+        await redis_pool.enqueue_job(
             "preview_generation_task",
             job_id,
             preview_id,
@@ -414,7 +415,8 @@ async def retry_preview_generation(
 
         # Enqueue background generation task in ARQ queue
         # Replaced with ARQ queue - see worker.py
-        await request.app.state.redis_pool.enqueue_job(
+        redis_pool = get_redis_pool(request)
+        await redis_pool.enqueue_job(
             "preview_generation_task",
             new_job_id,
             preview_id,
@@ -976,7 +978,6 @@ async def test_trigger_completion(preview_id: str, request: Request):
 
     SECURITY: This endpoint is disabled in production.
     """
-    from app.background.tasks import generate_remaining_pages
     from app.models.enums import OrderStatus
     from datetime import datetime, timedelta
     from app.config import get_settings
@@ -1033,7 +1034,8 @@ async def test_trigger_completion(preview_id: str, request: Request):
 
     # Enqueue remaining page generation in ARQ queue
     # Replaced with ARQ queue - see worker.py
-    await request.app.state.redis_pool.enqueue_job(
+    redis_pool = get_redis_pool(request)
+    await redis_pool.enqueue_job(
         "post_payment_generation_task",
         order_id,
         preview_id,

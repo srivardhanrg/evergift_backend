@@ -252,6 +252,7 @@ class CartoonTwoStagePipeline:
             if seed:
                 payload["seed"] = seed
 
+            # TODO: gate with FAL_SEMAPHORE when cartoon themes are activated
             async with httpx.AsyncClient(timeout=90.0) as client:
                 response = await client.post(
                     f"https://fal.run/{self.scene_model_id}",
