@@ -81,21 +81,11 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration
-# Production: restrict to known origins. Development: allow all for local testing.
-_settings = get_settings()
-if _settings.app_env == "production":
-    _allowed_origins = [
-        "https://storygift-2061.myshopify.com",
-        "https://storygift.in",
-        "https://www.storygift.in",
-    ]
-else:
-    _allowed_origins = ["*"]
-
+# CORS Configuration - open for all origins
+# TODO: Lock down to specific origins before hardening production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
+    allow_origins=["*"],
     allow_credentials=False,  # Must be False with wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
