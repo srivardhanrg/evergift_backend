@@ -4,7 +4,7 @@ Shopify webhook handlers.
 
 import json
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Request, HTTPException
 import structlog
 
 from app.config import get_settings
@@ -28,7 +28,7 @@ def _mask_email(email: str) -> str:
 
 
 @router.post("/order-paid")
-async def handle_order_paid(request: Request, background_tasks: BackgroundTasks):
+async def handle_order_paid(request: Request):
     """
     Handle Shopify orders/paid webhook.
 
@@ -63,9 +63,18 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         customer_name = f"{webhook_data.get('customer', {}).get('first_name', '')} {webhook_data.get('customer', {}).get('last_name', '')}".strip()
 
         if not customer_email:
-            logger.error("No customer email in webhook", order_id=order_id)
-            # Still return 200 to acknowledge webhook
-            return {"success": True, "message": "Webhook received but missing customer email"}
+            # Shopify sometimes puts email at the top-level "email" or "contact_email" field
+            # (e.g. guest checkout / phone-only checkout in certain regions)
+            customer_email = webhook_data.get("email") or webhook_data.get("contact_email")
+
+        if not customer_email:
+            # Log a warning but DO NOT abort — generate_pdf reads email from the previews table
+            # anyway. Stopping here means a paid order gets silently dropped.
+            logger.warning(
+                "No customer email in webhook — proceeding without it; "
+                "completion email will rely on previews.customer_email",
+                order_id=order_id
+            )
 
         # Step 3: Check idempotency
         db = get_db()
@@ -261,21 +270,22 @@ async def handle_order_paid(request: Request, background_tasks: BackgroundTasks)
         
         logger.info("Preview status updated to PURCHASED", preview_id=preview_id)
 
-        # Step 6: Queue background job — generate_pdf handles Lulu internally for physical orders
+        # Step 6: Enqueue background generation job in ARQ queue
+        # Replaced with ARQ queue - see worker.py
         child_name_from_preview = preview.get("child_name", "Child")
 
         if order_type == "physical":
             # Physical book: generate pages → PDF → Lulu (all sequential inside generate_pdf)
-            logger.info("Physical book order — queueing sequential generation + Lulu", order_id=order_id)
+            logger.info("Physical book order — enqueueing sequential generation + Lulu", order_id=order_id)
         else:
-            logger.info("Digital PDF order — queueing page generation", order_id=order_id)
+            logger.info("Digital PDF order — enqueueing page generation", order_id=order_id)
 
-        background_tasks.add_task(
-            generate_pdf,
-            order_id=order_id,
-            preview_id=preview_id,
-            child_name=child_name_from_preview,
-            order_type=order_type
+        await request.app.state.redis_pool.enqueue_job(
+            "post_payment_generation_task",
+            order_id,
+            preview_id,
+            child_name_from_preview,
+            order_type
         )
 
         logger.info(
@@ -430,7 +440,7 @@ async def test_webhook(request: Request):
 
 
 @router.post("/test-order-paid")
-async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
+async def test_order_paid(request: Request):
     """
     TEST ENDPOINT: Simulate order-paid webhook without HMAC verification.
     
@@ -501,18 +511,19 @@ async def test_order_paid(request: Request, background_tasks: BackgroundTasks):
 
         logger.info("TEST: Preview status updated to PURCHASED", preview_id=preview_id)
 
-        # Queue PDF generation - must pass child_name and order_type
+        # Enqueue PDF generation in ARQ queue
+        # Replaced with ARQ queue - see worker.py
         child_name_from_preview = preview.get("child_name", "Child")
-        background_tasks.add_task(
-            generate_pdf,
-            order_id=str(order_id),
-            preview_id=preview_id,
-            child_name=child_name_from_preview,
-            order_type=order_type
+        await request.app.state.redis_pool.enqueue_job(
+            "post_payment_generation_task",
+            str(order_id),
+            preview_id,
+            child_name_from_preview,
+            order_type
         )
-        
+
         logger.info(
-            "TEST order processed - PDF generation queued",
+            "TEST order processed - PDF generation enqueued",
             order_id=order_id,
             preview_id=preview_id
         )

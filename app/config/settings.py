@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     supabase_key: str
     database_url: str
 
+    # Job Queue (Redis)
+    redis_url: str = "redis://localhost:6379"  # Redis URL for ARQ job queue
+
     # Storage (Cloudflare R2)
     r2_account_id: str
     r2_access_key_id: str

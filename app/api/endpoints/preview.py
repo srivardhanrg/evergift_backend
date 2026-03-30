@@ -10,7 +10,7 @@ Shopify Integration:
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, Request
 import structlog
 
 from app.models.schemas import (
@@ -67,8 +67,7 @@ def extract_shopify_customer_context(request: Request) -> tuple[Optional[str], O
 @limiter.limit("5/minute")
 async def create_preview(
     request: Request,
-    preview_request: PreviewCreateRequest,
-    background_tasks: BackgroundTasks
+    preview_request: PreviewCreateRequest
 ):
     """
     Create a new preview generation job.
@@ -244,23 +243,23 @@ async def create_preview(
         if not job_response.data:
             raise Exception("Failed to create job record")
 
-        # Start background generation task using NanoBanana pipeline
-        # All themes now use the NanoBanana pipeline (storygift approach)
+        # Enqueue background generation task in ARQ queue
+        # Replaced with ARQ queue - see worker.py
         theme_value = preview_request.theme.value
 
-        background_tasks.add_task(
-            generate_full_preview,
-            job_id=job_id,
-            preview_id=preview_id,
-            photo_urls=preview_request.photo_urls,
-            child_name=preview_request.child_name,
-            child_age=preview_request.child_age,
-            child_gender=preview_request.child_gender,
-            theme=theme_value,
-            style=style  # Pass hardcoded photorealistic style
+        await request.app.state.redis_pool.enqueue_job(
+            "preview_generation_task",
+            job_id,
+            preview_id,
+            preview_request.photo_urls,
+            preview_request.child_name,
+            preview_request.child_age,
+            preview_request.child_gender,
+            theme_value,
+            style  # Pass hardcoded photorealistic style
         )
 
-        logger.info("Preview generation job started", job_id=job_id, preview_id=preview_id, style=style)
+        logger.info("Preview generation job enqueued", job_id=job_id, preview_id=preview_id, style=style)
 
         return JobStartResponse(
             job_id=job_id,
@@ -341,8 +340,7 @@ async def save_notification_email(
 @limiter.limit("3/minute")
 async def retry_preview_generation(
     request: Request,
-    job_id: str,
-    background_tasks: BackgroundTasks
+    job_id: str
 ):
     """
     Retry a failed preview generation job.
@@ -414,22 +412,23 @@ async def retry_preview_generation(
             "status": PreviewStatus.GENERATING.value
         }).eq("preview_id", preview_id).execute()
 
-        # Start background generation task
-        background_tasks.add_task(
-            generate_full_preview,
-            job_id=new_job_id,
-            preview_id=preview_id,
-            photo_urls=preview.get("photo_urls") or [preview["photo_url"]],
-            child_name=preview["child_name"],
-            child_age=preview["child_age"],
-            child_gender=preview["child_gender"],
-            theme=preview["theme"],
-            style=preview.get("style", "photorealistic")
+        # Enqueue background generation task in ARQ queue
+        # Replaced with ARQ queue - see worker.py
+        await request.app.state.redis_pool.enqueue_job(
+            "preview_generation_task",
+            new_job_id,
+            preview_id,
+            preview.get("photo_urls") or [preview["photo_url"]],
+            preview["child_name"],
+            preview["child_age"],
+            preview["child_gender"],
+            preview["theme"],
+            preview.get("style", "photorealistic")
         )
 
-        logger.info("Preview retry job started", 
-                   old_job_id=job_id, 
-                   new_job_id=new_job_id, 
+        logger.info("Preview retry job enqueued",
+                   old_job_id=job_id,
+                   new_job_id=new_job_id,
                    preview_id=preview_id,
                    attempt=old_job["attempts"] + 1)
 
@@ -968,7 +967,7 @@ async def get_preview_v2(preview_id: str):
 # PROTECTED: Only available in development/testing mode
 # ============================================
 @router.post("/test/trigger-completion/{preview_id}")
-async def test_trigger_completion(preview_id: str, background_tasks: BackgroundTasks):
+async def test_trigger_completion(preview_id: str, request: Request):
     """
     TEST ONLY: Triggers the remaining page generation for a preview.
     This simulates what happens after Shopify webhook confirms payment.
@@ -1031,13 +1030,15 @@ async def test_trigger_completion(preview_id: str, background_tasks: BackgroundT
     
     # Get child_name from preview (required by generate_remaining_pages)
     child_name = preview.get("child_name", "Child")
-    
-    # Queue the remaining page generation
-    background_tasks.add_task(
-        generate_remaining_pages,
-        order_id=order_id,
-        preview_id=preview_id,
-        child_name=child_name  # CRITICAL: This was missing!
+
+    # Enqueue remaining page generation in ARQ queue
+    # Replaced with ARQ queue - see worker.py
+    await request.app.state.redis_pool.enqueue_job(
+        "post_payment_generation_task",
+        order_id,
+        preview_id,
+        child_name,
+        "digital"  # order_type
     )
     
     return {

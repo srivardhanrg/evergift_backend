@@ -183,11 +183,31 @@ async def startup_event():
         debug=settings.app_debug
     )
 
+    # Initialize Redis connection pool for ARQ job queue
+    try:
+        from arq.connections import create_pool, RedisSettings
+        app.state.redis_pool = await create_pool(
+            RedisSettings.from_dsn(settings.redis_url)
+        )
+        logger.info("Redis connection pool initialized", redis_url=settings.redis_url[:20] + "...")
+    except Exception as e:
+        logger.error("Failed to initialize Redis pool", error=str(e))
+        # Don't fail startup if Redis is unavailable - allows health checks to work
+        app.state.redis_pool = None
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("Shutting down Zelavo Kids Backend")
+
+    # Close Redis connection pool
+    if hasattr(app.state, "redis_pool") and app.state.redis_pool:
+        try:
+            await app.state.redis_pool.close()
+            logger.info("Redis connection pool closed")
+        except Exception as e:
+            logger.error("Error closing Redis pool", error=str(e))
 
 
 # Include routers
