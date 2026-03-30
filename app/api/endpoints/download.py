@@ -21,7 +21,7 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-def _build_download_response(
+async def _build_download_response(
     preview: dict,
     storage: StorageService,
     pdf_exists: bool,
@@ -54,7 +54,7 @@ def _build_download_response(
     if preview.get("hires_images"):
         for img_data in preview["hires_images"]:
             image_path = f"final/{preview['preview_id']}/page_{img_data['page']:02d}.jpg"
-            image_signed_url = storage.generate_signed_url(image_path, expires_in=3600)
+            image_signed_url = await storage.generate_signed_url(image_path, expires_in=3600)
             image_downloads.append({
                 "page": img_data["page"],
                 "url": image_signed_url,
@@ -207,7 +207,7 @@ async def get_download(identifier: str):
                 except Exception:
                     pass
 
-                return _build_download_response(preview, storage, pdf_exists, pdf_size_mb, expires_at)
+                return await _build_download_response(preview, storage, pdf_exists, pdf_size_mb, expires_at)
             else:
                 # Preview says complete but PDF is missing from R2
                 logger.warning(

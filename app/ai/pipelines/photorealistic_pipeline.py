@@ -19,6 +19,7 @@ from typing import Optional, Dict, List, Any
 import httpx
 
 from app.ai.base import GenerationResult
+from app.ai.concurrency import FAL_SEMAPHORE
 from app.services.storage import StorageService
 from app.config import get_settings
 
@@ -75,19 +76,21 @@ class PhotorealisticPipeline:
             logger.info("Starting VLM face analysis", image_url=face_image_url)
             start_time = time.time()
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    "https://fal.run/fal-ai/llava-next",
-                    headers={
-                        "Authorization": f"Key {self.settings.fal_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "image_url": face_image_url,
-                        "prompt": "Describe the child's face in precise detail: EXACT skin tone (light/medium/dark/very dark brown, or pale/beige/tan/olive), facial structure, hair color and texture (straight/wavy/curly/kinky), eye color and shape, nose shape, cheek fullness, and any distinctive features like bindi, moles, or facial marks. Be very specific about skin tone - describe it accurately using brown/tan/beige/olive/pale descriptors. Include ethnic features if visible (South Asian, East Asian, African, etc.). Do not describe clothing or background. Example: 'a young child with medium-dark brown South Asian skin tone, round full cheeks, small nose, curly dark brown hair, large expressive dark eyes, and a bindi on the forehead'.",
-                        "max_tokens": 200
-                    }
-                )
+            # Gate fal.ai API calls with semaphore to prevent rate limiting
+            async with FAL_SEMAPHORE:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        "https://fal.run/fal-ai/llava-next",
+                        headers={
+                            "Authorization": f"Key {self.settings.fal_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "image_url": face_image_url,
+                            "prompt": "Describe the child's face in precise detail: EXACT skin tone (light/medium/dark/very dark brown, or pale/beige/tan/olive), facial structure, hair color and texture (straight/wavy/curly/kinky), eye color and shape, nose shape, cheek fullness, and any distinctive features like bindi, moles, or facial marks. Be very specific about skin tone - describe it accurately using brown/tan/beige/olive/pale descriptors. Include ethnic features if visible (South Asian, East Asian, African, etc.). Do not describe clothing or background. Example: 'a young child with medium-dark brown South Asian skin tone, round full cheeks, small nose, curly dark brown hair, large expressive dark eyes, and a bindi on the forehead'.",
+                            "max_tokens": 200
+                        }
+                    )
 
             if response.status_code == 200:
                 try:
@@ -175,25 +178,27 @@ class PhotorealisticPipeline:
                 face_expression=face_expression or "from prompt"
             )
 
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                payload = {
-                    "prompt": enhanced_prompt,
-                    "image_urls": face_url,  # face_url is now a list of URLs
-                    "aspect_ratio": aspect_ratio,
-                    "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
-                }
+            # Gate fal.ai API calls with semaphore to prevent rate limiting
+            async with FAL_SEMAPHORE:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    payload = {
+                        "prompt": enhanced_prompt,
+                        "image_urls": face_url,  # face_url is now a list of URLs
+                        "aspect_ratio": aspect_ratio,
+                        "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
+                    }
 
-                if seed:
-                    payload["seed"] = seed
+                    if seed:
+                        payload["seed"] = seed
 
-                response = await client.post(
-                    "https://fal.run/fal-ai/nano-banana/edit",
-                    headers={
-                        "Authorization": f"Key {self.settings.fal_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json=payload
-                )
+                    response = await client.post(
+                        "https://fal.run/fal-ai/nano-banana/edit",
+                        headers={
+                            "Authorization": f"Key {self.settings.fal_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json=payload
+                    )
 
             if response.status_code == 200:
                 try:

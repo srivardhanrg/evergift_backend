@@ -91,7 +91,9 @@ class StorageService:
         try:
             logger.info("Uploading image to R2", path=path, size_bytes=len(image_bytes))
 
-            self.s3_client.put_object(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            await asyncio.to_thread(
+                self.s3_client.put_object,
                 Bucket=self.settings.r2_bucket_name,
                 Key=path,
                 Body=image_bytes,
@@ -127,7 +129,9 @@ class StorageService:
         try:
             logger.info("Uploading PDF to R2", path=path, size_bytes=len(pdf_bytes))
 
-            self.s3_client.put_object(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            await asyncio.to_thread(
+                self.s3_client.put_object,
                 Bucket=self.settings.r2_bucket_name,
                 Key=path,
                 Body=pdf_bytes,
@@ -144,7 +148,7 @@ class StorageService:
             logger.error("Failed to upload PDF to R2", path=path, error=str(e))
             raise StorageError(f"Failed to upload PDF: {str(e)}")
 
-    def generate_signed_url(
+    async def generate_signed_url(
         self,
         path: str,
         expires_in: int = 3600,
@@ -172,7 +176,9 @@ class StorageService:
             if content_disposition:
                 params['ResponseContentDisposition'] = content_disposition
 
-            url = self.s3_client.generate_presigned_url(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            url = await asyncio.to_thread(
+                self.s3_client.generate_presigned_url,
                 'get_object',
                 Params=params,
                 ExpiresIn=expires_in
@@ -287,7 +293,9 @@ class StorageService:
         try:
             logger.info("Deleting file from R2", path=path)
 
-            self.s3_client.delete_object(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            await asyncio.to_thread(
+                self.s3_client.delete_object,
                 Bucket=self.settings.r2_bucket_name,
                 Key=path
             )
@@ -311,29 +319,35 @@ class StorageService:
         try:
             logger.info("Deleting folder from R2", path_prefix=path_prefix)
 
-            # List all objects with the prefix
-            paginator = self.s3_client.get_paginator('list_objects_v2')
-            pages = paginator.paginate(
-                Bucket=self.settings.r2_bucket_name,
-                Prefix=path_prefix
-            )
-
-            delete_count = 0
-
-            for page in pages:
-                if 'Contents' not in page:
-                    continue
-
-                # Prepare objects for batch deletion
-                objects_to_delete = [{'Key': obj['Key']} for obj in page['Contents']]
-
-                # Delete batch
-                self.s3_client.delete_objects(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            def _delete_folder_sync():
+                # List all objects with the prefix
+                paginator = self.s3_client.get_paginator('list_objects_v2')
+                pages = paginator.paginate(
                     Bucket=self.settings.r2_bucket_name,
-                    Delete={'Objects': objects_to_delete}
+                    Prefix=path_prefix
                 )
 
-                delete_count += len(objects_to_delete)
+                delete_count = 0
+
+                for page in pages:
+                    if 'Contents' not in page:
+                        continue
+
+                    # Prepare objects for batch deletion
+                    objects_to_delete = [{'Key': obj['Key']} for obj in page['Contents']]
+
+                    # Delete batch
+                    self.s3_client.delete_objects(
+                        Bucket=self.settings.r2_bucket_name,
+                        Delete={'Objects': objects_to_delete}
+                    )
+
+                    delete_count += len(objects_to_delete)
+
+                return delete_count
+
+            delete_count = await asyncio.to_thread(_delete_folder_sync)
 
             logger.info("Folder deleted successfully", path_prefix=path_prefix, count=delete_count)
             return delete_count
@@ -353,7 +367,9 @@ class StorageService:
             True if file exists, False otherwise
         """
         try:
-            self.s3_client.head_object(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            await asyncio.to_thread(
+                self.s3_client.head_object,
                 Bucket=self.settings.r2_bucket_name,
                 Key=path
             )
@@ -372,7 +388,9 @@ class StorageService:
             File size in bytes
         """
         try:
-            response = self.s3_client.head_object(
+            # Wrap blocking boto3 call with asyncio.to_thread to prevent event loop blocking
+            response = await asyncio.to_thread(
+                self.s3_client.head_object,
                 Bucket=self.settings.r2_bucket_name,
                 Key=path
             )
