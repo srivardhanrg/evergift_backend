@@ -290,5 +290,5 @@ class WorkerSettings:
 
     # Health check cron (runs every 15 minutes)
     cron_jobs = [
-        cron(func=health_check, minute={0, 15, 30, 45})
+        cron(health_check, minute={0, 15, 30, 45})
     ]
