@@ -23,17 +23,21 @@ COPY . .
 # Copy font files for text overlay rendering
 COPY fonts/ /app/fonts/
 
+# Copy and set executable permissions for entrypoint script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Expose port
+# Expose port (only used by web service)
 EXPOSE 8000
 
-# Health check
+# Health check (only used by web service)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run application with gunicorn (production WSGI server)
-# Using 2 workers with uvicorn for async support and graceful shutdown
-CMD ["gunicorn", "app.main:app", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--graceful-timeout", "120", "--timeout", "600", "--worker-tmp-dir", "/dev/shm"]
+# Entrypoint script decides whether to run web server or worker
+# Set SERVICE_TYPE environment variable: "web" or "worker"
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
