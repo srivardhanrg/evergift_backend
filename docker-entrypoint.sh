@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Docker entrypoint script for MagicTales backend
 # Determines whether to run web server or worker based on SERVICE_TYPE env var
 
