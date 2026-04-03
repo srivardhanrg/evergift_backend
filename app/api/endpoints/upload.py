@@ -120,7 +120,8 @@ async def upload_photos(
                     "upload_order": i + 1,
                     "face_valid": validation_result.is_valid,
                     "face_count": validation_result.face_count,
-                    "quality_score": validation_result.quality_score if validation_result.is_valid else 0.0
+                    "quality_score": validation_result.quality_score if validation_result.is_valid else 0.0,
+                    "error_code": validation_result.error_code if not validation_result.is_valid else None
                 })
 
                 logger.info(f"Photo {i+1} processed",

@@ -223,7 +223,7 @@ class FaceValidationService:
 
             # Check if face is reasonably front-facing and clear
             # (MediaPipe detection score handles face quality and orientation)
-            if confidence_score < 0.7:
+            if confidence_score < 0.5:
                 logger.warning(f"Face detection confidence too low: {confidence_score:.2f}")
                 return FaceValidationResult(
                     is_valid=False,
@@ -292,13 +292,15 @@ class FaceValidationService:
                 details={"error": str(e)}
             )
 
-    def _is_blurry(self, image: np.ndarray, threshold: float = 25.0) -> bool:
+    def _is_blurry(self, image: np.ndarray, threshold: float = 12.0) -> bool:
         """
         Check if image is too blurry using Laplacian variance.
 
         Args:
             image: OpenCV image
-            threshold: Variance threshold (lower = more blurry)
+            threshold: Variance threshold (lower = more blurry).
+                       12.0 accepts typical mobile phone quality while
+                       catching genuinely unidentifiable blur.
 
         Returns:
             True if image is too blurry
