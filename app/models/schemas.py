@@ -62,6 +62,7 @@ class PhotoData(BaseModel):
     face_valid: bool
     face_count: int
     quality_score: float = 0.0
+    error_code: Optional[str] = None
 
 
 class PhotoUploadResponse(BaseModel):
