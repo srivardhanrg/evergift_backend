@@ -9,6 +9,11 @@ import mediapipe as mp
 from PIL import Image
 from PIL.ImageOps import exif_transpose
 from io import BytesIO
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
 from typing import Tuple
 import structlog
 

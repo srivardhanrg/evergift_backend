@@ -18,7 +18,16 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 # Allowed image types (validated by magic bytes)
-ALLOWED_IMAGE_TYPES = {'jpeg', 'png', 'gif', 'webp'}
+ALLOWED_IMAGE_TYPES = {'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'}
+
+
+def _is_heic(file_bytes: bytes) -> bool:
+    """Detect HEIC/HEIF by checking the ftyp box signature (imghdr doesn't support it)."""
+    if len(file_bytes) < 12:
+        return False
+    ftyp = file_bytes[4:8]
+    brand = file_bytes[8:12]
+    return ftyp == b'ftyp' and brand in (b'heic', b'heix', b'hevc', b'hevx', b'mif1', b'msf1', b'MiHE', b'MiHB')
 
 
 def validate_image_magic_bytes(file_bytes: bytes) -> str:
@@ -28,7 +37,9 @@ def validate_image_magic_bytes(file_bytes: bytes) -> str:
 
     Returns the detected image type or raises HTTPException.
     """
-    # imghdr.what() checks magic bytes, not file extension
+    if _is_heic(file_bytes):
+        return 'heic'
+
     image_type = imghdr.what(None, h=file_bytes)
 
     if image_type not in ALLOWED_IMAGE_TYPES:
@@ -41,7 +52,7 @@ def validate_image_magic_bytes(file_bytes: bytes) -> str:
             status_code=400,
             detail={
                 "code": "INVALID_IMAGE_FORMAT",
-                "message": f"Invalid image format. Allowed formats: JPEG, PNG, GIF, WebP. Detected: {image_type or 'unknown'}",
+                "message": f"Invalid image format. Allowed formats: JPEG, PNG, WebP, HEIC. Detected: {image_type or 'unknown'}",
                 "detected_type": image_type
             }
         )
