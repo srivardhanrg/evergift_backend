@@ -180,7 +180,7 @@ class PhotorealisticPipeline:
                     "prompt": enhanced_prompt,
                     "image_urls": face_url,
                     "image_size": "square_hd",
-                    "quality": "high",
+                    "quality": "medium",
                     "output_format": "jpeg",
                 }
 
