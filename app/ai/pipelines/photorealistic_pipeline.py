@@ -409,37 +409,37 @@ class PhotorealisticPipeline:
         child_gender: str,
         analyzed_features: str
     ) -> str:
-        """
-        Build enhanced prompt with identity lock and scene description.
-
-        Layers prompt structure:
-        - Subject + Age + Gender + Identity Lock
-        - Scene Action
-        - Style constraints
-
-        Note: Identity preservation primarily handled by nano-banana's
-        image_urls parameter. The text prompt reinforces but doesn't
-        replace the image reference.
-        """
         personalized_prompt = base_prompt.replace("{name}", child_name)
-
-        # Convert gender to boy/girl for natural language
         gender_word = "boy" if child_gender.lower() == "male" else "girl"
 
-        enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}.
+        enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}, rendered as a photorealistic character inspired by the uploaded reference photo.
 
-IDENTITY LOCK: {analyzed_features}. The child's face must EXACTLY match the reference image provided - same facial structure, same skin tone, same hair, same eyes, same nose, same ethnic features. DO NOT alter, idealize, or modify ANY facial characteristics.
+Identity anchoring — extract and preserve these structural features from the reference photo:
+- Overall face shape and proportions
+- Skin tone and complexion — preserve authentically, do not lighten, darken, or color-shift under any scene lighting
+- Eye shape, size, and color
+- Eyebrow shape and thickness
+- Nose shape and proportions
+- Lip shape and natural color
+- Hair color, texture, and hairline
+- Ethnic and cultural features as shown in reference
+- Any distinguishing features visible in reference (bindi, earrings, freckles, etc.) — include if scene-appropriate
+- Age-appropriate facial proportions for a {child_age}-year-old child (fuller cheeks, softer features, larger eye-to-face ratio)
 
-CRITICAL SKIN TONE PRESERVATION: Render the child's EXACT skin tone from the reference photo - do not lighten, darken, or shift skin color regardless of lighting conditions (golden light, moonlight, magical glow, underwater light, etc.). Maintain authentic complexion even in dramatic or colored lighting. The lighting should enhance without altering natural skin tone.
+Creative freedom — these SHOULD vary from the reference photo:
+- Facial expression — render scene-appropriate emotion (excitement, joy, curiosity, wonder) rather than copying the reference's neutral portrait pose
+- Head angle and body pose — natural to the scene action, not the front-facing portrait angle of the reference
+- Hair styling — can be loose, tied, braided, or windblown as the scene requires, while keeping the reference's hair color and texture
+- Lighting on face — dramatic scene lighting is welcome
+- Mouth position — open smile, laughing, speaking, etc. as the scene requires
+- Clothing — use the costume specified in the scene description, NOT the clothing from the reference photo; keep this costume consistent across all scenes
 
-Age-specific features: Render with age-appropriate facial proportions and features for a {child_age}-year-old {gender_word}.
+Skin tone note: Preserve the reference child's authentic complexion across all lighting conditions. Dramatic colored lighting should add highlights and shadows without changing underlying skin tone — especially important for children with medium and darker skin tones.
 
-Scene Action: {personalized_prompt}.
+Scene: {personalized_prompt}
 
-Environment: Masterpiece, 8k resolution, photorealistic, intricate details, sharp focus, ray tracing, soft volumetric lighting.
+Style: Photorealistic, cinematic quality, hyper-realistic skin texture, 8k resolution, soft volumetric lighting, deep depth of field, sharp focus, shot on 35mm film, award-winning photograph aesthetic.
 
-Style: an award-winning cinematic photograph, hyper-realistic, highly detailed skin texture, 8k resolution, deep depth of field, sharp background, soft natural lighting, shot on 35mm film.
-
-Constraint: IDENTICAL face to reference image, consistent clothing, perfect face integration, age-appropriate proportions, authentic skin tone preservation, no face modifications."""
+Constraint: Character must be recognizable as the reference child through structural identity features (face shape, skin tone, eye shape, hair, ethnic features), rendered with scene-appropriate expression and pose. Do NOT copy the reference photo's expression or head angle. The goal is recognizable photorealistic likeness with natural scene-driven emotion."""
 
         return enhanced_prompt
