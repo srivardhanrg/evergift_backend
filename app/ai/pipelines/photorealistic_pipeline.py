@@ -50,7 +50,7 @@ class PhotorealisticPipeline:
         self.storage = StorageService()
 
         # Model configuration
-        self.model_id = "fal-ai/nano-banana/edit"
+        self.model_id = "fal-ai/gpt-image-2/image-to-image"
         self.model_name = "photorealistic"
 
         logger.info(
@@ -178,16 +178,17 @@ class PhotorealisticPipeline:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 payload = {
                     "prompt": enhanced_prompt,
-                    "image_urls": face_url,  # face_url is now a list of URLs
-                    "aspect_ratio": aspect_ratio,
-                    "negative_prompt": "black bars, letterbox, letterboxing, scope, cinema bars, pillarbox, matte bars, widescreen bars, black borders, black border on top, black border on bottom, cropped frame, blurry, low quality, distorted face",
+                    "image_urls": face_url,
+                    "image_size": "square_hd",
+                    "quality": "high",
+                    "output_format": "jpeg",
                 }
 
                 if seed:
                     payload["seed"] = seed
 
                 response = await client.post(
-                    "https://fal.run/fal-ai/nano-banana/edit",
+                    "https://fal.run/fal-ai/gpt-image-2/image-to-image",
                     headers={
                         "Authorization": f"Key {self.settings.fal_api_key}",
                         "Content-Type": "application/json"
