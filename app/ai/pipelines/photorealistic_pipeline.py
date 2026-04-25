@@ -50,7 +50,7 @@ class PhotorealisticPipeline:
         self.storage = StorageService()
 
         # Model configuration
-        self.model_id = "fal-ai/gpt-image-2/image-to-image"
+        self.model_id = "openai/gpt-image-2"
         self.model_name = "photorealistic"
 
         logger.info(
@@ -188,7 +188,7 @@ class PhotorealisticPipeline:
                     payload["seed"] = seed
 
                 response = await client.post(
-                    "https://fal.run/fal-ai/gpt-image-2/image-to-image",
+                    "https://fal.run/openai/gpt-image-2",
                     headers={
                         "Authorization": f"Key {self.settings.fal_api_key}",
                         "Content-Type": "application/json"
