@@ -175,7 +175,7 @@ class PhotorealisticPipeline:
                 face_expression=face_expression or "from prompt"
             )
 
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 payload = {
                     "prompt": enhanced_prompt,
                     "image_urls": face_url,
