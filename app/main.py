@@ -15,6 +15,7 @@ from pathlib import Path
 
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from fastapi.exceptions import RequestValidationError
 
 from app.config import get_settings
 from app.api.router import api_router, health_router, webhook_router
@@ -121,6 +122,16 @@ async def log_requests(request: Request, call_next):
             client_ip=request.client.host if request.client else None,
         )
     return response
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "Request validation failed (422)",
+        path=str(request.url.path),
+        errors=exc.errors()
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
 @app.exception_handler(ZelavoBaseException)
