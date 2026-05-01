@@ -7,7 +7,13 @@ import cv2
 import numpy as np
 import mediapipe as mp
 from PIL import Image
+from PIL.ImageOps import exif_transpose
 from io import BytesIO
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
 from typing import Tuple
 import structlog
 
@@ -278,6 +284,9 @@ class FaceValidationService:
         try:
             # Convert to PIL Image first
             pil_image = Image.open(BytesIO(image_bytes))
+
+            # Bake EXIF rotation into pixels so MediaPipe sees the correct orientation
+            pil_image = exif_transpose(pil_image)
 
             # Convert to RGB if necessary
             if pil_image.mode != 'RGB':
