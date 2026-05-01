@@ -15,6 +15,7 @@ from pathlib import Path
 
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from fastapi.exceptions import RequestValidationError
 
 from app.config import get_settings
 from app.api.router import api_router, health_router, webhook_router
@@ -123,6 +124,16 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "Request validation failed (422)",
+        path=str(request.url.path),
+        errors=exc.errors()
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
 @app.exception_handler(ZelavoBaseException)
 async def zelavo_exception_handler(request: Request, exc: ZelavoBaseException):
     """Handle custom Zelavo exceptions."""
@@ -183,31 +194,11 @@ async def startup_event():
         debug=settings.app_debug
     )
 
-    # Initialize Redis connection pool for ARQ job queue
-    try:
-        from arq.connections import create_pool, RedisSettings
-        app.state.redis_pool = await create_pool(
-            RedisSettings.from_dsn(settings.redis_url)
-        )
-        logger.info("Redis connection pool initialized", redis_url=settings.redis_url[:20] + "...")
-    except Exception as e:
-        logger.error("Failed to initialize Redis pool", error=str(e))
-        # Don't fail startup if Redis is unavailable - allows health checks to work
-        app.state.redis_pool = None
-
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("Shutting down Zelavo Kids Backend")
-
-    # Close Redis connection pool
-    if hasattr(app.state, "redis_pool") and app.state.redis_pool:
-        try:
-            await app.state.redis_pool.close()
-            logger.info("Redis connection pool closed")
-        except Exception as e:
-            logger.error("Error closing Redis pool", error=str(e))
 
 
 # Include routers
