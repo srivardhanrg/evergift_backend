@@ -415,34 +415,35 @@ class PhotorealisticPipeline:
         personalized_prompt = base_prompt.replace("{name}", child_name)
         gender_word = "boy" if child_gender.lower() == "male" else "girl"
 
-        enhanced_prompt = f"""Subject: A {child_age}-year-old {gender_word} named {child_name}, rendered as a photorealistic character inspired by the uploaded reference photo.
+        enhanced_prompt = f"""IDENTITY MANDATE — This image must depict a recognizable photorealistic likeness of the exact child shown in the reference photo. The reference image is the primary source of truth for this child's identity. Do not generalize or idealize — reproduce this specific child.
 
-Identity anchoring — extract and preserve these structural features from the reference photo:
-- Overall face shape and proportions
-- Skin tone and complexion — preserve authentically, do not lighten, darken, or color-shift under any scene lighting
-- Eye shape, size, and color
-- Eyebrow shape and thickness
-- Nose shape and proportions
-- Lip shape and natural color
-- Hair color, texture, and hairline
-- Ethnic and cultural features as shown in reference
-- Any distinguishing features visible in reference (bindi, earrings, freckles, etc.) — include if scene-appropriate
-- Age-appropriate facial proportions for a {child_age}-year-old child (fuller cheeks, softer features, larger eye-to-face ratio)
+NON-NEGOTIABLE identity features — extract these precisely from the reference photo and preserve them without compromise:
+• Face shape, bone structure, and proportions — replicate exactly
+• Skin tone and ethnic complexion — match precisely, no lightening, darkening, or color shift under any lighting condition
+• Eye shape, size, spacing, and iris color — exact match
+• Eyebrow shape, thickness, and arch
+• Nose shape, width, and proportions
+• Cheek fullness, jawline, and chin shape
+• Lip shape and natural color
+• Hair color, texture, and pattern (straight/wavy/curly/kinky) — exact match
+• Ethnic heritage markers as shown in reference
+• Any distinguishing features (bindi, freckles, moles, birthmarks) — include if scene-appropriate
+• Age-appropriate proportions for a {child_age}-year-old (fuller cheeks, softer jaw, larger eye-to-face ratio)
 
-Creative freedom — these SHOULD vary from the reference photo:
-- Facial expression — render scene-appropriate emotion (excitement, joy, curiosity, wonder) rather than copying the reference's neutral portrait pose
-- Head angle and body pose — natural to the scene action, not the front-facing portrait angle of the reference
-- Hair styling — can be loose, tied, braided, or windblown as the scene requires, while keeping the reference's hair color and texture
-- Lighting on face — dramatic scene lighting is welcome
-- Mouth position — open smile, laughing, speaking, etc. as the scene requires
-- Clothing — use the costume specified in the scene description, NOT the clothing from the reference photo; keep this costume consistent across all scenes
+Skin tone preservation: The child's exact complexion must survive all scene lighting. Colored or dramatic light modifies mood in the environment — it must NOT shift the underlying skin tone. Medium and darker skin tones especially must not be lightened.
 
-Skin tone note: Preserve the reference child's authentic complexion across all lighting conditions. Dramatic colored lighting should add highlights and shadows without changing underlying skin tone — especially important for children with medium and darker skin tones.
+Scene-adaptive elements — ONLY these should differ from the reference photo:
+• Facial expression — scene-driven emotion natural to the action (not the reference's neutral portrait pose)
+• Head angle and body pose — natural to the scene, not copying the portrait angle
+• Hair styling — can be loose, tied, or windswept while keeping the reference's exact hair color and texture
+• Clothing — follow the scene costume description, not what is worn in the reference photo
+
+Subject: A {child_age}-year-old {gender_word} named {child_name}.
 
 Scene: {personalized_prompt}
 
-Style: Photorealistic, cinematic quality, hyper-realistic skin texture, 8k resolution, soft volumetric lighting, deep depth of field, sharp focus, shot on 35mm film, award-winning photograph aesthetic.
+Style: Photorealistic, cinematic quality, hyper-realistic skin texture, 8k resolution, shot on 35mm film, soft volumetric lighting, deep depth of field, award-winning photograph aesthetic.
 
-Constraint: Character must be recognizable as the reference child through structural identity features (face shape, skin tone, eye shape, hair, ethnic features), rendered with scene-appropriate expression and pose. Do NOT copy the reference photo's expression or head angle. The goal is recognizable photorealistic likeness with natural scene-driven emotion."""
+Identity verification: The final image must pass this check — is this child immediately recognizable as the same person from the reference photo? Face shape, skin tone, eye shape, and hair must be unmistakably that specific child. Expression and pose vary by scene; identity does not."""
 
         return enhanced_prompt
